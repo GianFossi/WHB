@@ -138,6 +138,228 @@ module Report =
     let f5 (x: float) = x.ToString("F5", ci)
 
     /// <summary>
+    /// Returns the material density used for inventory and shipping-weight estimates.
+    /// </summary>
+    /// <remarks>
+    /// Densities are representative engineering values because the material catalogue does not currently store density.
+    /// </remarks>
+    let private densityOf (mat: Materials.Material) =
+        let name = mat.Name.ToUpperInvariant()
+        if name.Contains("ALLOY") then 8050.0
+        elif name.Contains("AUSTENITICO") || name.Contains("321") then 8000.0
+        else 7850.0
+
+    /// <summary>
+    /// Returns the standard pipe outside diameter inferred from an NPS label.
+    /// </summary>
+    /// <remarks>
+    /// The lookup is used only for metal-weight estimates when the model contains pipe ID but not pipe OD.
+    /// </remarks>
+    let private pipeOdFromNps (nps: string) (id: float) =
+        let s = nps.Replace("\"", "").Trim()
+        let first = s.Split([| ' '; '\t' |], StringSplitOptions.RemoveEmptyEntries) |> Array.tryHead
+        let n =
+            match first with
+            | Some v ->
+                match Double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture) with
+                | true, x -> Some x
+                | _ -> None
+            | None -> None
+        let odIn =
+            match n with
+            | Some 4.0 -> Some 4.5
+            | Some 6.0 -> Some 6.625
+            | Some 8.0 -> Some 8.625
+            | Some 10.0 -> Some 10.75
+            | Some 12.0 -> Some 12.75
+            | Some 14.0 -> Some 14.0
+            | Some 16.0 -> Some 16.0
+            | Some 18.0 -> Some 18.0
+            | Some 20.0 -> Some 20.0
+            | Some 24.0 -> Some 24.0
+            | _ -> None
+        match odIn with
+        | Some x -> max (id * 1.02) (x * 0.0254)
+        | None -> id * 1.08
+
+    /// <summary>
+    /// Calculates the internal volume of a piping line.
+    /// </summary>
+    /// <remarks>
+    /// The line volume includes straight lengths and elbow arc lengths for every parallel counted line.
+    /// </remarks>
+    let private lineWaterVolume (l: Piping.Line) =
+        Piping.area l * Piping.developedLength l * float l.Count
+
+    /// <summary>
+    /// Calculates the metal weight of a piping line.
+    /// </summary>
+    /// <remarks>
+    /// Pipe OD is inferred from the NPS label when available; use vendor pipe weights for final material take-off.
+    /// </remarks>
+    let private lineMetalWeight (rho: float) (l: Piping.Line) =
+        let od = pipeOdFromNps l.Nps l.Id
+        let areaMetal = Math.PI / 4.0 * max 0.0 (od * od - l.Id * l.Id)
+        areaMetal * Piping.developedLength l * float l.Count * rho
+
+    /// <summary>
+    /// Calculates the liquid volume in a horizontal cylindrical drum up to the normal level.
+    /// </summary>
+    /// <remarks>
+    /// The result is based on a circular-segment area times drum length and excludes internals displacement.
+    /// </remarks>
+    let private drumWaterVolume (d: Drum.Internals) =
+        let r = 0.5 * d.ShellId
+        let h = max 0.0 (min d.ShellId d.NormalLevel)
+        let theta = 2.0 * acos ((r - h) / r)
+        let segmentArea = 0.5 * r * r * (theta - sin theta)
+        segmentArea * d.Length
+
+    /// <summary>
+    /// Builds a text summary of water volumes and estimated metal weights.
+    /// </summary>
+    /// <remarks>
+    /// The summary separates water inventory by WHB shell, risers, downcomers, and steam drum, then lists component metal-weight estimates.
+    /// </remarks>
+    let inventoryText (r: DesignResult) =
+        let c = r.Case
+        let rhoTube = densityOf c.Material
+        let rhoShell = densityOf c.ShellMaterial
+        let rhoFerrule = densityOf c.FerruleMaterial
+        let shellInternal = Math.PI / 4.0 * c.Tube.ShellId * c.Tube.ShellId * c.Tube.Length
+        let tubeDisplacement = Math.PI / 4.0 * c.Tube.Do * c.Tube.Do * c.Tube.Length * float c.Tube.NTubes
+        let bypassDisplacement =
+            if c.Bypass.Enabled then Math.PI / 4.0 * c.Bypass.PipeOd * c.Bypass.PipeOd * c.Tube.Length else 0.0
+        let whbWater = max 0.0 (shellInternal - tubeDisplacement - bypassDisplacement)
+        let riserWater = c.Loop.Risers |> List.filter (fun l -> l.Connected) |> List.sumBy lineWaterVolume
+        let downcomerWater = c.Loop.Downcomers |> List.filter (fun l -> l.Connected) |> List.sumBy lineWaterVolume
+        let drumWater = if c.Loop.Drum.Enabled then drumWaterVolume c.Loop.Drum else 0.0
+        let totalWater = whbWater + riserWater + downcomerWater + drumWater
+
+        let tubeMetal =
+            Math.PI / 4.0 * (c.Tube.Do * c.Tube.Do - c.Tube.Di * c.Tube.Di) * c.Tube.Length * float c.Tube.NTubes * rhoTube
+        let shellMetal =
+            Math.PI / 4.0 * ((c.Tube.ShellId + 2.0 * c.ShellThickness) ** 2.0 - c.Tube.ShellId ** 2.0) * c.Tube.Length * rhoShell
+        let baffleMetal =
+            let count = max 0 (List.length c.BaffleSpans - 1)
+            let gross = Math.PI / 4.0 * c.Tube.BaffleOd * c.Tube.BaffleOd
+            let holes = Math.PI / 4.0 * c.Tube.Do * c.Tube.Do * float c.Tube.NTubes
+            max 0.0 (gross - holes) * c.BaffleThickness * float count * rhoShell
+        let ferruleMetal =
+            if c.Ferrule.Enabled then
+                let length = c.Ferrule.Lengths |> List.sumBy (fun (frac, len) -> frac * len)
+                Math.PI / 4.0 * max 0.0 (c.Ferrule.SleeveOd ** 2.0 - c.Ferrule.Bore ** 2.0) * length * float c.Tube.NTubes * rhoFerrule
+            else 0.0
+        let riserMetal = c.Loop.Risers |> List.filter (fun l -> l.Connected) |> List.sumBy (lineMetalWeight rhoShell)
+        let downcomerMetal = c.Loop.Downcomers |> List.filter (fun l -> l.Connected) |> List.sumBy (lineMetalWeight rhoShell)
+        let drumMetal =
+            if c.Loop.Drum.Enabled then
+                let d = c.Loop.Drum
+                Math.PI / 4.0 * ((d.ShellId + 2.0 * c.ShellThickness) ** 2.0 - d.ShellId ** 2.0) * d.Length * rhoShell
+            else 0.0
+        let bypassMetal =
+            if c.Bypass.Enabled then
+                let liner = Math.PI / 4.0 * (c.Bypass.LinerOd ** 2.0 - c.Bypass.LinerId ** 2.0) * c.Tube.Length * densityOf c.Bypass.LinerMaterial
+                let pipe = Math.PI / 4.0 * (c.Bypass.PipeOd ** 2.0 - c.Bypass.InsulOd ** 2.0) * c.Tube.Length * densityOf c.Bypass.PipeMaterial
+                liner + pipe
+            else 0.0
+        let totalMetal = tubeMetal + shellMetal + baffleMetal + ferruleMetal + riserMetal + downcomerMetal + drumMetal + bypassMetal
+
+        let sb = StringBuilder()
+        hdr sb "Water Volume And Metal Weight Summary"
+        sb.AppendLine("  Water volumes are geometric inventories. Riser volume is total internal volume, not separated into liquid/vapor holdup.") |> ignore
+        sb.AppendLine("  Metal weights are estimates. Riser/downcomer pipe OD is inferred from NPS; use vendor MTO values for final weights.") |> ignore
+        sb.AppendLine() |> ignore
+        sb.AppendLine(sprintf "  %-32s %12s %12s" "Water inventory" "m3" "% total") |> ignore
+        sb.AppendLine(sprintf "  %-32s %12s %12s" "WHB shell side" (f3 whbWater) (f1 (100.0 * whbWater / totalWater))) |> ignore
+        sb.AppendLine(sprintf "  %-32s %12s %12s" "Risers" (f3 riserWater) (f1 (100.0 * riserWater / totalWater))) |> ignore
+        sb.AppendLine(sprintf "  %-32s %12s %12s" "Downcomers" (f3 downcomerWater) (f1 (100.0 * downcomerWater / totalWater))) |> ignore
+        sb.AppendLine(sprintf "  %-32s %12s %12s" "Steam drum at normal level" (f3 drumWater) (f1 (100.0 * drumWater / totalWater))) |> ignore
+        sb.AppendLine(sprintf "  %-32s %12s %12s" "TOTAL WATER" (f3 totalWater) "100.0") |> ignore
+        sb.AppendLine() |> ignore
+        sb.AppendLine(sprintf "  %-32s %12s" "Metal component" "kg") |> ignore
+        for name, value in
+            [ "Tubes", tubeMetal
+              "WHB shell", shellMetal
+              "Baffles", baffleMetal
+              "Ferrules", ferruleMetal
+              "Risers", riserMetal
+              "Downcomers", downcomerMetal
+              "Steam drum shell", drumMetal
+              "Bypass liner and pipe", bypassMetal
+              "TOTAL METAL", totalMetal ] do
+            sb.AppendLine(sprintf "  %-32s %12s" name (f0 value)) |> ignore
+        sb.ToString()
+
+    /// <summary>
+    /// Builds a CSV summary of water volumes and estimated metal weights.
+    /// </summary>
+    /// <remarks>
+    /// The CSV table mirrors the text inventory report for spreadsheet checks.
+    /// </remarks>
+    let inventoryCsv (r: DesignResult) =
+        let c = r.Case
+        let rhoTube = densityOf c.Material
+        let rhoShell = densityOf c.ShellMaterial
+        let rhoFerrule = densityOf c.FerruleMaterial
+        let shellInternal = Math.PI / 4.0 * c.Tube.ShellId * c.Tube.ShellId * c.Tube.Length
+        let tubeDisplacement = Math.PI / 4.0 * c.Tube.Do * c.Tube.Do * c.Tube.Length * float c.Tube.NTubes
+        let bypassDisplacement =
+            if c.Bypass.Enabled then Math.PI / 4.0 * c.Bypass.PipeOd * c.Bypass.PipeOd * c.Tube.Length else 0.0
+        let whbWater = max 0.0 (shellInternal - tubeDisplacement - bypassDisplacement)
+        let riserWater = c.Loop.Risers |> List.filter (fun l -> l.Connected) |> List.sumBy lineWaterVolume
+        let downcomerWater = c.Loop.Downcomers |> List.filter (fun l -> l.Connected) |> List.sumBy lineWaterVolume
+        let drumWater = if c.Loop.Drum.Enabled then drumWaterVolume c.Loop.Drum else 0.0
+        let tubeMetal =
+            Math.PI / 4.0 * (c.Tube.Do * c.Tube.Do - c.Tube.Di * c.Tube.Di) * c.Tube.Length * float c.Tube.NTubes * rhoTube
+        let shellMetal =
+            Math.PI / 4.0 * ((c.Tube.ShellId + 2.0 * c.ShellThickness) ** 2.0 - c.Tube.ShellId ** 2.0) * c.Tube.Length * rhoShell
+        let baffleMetal =
+            let count = max 0 (List.length c.BaffleSpans - 1)
+            let gross = Math.PI / 4.0 * c.Tube.BaffleOd * c.Tube.BaffleOd
+            let holes = Math.PI / 4.0 * c.Tube.Do * c.Tube.Do * float c.Tube.NTubes
+            max 0.0 (gross - holes) * c.BaffleThickness * float count * rhoShell
+        let ferruleMetal =
+            if c.Ferrule.Enabled then
+                let length = c.Ferrule.Lengths |> List.sumBy (fun (frac, len) -> frac * len)
+                Math.PI / 4.0 * max 0.0 (c.Ferrule.SleeveOd ** 2.0 - c.Ferrule.Bore ** 2.0) * length * float c.Tube.NTubes * rhoFerrule
+            else 0.0
+        let riserMetal = c.Loop.Risers |> List.filter (fun l -> l.Connected) |> List.sumBy (lineMetalWeight rhoShell)
+        let downcomerMetal = c.Loop.Downcomers |> List.filter (fun l -> l.Connected) |> List.sumBy (lineMetalWeight rhoShell)
+        let drumMetal =
+            if c.Loop.Drum.Enabled then
+                let d = c.Loop.Drum
+                Math.PI / 4.0 * ((d.ShellId + 2.0 * c.ShellThickness) ** 2.0 - d.ShellId ** 2.0) * d.Length * rhoShell
+            else 0.0
+        let bypassMetal =
+            if c.Bypass.Enabled then
+                let liner = Math.PI / 4.0 * (c.Bypass.LinerOd ** 2.0 - c.Bypass.LinerId ** 2.0) * c.Tube.Length * densityOf c.Bypass.LinerMaterial
+                let pipe = Math.PI / 4.0 * (c.Bypass.PipeOd ** 2.0 - c.Bypass.InsulOd ** 2.0) * c.Tube.Length * densityOf c.Bypass.PipeMaterial
+                liner + pipe
+            else 0.0
+        let sb = StringBuilder()
+        sb.AppendLine("section,item,unit,value,note") |> ignore
+        for name, value, note in
+            [ "WHB shell side", whbWater, "Geometric shell-side water volume excluding tubes and bypass pipe"
+              "Risers", riserWater, "Total connected riser internal volume"
+              "Downcomers", downcomerWater, "Total connected downcomer internal volume"
+              "Steam drum at normal level", drumWater, "Liquid volume up to normal level; internals displacement excluded"
+              "TOTAL WATER", whbWater + riserWater + downcomerWater + drumWater, "Total geometric water inventory" ] do
+            sb.AppendLine(sprintf "water,%s,m3,%s,%s" name (f3 value) note) |> ignore
+        for name, value, note in
+            [ "Tubes", tubeMetal, "Exact from tube OD, ID, length, count, and representative density"
+              "WHB shell", shellMetal, "Cylindrical shell estimate"
+              "Baffles", baffleMetal, "Plate estimate excluding tube holes"
+              "Ferrules", ferruleMetal, "Sleeve estimate"
+              "Risers", riserMetal, "Pipe OD inferred from NPS"
+              "Downcomers", downcomerMetal, "Pipe OD inferred from NPS"
+              "Steam drum shell", drumMetal, "Cylindrical shell estimate"
+              "Bypass liner and pipe", bypassMetal, "Liner plus outer pipe estimate"
+              "TOTAL METAL", tubeMetal + shellMetal + baffleMetal + ferruleMetal + riserMetal + downcomerMetal + drumMetal + bypassMetal, "Estimated total metal weight" ] do
+            sb.AppendLine(sprintf "metal,%s,kg,%s,%s" name (f0 value) note) |> ignore
+        sb.ToString()
+
+    /// <summary>
     /// Calculates or returns definizioni for the WHB calculation model.
     /// </summary>
     /// <remarks>

@@ -1294,6 +1294,16 @@ let runCase (case: DesignCase) (outDir: string) =
     File.WriteAllText(Path.Combine(outDir, "pds_comparison.txt"), pdsText)
     File.WriteAllText(Path.Combine(outDir, "pds_comparison.csv"), PdsComparison.csv r)
     printfn "%s" pdsText
+    /// <summary>
+    /// Calculates or returns inventoryText for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// The inventory summary reports partial and total water volumes plus estimated component metal weights.
+    /// </remarks>
+    let inventoryText = Report.inventoryText r
+    File.WriteAllText(Path.Combine(outDir, "inventory_summary.txt"), inventoryText)
+    File.WriteAllText(Path.Combine(outDir, "inventory_summary.csv"), Report.inventoryCsv r)
+    printfn "%s" inventoryText
     File.WriteAllText(Path.Combine(outDir, "celle.csv"), Report.csvCells r)
     File.WriteAllText(Path.Combine(outDir, "profilo_assiale.csv"), Report.csvAxial r)
     File.WriteAllText(Path.Combine(outDir, "tensioni.csv"), Report.csvStress r)

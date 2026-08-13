@@ -177,6 +177,8 @@ Default output is written to `risultati/` unless `--out` is provided.
 | `criticita.txt` | Summary of findings and warnings |
 | `pds_comparison.txt` | Mandatory comparison between app output and available client PDS data |
 | `pds_comparison.csv` | Spreadsheet-ready PDS comparison table |
+| `inventory_summary.txt` | Water-volume and estimated metal-weight summary |
+| `inventory_summary.csv` | Spreadsheet-ready inventory summary |
 | `celle.csv` | One row per calculation cell |
 | `profilo_assiale.csv` | Axial aggregate profile |
 | `tensioni.csv` | Stress/check table |
