@@ -7,8 +7,15 @@ The model is intended for engineering study of WHB units where process gas flows
 inside tubes and boiling water/steam circulates naturally on the shell side with
 an elevated steam drum.
 
-Technical background and correlation notes are in
-[`DOC_correlazioni_e_problematiche.md`](DOC_correlazioni_e_problematiche.md).
+## Documentation Map
+
+- [What the software does](docs/SCOPE.md)
+- [Main assumptions](docs/ASSUMPTIONS.md)
+- [Theory recap](docs/THEORY.md)
+- [Limitations and simplifications](docs/LIMITATIONS.md)
+- [Acronyms and terms](docs/ACRONYMS.md)
+- [Future implementation TODO](docs/TODO.md)
+- [Detailed correlation and issue notes](DOC_correlazioni_e_problematiche.md)
 
 > Warning: this software is an engineering calculation aid, not a certified
 > pressure-vessel, boiler-code or safety-integrity tool. Always review results
