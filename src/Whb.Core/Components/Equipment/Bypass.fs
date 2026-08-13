@@ -4,10 +4,10 @@ open System
 open Constants
 
 /// <summary>
-/// Provides bypass functionality for the WHB calculation model.
+/// Calculates bypass duct thermal performance, wall temperatures, heat loss, and pressure drop.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
 /// </remarks>
 module Bypass =
 
@@ -15,7 +15,7 @@ module Bypass =
     /// Represents spec data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
     /// </remarks>
     type Spec =
         { Enabled: bool
@@ -43,7 +43,7 @@ module Bypass =
     /// Represents node data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
     /// </remarks>
     type Node =
         { Z: float
@@ -62,7 +62,7 @@ module Bypass =
     /// Represents result data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
     /// </remarks>
     type Result =
         { Fraction: float
@@ -82,7 +82,7 @@ module Bypass =
     /// Calculates or returns wallResistance for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
     /// </remarks>
     let private wallResistance (s: Spec) (tLinerC: float) (tPipeC: float) =
         let rLiner = log (s.LinerOd / s.LinerId) / (2.0 * Math.PI * s.LinerMaterial.K tLinerC)
@@ -94,7 +94,7 @@ module Bypass =
     /// Calculates or returns march for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
     /// </remarks>
     let march (s: Spec) (comp: GasProps.Composition) (pIn: float) (z: float) (tIn: float)
               (mixRule: GasProps.MixingRule) (real: bool) (shiftMode: Shift.Mode)
@@ -150,3 +150,5 @@ module Bypass =
             p <- p - GasSide.dpFrictionPerM f s.LinerId props.Rho vel * dzi
         let tOut = fst (Shift.stateFromEnthalpyAt shiftMode real p comp0 h)
         (List.ofSeq nodes, tOut, qTot, pIn - p)
+
+

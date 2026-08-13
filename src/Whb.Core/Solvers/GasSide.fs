@@ -3,10 +3,10 @@ namespace Whb.Core
 open System
 
 /// <summary>
-/// Provides gasside functionality for the WHB calculation model.
+/// Provides gas-side forced-convection, radiation, and pressure-drop correlations for WHB thermal calculations.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
 /// </remarks>
 module GasSide =
 
@@ -14,7 +14,7 @@ module GasSide =
     /// Calculates or returns fblasius for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let fBlasius (re: float) = 0.3164 * Math.Pow(re, -0.25)
 
@@ -22,7 +22,7 @@ module GasSide =
     /// Calculates or returns ffilonenko for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let fFilonenko (re: float) =
         let x = 1.82 * log10 re - 1.64
@@ -32,7 +32,7 @@ module GasSide =
     /// Calculates or returns fcolebrook for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let fColebrook (re: float) (relRough: float) =
         let mutable f = fFilonenko re
@@ -45,7 +45,7 @@ module GasSide =
     /// Calculates or returns flaminar for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let fLaminar (re: float) = 64.0 / re
 
@@ -53,7 +53,7 @@ module GasSide =
     /// Calculates or returns darcyfriction for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let darcyFriction (re: float) (relRough: float) =
         if re < 2300.0 then fLaminar (max 1.0 re)
@@ -64,7 +64,7 @@ module GasSide =
     /// Represents correlation data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     type Correlation =
         | DittusBoelter
@@ -78,7 +78,7 @@ module GasSide =
     /// Calculates or returns correlationname for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let correlationName =
         function
@@ -93,7 +93,7 @@ module GasSide =
     /// Calculates or returns nusseltfd for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let nusseltFD (corr: Correlation) (re: float) (pr: float) (muRatio: float) =
         let ret = max re 1.0
@@ -124,7 +124,7 @@ module GasSide =
     /// Calculates or returns gaspropertycorrection for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let gasPropertyCorrection (tWallK: float) (tBulkK: float) =
         let r = max 0.2 (min 5.0 (tWallK / tBulkK))
@@ -134,7 +134,7 @@ module GasSide =
     /// Calculates or returns entrancecorrection for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let entranceCorrection (x: float) (d: float) (c: float) =
         let xe = max x (2.0 * d)
@@ -144,7 +144,7 @@ module GasSide =
     /// Calculates or returns entrancecorrectionmean for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let entranceCorrectionMean (l: float) (d: float) (c: float) =
         1.0 + c * Math.Pow(d / l, 0.7)
@@ -153,7 +153,7 @@ module GasSide =
     /// Represents gashtcresult data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     type GasHtcResult =
         { Re: float
@@ -171,7 +171,7 @@ module GasSide =
     /// Calculates or returns localhtc for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let localHtc
         (corr: Correlation)
@@ -179,7 +179,7 @@ module GasSide =
         (muWall: float)
         (di: float)
         (mdotPerTube: float)
-        (x: float)                 // ascissa dall'ingresso [m]
+        (x: float)                 // Axial distance from the inlet [m]
         (entranceC: float)
         (tWallK: float)
         (rH2O: float)
@@ -198,7 +198,7 @@ module GasSide =
         let fEnt = entranceCorrection x di entranceC
         let fProp =
             match corr with
-            | SiederTate | Hausen -> 1.0          // già inclusa via (µb/µw)^0.14
+            | SiederTate | Hausen -> 1.0          // Already included through (mub/muw)^0.14
             | _ -> gasPropertyCorrection tWallK props.T
         let nu = nuFD * fEnt * fProp
         let hConv = nu * props.K / di
@@ -213,7 +213,7 @@ module GasSide =
     /// Calculates or returns dpfrictionperm for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let dpFrictionPerM (f: float) (di: float) (rho: float) (vel: float) =
         f / di * rho * vel * vel / 2.0
@@ -222,6 +222,8 @@ module GasSide =
     /// Calculates or returns dplocal for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
     /// </remarks>
     let dpLocal (k: float) (rho: float) (vel: float) = k * rho * vel * vel / 2.0
+
+

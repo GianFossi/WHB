@@ -4,10 +4,10 @@ open System
 open Constants
 
 /// <summary>
-/// Provides drum functionality for the WHB calculation model.
+/// Calculates steam-drum internals, separation velocities, circulation losses, and steam-side pressure drops.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
 /// </remarks>
 module Drum =
 
@@ -15,7 +15,7 @@ module Drum =
     /// Represents internals data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
     /// </remarks>
     type Internals =
         { Enabled: bool
@@ -48,7 +48,7 @@ module Drum =
     /// Represents item data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
     /// </remarks>
     type Item =
         { Label: string
@@ -63,7 +63,7 @@ module Drum =
     /// Represents result data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
     /// </remarks>
     type Result =
         { /// Pressure loss along the circulation path [Pa]; included in the balance.
@@ -87,7 +87,7 @@ module Drum =
     /// Calculates or returns soudersbrown for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
     /// </remarks>
     let soudersBrown (kSb: float) (rhoL: float) (rhoV: float) =
         kSb * sqrt ((rhoL - rhoV) / rhoV)
@@ -96,7 +96,7 @@ module Drum =
     /// Calculates or returns dplocaltwophase for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
     /// </remarks>
     let dpLocalTwoPhase (k: float) (g_: float) (rhoH: float) =
         k * g_ * g_ / (2.0 * rhoH)
@@ -105,7 +105,7 @@ module Drum =
     /// Calculates or returns chisholmsingularity for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
     /// </remarks>
     let chisholmSingularity (b: float) (x: float) (rhoL: float) (rhoV: float) =
         1.0 + (rhoL / rhoV - 1.0) * (b * x * (1.0 - x) + x * x)
@@ -114,7 +114,7 @@ module Drum =
     /// Calculates or returns surfacearea for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
     /// </remarks>
     let surfaceArea (id_: float) (length: float) (level: float) =
         let r = 0.5 * id_
@@ -126,7 +126,7 @@ module Drum =
     /// Calculates or returns ductFriction for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
     /// </remarks>
     let private ductFriction (re: float) (l: float) (dh: float) =
         let f = GasSide.darcyFriction (max 2000.0 re) (5e-5 / dh)
@@ -136,7 +136,7 @@ module Drum =
     /// Calculates or returns solve for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
     /// </remarks>
     let solve (d: Internals) (sat: Steam.SatProps) (wCirc: float) (x: float)
               (wSteam: float) (riserArea: float) (dcArea: float) : Result =
@@ -240,3 +240,5 @@ module Drum =
             [ "La perdita del percorso VAPORE non entra nel bilancio di circolazione: si scarica sulla pressione consegnata in rete."
               "Il modello per le singolarita' bifase e' OMOGENEO: dp = K G²/(2 rho_H). E' la pratica raccomandata per accidentalita' brusche."
               "Se il costruttore fornisce la curva dp-portata delle interne, usarla: e' l'unico dato veramente affidabile." ] }
+
+

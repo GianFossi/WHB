@@ -4,10 +4,10 @@ open System
 open Constants
 
 /// <summary>
-/// Provides steam functionality for the WHB calculation model.
+/// Provides steam and water thermodynamic property calculations for saturation and IF97-style regions.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
 /// </remarks>
 module Steam =
 
@@ -15,7 +15,7 @@ module Steam =
     /// Calculates or returns n4 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private n4 =
         [| 0.11670521452767e4; -0.72421316703206e6; -0.17073846940092e2;
@@ -27,7 +27,7 @@ module Steam =
     /// Calculates or returns psat_mpa for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let psat_MPa (tK: float) =
         let th = tK + n4.[8] / (tK - n4.[9])
@@ -41,7 +41,7 @@ module Steam =
     /// Calculates or returns tsat_k for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let tsat_K (pMPa: float) =
         let beta = pMPa ** 0.25
@@ -55,7 +55,7 @@ module Steam =
     /// Calculates or returns r1 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private r1 =
         [| (0, -2, 0.14632971213167);   (0, -1, -0.84548187169114)
@@ -85,7 +85,7 @@ module Steam =
     /// Calculates or returns reg1 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private reg1 (pMPa: float) (tK: float) =
         let pi = pMPa / 16.53
@@ -115,7 +115,7 @@ module Steam =
     /// Calculates or returns r2j0 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private r2j0 = [| 0; 1; -5; -4; -3; -2; -1; 2; 3 |]
 
@@ -123,7 +123,7 @@ module Steam =
     /// Calculates or returns r2n0 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private r2n0 =
         [| -0.96927686500217e1;  0.10086655968018e2; -0.56087911283020e-2;
@@ -134,7 +134,7 @@ module Steam =
     /// Calculates or returns r2r for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private r2r =
         [| (1, 0,  -0.17731742473213e-2); (1, 1, -0.17834862292358e-1)
@@ -164,7 +164,7 @@ module Steam =
     /// Calculates or returns reg2 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private reg2 (pMPa: float) (tK: float) =
         let pi = pMPa
@@ -203,7 +203,7 @@ module Steam =
     /// Calculates or returns hVisc0 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private hVisc0 = [| 1.67752; 2.20462; 0.6366564; -0.241605 |]
 
@@ -211,7 +211,7 @@ module Steam =
     /// Calculates or returns hVisc1 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private hVisc1 =
         [| (0,0, 5.20094e-1); (1,0, 8.50895e-2); (2,0,-1.08374);    (3,0,-2.89555e-1)
@@ -228,7 +228,7 @@ module Steam =
     /// Calculates or returns viscosity for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let viscosity (tK: float) (rho: float) =
         let tb = tK / Tc_water
@@ -247,7 +247,7 @@ module Steam =
     /// Calculates or returns lam0 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private lam0 = [| 2.443221e-3; 1.323095e-2; 6.770357e-3; -3.454586e-3; 4.096266e-4 |]
 
@@ -255,7 +255,7 @@ module Steam =
     /// Calculates or returns lam1 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let private lam1 =
         array2D
@@ -269,7 +269,7 @@ module Steam =
     /// Calculates or returns conductivity for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let conductivity (tK: float) (rho: float) =
         let tb = tK / Tc_water
@@ -291,7 +291,7 @@ module Steam =
     /// Calculates or returns surfacetension for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let surfaceTension (tK: float) =
         let tau = 1.0 - tK / Tc_water
@@ -302,7 +302,7 @@ module Steam =
     /// Represents satprops data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     type SatProps =
         { P: float          // Pa
@@ -326,7 +326,7 @@ module Steam =
     /// Calculates or returns sat for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let sat (pPa: float) : SatProps =
         let pMPa = pPa / 1.0e6
@@ -360,14 +360,14 @@ module Steam =
     /// Calculates or returns region1 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let region1 (pMPa: float) (tK: float) = reg1 pMPa tK
     /// <summary>
     /// Calculates or returns region2 for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let region2 (pMPa: float) (tK: float) = reg2 pMPa tK
 
@@ -375,7 +375,7 @@ module Steam =
     /// Calculates or returns hliquid for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let hLiquid (pPa: float) (tK: float) =
         let (_, h, _, _) = reg1 (pPa / 1.0e6) tK
@@ -385,8 +385,10 @@ module Steam =
     /// Calculates or returns rholiquid for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
     /// </remarks>
     let rhoLiquid (pPa: float) (tK: float) =
         let (v, _, _, _) = reg1 (pPa / 1.0e6) tK
         1.0 / v
+
+

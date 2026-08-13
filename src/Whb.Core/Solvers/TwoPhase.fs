@@ -4,10 +4,10 @@ open System
 open Constants
 
 /// <summary>
-/// Provides twophase functionality for the WHB calculation model.
+/// Provides two-phase density, void-fraction, slip, and pressure-drop methods for circulation and process calculations.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
 /// </remarks>
 module TwoPhase =
 
@@ -15,7 +15,7 @@ module TwoPhase =
     /// Represents voidmodel data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     type VoidModel =
         | Homogeneous
@@ -27,7 +27,7 @@ module TwoPhase =
     /// Calculates or returns voidmodelname for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let voidModelName =
         function
@@ -40,7 +40,7 @@ module TwoPhase =
     /// Calculates or returns voidfraction for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let voidFraction (model: VoidModel) (x: float) (s: Steam.SatProps) (g_: float) =
         let x = min 0.9999 (max 0.0 x)
@@ -71,7 +71,7 @@ module TwoPhase =
     /// Calculates or returns mixturedensity for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let mixtureDensity (alpha: float) (s: Steam.SatProps) =
         alpha * s.RhoV + (1.0 - alpha) * s.RhoL
@@ -80,7 +80,7 @@ module TwoPhase =
     /// Calculates or returns homogeneousdensity for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let homogeneousDensity (x: float) (s: Steam.SatProps) =
         1.0 / (x / s.RhoV + (1.0 - x) / s.RhoL)
@@ -89,7 +89,7 @@ module TwoPhase =
     /// Represents frictionmodel data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     type FrictionModel =
         | HomogeneousFriction
@@ -101,7 +101,7 @@ module TwoPhase =
     /// Calculates or returns frictionmodelname for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let frictionModelName =
         function
@@ -114,7 +114,7 @@ module TwoPhase =
     /// Calculates or returns martinellixtt for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let martinelliXtt (x: float) (s: Steam.SatProps) =
         let x = min 0.999 (max 1e-6 x)
@@ -126,7 +126,7 @@ module TwoPhase =
     /// Calculates or returns phi2lo for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let phi2LO (model: FrictionModel) (x: float) (g_: float) (d: float) (s: Steam.SatProps) =
         let x = min 0.999 (max 0.0 x)
@@ -171,7 +171,7 @@ module TwoPhase =
     /// Calculates or returns dpfrictiontwophase for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let dpFrictionTwoPhase
         (model: FrictionModel) (x: float) (g_: float) (d: float) (l: float) (s: Steam.SatProps) =
@@ -184,7 +184,7 @@ module TwoPhase =
     /// Calculates or returns dpacceleration for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let dpAcceleration (model: VoidModel) (xIn: float) (xOut: float) (g_: float) (s: Steam.SatProps) =
         let term x =
@@ -198,7 +198,7 @@ module TwoPhase =
     /// Calculates or returns dpstatic for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let dpStatic (model: VoidModel) (x: float) (g_: float) (h: float) (s: Steam.SatProps) =
         let a = voidFraction model x s g_
@@ -208,7 +208,7 @@ module TwoPhase =
     /// Calculates or returns bundlefrictionfactor for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let bundleFrictionFactor (re: float) (a: float) (b: float) (staggered: bool) =
         let re = max 10.0 re
@@ -222,7 +222,7 @@ module TwoPhase =
     /// Calculates or returns dpcrossflow for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let dpCrossflow (re: float) (nRows: float) (gMax: float) (rho: float) (a: float) (b: float) (staggered: bool) =
         let f = bundleFrictionFactor re a b staggered
@@ -232,7 +232,7 @@ module TwoPhase =
     /// Calculates or returns phi2crossflowliquid for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let phi2CrossflowLiquid (x: float) (s: Steam.SatProps) =
         let xtt = martinelliXtt x s
@@ -243,7 +243,7 @@ module TwoPhase =
     /// Calculates or returns dpcrossflowtwophase for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
     /// </remarks>
     let dpCrossflowTwoPhase
         (x: float) (nRows: float) (gMax: float) (s: Steam.SatProps)
@@ -252,3 +252,5 @@ module TwoPhase =
         let reL = max 10.0 (gl * d / s.MuL)
         let dpL = dpCrossflow reL nRows gl s.RhoL a b staggered
         dpL * phi2CrossflowLiquid x s
+
+

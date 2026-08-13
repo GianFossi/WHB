@@ -1,10 +1,10 @@
 namespace Whb.Core.Loads
 
 /// <summary>
-/// Provides loads functionality for the WHB calculation model.
+/// Defines load inputs and load-combination data used by WHB process and mechanical calculations.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Defines process and mechanical load data used by WHB thermal, hydraulic, and structural screening calculations. Keep units, design cases, and load-combination assumptions aligned with the governing project basis.
 /// </remarks>
 module Loads =
 
@@ -12,7 +12,7 @@ module Loads =
     /// Represents loadsource data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Defines process and mechanical load data used by WHB thermal, hydraulic, and structural screening calculations. Keep units, design cases, and load-combination assumptions aligned with the governing project basis.
     /// </remarks>
     type LoadSource = ClientPds | VendorPds | Calculated | Manual
 
@@ -21,7 +21,7 @@ module Loads =
     /// Represents thermalload data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Defines process and mechanical load data used by WHB thermal, hydraulic, and structural screening calculations. Keep units, design cases, and load-combination assumptions aligned with the governing project basis.
     /// </remarks>
     type ThermalLoad =
         { Tag: string
@@ -38,7 +38,9 @@ module Loads =
     /// Represents loadset data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Defines process and mechanical load data used by WHB thermal, hydraulic, and structural screening calculations. Keep units, design cases, and load-combination assumptions aligned with the governing project basis.
     /// </remarks>
     type LoadSet =
         { Name: string; Loads: ThermalLoad list }
+
+

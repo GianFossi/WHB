@@ -4,10 +4,10 @@ open System
 open Constants
 
 /// <summary>
-/// Provides waterside functionality for the WHB calculation model.
+/// Provides water-side boiling, convection, wall-temperature, and hydraulic correlations for WHB thermal calculations.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
 /// </remarks>
 module WaterSide =
 
@@ -15,7 +15,7 @@ module WaterSide =
     /// Represents poolboilingcorrelation data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     type PoolBoilingCorrelation =
         | Mostinski
@@ -28,7 +28,7 @@ module WaterSide =
     /// Calculates or returns poolboilingname for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let poolBoilingName =
         function
@@ -43,7 +43,7 @@ module WaterSide =
     /// Calculates or returns hmostinski for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let hMostinski (q: float) (p: float) (pc: float) =
         let pr = p / pc
@@ -55,7 +55,7 @@ module WaterSide =
     /// Calculates or returns hcooper for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let hCooper (q: float) (p: float) (pc: float) (rp: float) (mMol: float) =
         let pr = max 1e-4 (p / pc)
@@ -69,7 +69,7 @@ module WaterSide =
     /// Calculates or returns hrohsenow for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let hRohsenow (dTe: float) (s: Steam.SatProps) (csf: float) (sExp: float) =
         if dTe <= 0.0 then 0.0
@@ -83,7 +83,7 @@ module WaterSide =
     /// Calculates or returns hgorenflo for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let hGorenflo (q: float) (p: float) (pc: float) (rp: float) =
         let pr = max 1e-4 (min 0.95 (p / pc))
@@ -98,7 +98,7 @@ module WaterSide =
     /// Calculates or returns hcornwellhouston for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let hCornwellHouston (q: float) (d: float) (p: float) (pc: float) (s: Steam.SatProps) =
         let pr = p / pc
@@ -112,7 +112,7 @@ module WaterSide =
     /// Calculates or returns hpool for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let hPool
         (corr: PoolBoilingCorrelation)
@@ -139,7 +139,7 @@ module WaterSide =
     /// Calculates or returns hnaturalconvection for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let hNaturalConvection (d: float) (dT: float) (s: Steam.SatProps) =
         if dT <= 0.0 then 0.0
@@ -157,7 +157,7 @@ module WaterSide =
     /// Calculates or returns bundlefactor for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let bundleFactor (fb: float) = max 1.0 fb
 
@@ -165,7 +165,7 @@ module WaterSide =
     /// Calculates or returns chenf for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let chenF (x: float) (s: Steam.SatProps) =
         let x = min 0.99 (max 1e-4 x)
@@ -180,7 +180,7 @@ module WaterSide =
     /// Calculates or returns chens for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let chenS (reL: float) (f: float) =
         let retp = reL * Math.Pow(f, 1.25)
@@ -190,7 +190,7 @@ module WaterSide =
     /// Calculates or returns hforsterzuber for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let hForsterZuber (dTsat: float) (dPsat: float) (s: Steam.SatProps) =
         if dTsat <= 0.0 then 0.0
@@ -206,7 +206,7 @@ module WaterSide =
     /// Calculates or returns hzukauskas for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let hZukauskas (reMax: float) (pr: float) (prW: float) (k: float) (d: float) (staggered: bool) (stOverSl: float) =
         let c, m =
@@ -222,7 +222,7 @@ module WaterSide =
     /// Calculates or returns shellsidehtc for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let shellSideHtc
         (corr: PoolBoilingCorrelation)
@@ -241,7 +241,7 @@ module WaterSide =
     /// Calculates or returns chfzuber for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let chfZuber (s: Steam.SatProps) =
         0.131 * s.Hfg * Math.Pow(s.RhoV, 0.5)
@@ -251,7 +251,7 @@ module WaterSide =
     /// Calculates or returns chfhorizontaltube for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let chfHorizontalTube (d: float) (s: Steam.SatProps) =
         let lc = sqrt (s.Sigma / (g * (s.RhoL - s.RhoV)))
@@ -266,7 +266,7 @@ module WaterSide =
     /// Calculates or returns chfmostinski for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let chfMostinski (p: float) (pc: float) =
         let pr = p / pc
@@ -277,7 +277,7 @@ module WaterSide =
     /// Calculates or returns palenphib for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let palenPhiB (dBundle: float) (lTube: float) (areaOut: float) =
         if areaOut <= 0.0 then 1.0
@@ -289,7 +289,7 @@ module WaterSide =
     /// Calculates or returns chfbundle for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let chfBundle (dBundle: float) (lTube: float) (areaOut: float) (qCritTube: float) =
         palenPhiB dBundle lTube areaOut * qCritTube
@@ -298,7 +298,7 @@ module WaterSide =
     /// Calculates or returns chflienhardeichhorn for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let chfLienhardEichhorn (d: float) (u: float) (s: Steam.SatProps) =
         let uu = max 0.01 u
@@ -312,7 +312,7 @@ module WaterSide =
     /// Calculates or returns chfqualityderating for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let chfQualityDerating (x: float) (xCrit: float) =
         max 0.1 (1.0 - (max 0.0 x) / (max 1e-3 xCrit))
@@ -321,7 +321,7 @@ module WaterSide =
     /// Represents chfmodel data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     type ChfModel =
         | PalenBundle
@@ -333,7 +333,7 @@ module WaterSide =
     /// Calculates or returns chfmodelname for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let chfModelName =
         function
@@ -346,7 +346,7 @@ module WaterSide =
     /// Calculates or returns chflocal for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let chfLocal (model: ChfModel) (d: float) (u: float) (x: float) (xCrit: float)
                  (phiB: float) (qCritTube: float) (s: Steam.SatProps) =
@@ -361,7 +361,7 @@ module WaterSide =
     /// Calculates or returns dtonb for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let dTonb (q: float) (rc: float) (s: Steam.SatProps) =
         2.0 * s.Sigma * s.Tsat / (s.RhoV * s.Hfg * rc) + q * rc / s.KL
@@ -370,8 +370,10 @@ module WaterSide =
     /// Calculates or returns dtcrit for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
     /// </remarks>
     let dTcrit (corr: PoolBoilingCorrelation) (qCrit: float) (d: float) (s: Steam.SatProps) (rp: float) (csf: float) =
         let h = hPool corr qCrit d s rp csf
         if h <= 0.0 then nan else qCrit / h
+
+

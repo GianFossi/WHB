@@ -5,10 +5,10 @@ open Constants
 open Types
 
 /// <summary>
-/// Provides mechanics functionality for the WHB calculation model.
+/// Provides mechanical and thermoelastic screening calculations for WHB components and tube-bundle loads.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
 /// </remarks>
 module Mechanics =
 
@@ -16,7 +16,7 @@ module Mechanics =
     /// Calculates or returns axialexpansion for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let axialExpansion (mat: Materials.Material) (tRoomK: float) (segments: (float * float) list) =
         let tRoom = kToC tRoomK
@@ -38,7 +38,7 @@ module Mechanics =
     /// Calculates or returns shellmetaltemperature for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let shellMetalTemperature (sat: Steam.SatProps) (tAmbK: float) (uAmb: float)
                               (thk: float) (kShell: float) (hBoil: float) =
@@ -52,7 +52,7 @@ module Mechanics =
     /// Calculates or returns fixedtubesheet for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let fixedTubesheet
         (tubeMat: Materials.Material) (shellMat: Materials.Material)
@@ -106,7 +106,7 @@ module Mechanics =
     /// Calculates or returns nu for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let nu = 0.3
 
@@ -114,7 +114,7 @@ module Mechanics =
     /// Calculates or returns lame for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let lame (pi_: float) (pe: float) (ri: float) (ro: float) (r: float) =
         let d = ro * ro - ri * ri
@@ -128,7 +128,7 @@ module Mechanics =
     /// Calculates or returns thermalgradient for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let thermalGradient (alpha: float) (e: float) (dT: float)
                         (ri: float) (ro: float) (r: float) =
@@ -147,7 +147,7 @@ module Mechanics =
     /// Calculates or returns vonmises for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let vonMises (s1: float) (s2: float) (s3: float) =
         sqrt (0.5 * ((s1 - s2) ** 2.0 + (s2 - s3) ** 2.0 + (s3 - s1) ** 2.0))
@@ -156,7 +156,7 @@ module Mechanics =
     /// Calculates or returns tresca for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let tresca (s1: float) (s2: float) (s3: float) =
         let mx = max s1 (max s2 s3)
@@ -167,7 +167,7 @@ module Mechanics =
     /// Calculates or returns stresspoints for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let stressPoints (pi_: float) (pe: float) (ri: float) (ro: float)
                      (sigmaZmem: float) (alpha: float) (e: float) (dT: float) =
@@ -190,7 +190,7 @@ module Mechanics =
     /// Calculates or returns restrainedsystem for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let restrainedSystem (tRoomK: float) (l: float) (pEnd: float)
                          (members: (string * Materials.Material * float * float * float * float) list) =
@@ -223,7 +223,7 @@ module Mechanics =
     /// Calculates or returns bucklingcheck for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let bucklingCheck (label: string) (mat: Materials.Material) (tEqK: float)
                       (dOut: float) (dIn: float) (span: float)
@@ -277,7 +277,7 @@ module Mechanics =
     /// Calculates or returns regimename for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let regimeName =
         function
@@ -291,7 +291,7 @@ module Mechanics =
     /// Calculates or returns dminforslug for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let dMinForSlug (sat: Steam.SatProps) =
         19.0 * sqrt ((sat.RhoL - sat.RhoV) * sat.Sigma / (sat.RhoL * sat.RhoL * g))
@@ -300,7 +300,7 @@ module Mechanics =
     /// Calculates or returns flowregime for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let flowRegime (sat: Steam.SatProps) (d: float) (jl: float) (jv: float) =
         let j = jl + jv
@@ -321,7 +321,7 @@ module Mechanics =
     /// Calculates or returns checkrisers for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let checkRisers (sat: Steam.SatProps) (lines: (Piping.Line * float) list) (x: float)
                     (rhoV2Max: float) (voidModel: TwoPhase.VoidModel) =
@@ -361,8 +361,10 @@ module Mechanics =
     /// Calculates or returns minsubmergence for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies mechanical and thermoelastic calculations for expansion, stress, support, and load screening. The methods are engineering approximations; confirm allowable stresses, boundary conditions, load combinations, and code requirements before design release.
     /// </remarks>
     let minSubmergence (d: float) (v: float) =
         let fr = v / sqrt (g * d)
         d * (0.5 + 2.3 * fr)
+
+

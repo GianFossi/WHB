@@ -4,10 +4,10 @@ open System
 open Constants
 
 /// <summary>
-/// Provides gasprops functionality for the WHB calculation model.
+/// Provides gas-mixture thermodynamic, transport, radiation, and real-gas property calculations for WHB process models.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
 /// </remarks>
 module GasProps =
 
@@ -15,7 +15,7 @@ module GasProps =
     /// Represents species data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     type Species =
         | H2 | N2 | O2 | CO | CO2 | CH4 | H2O | Ar | NH3
@@ -24,7 +24,7 @@ module GasProps =
     /// Calculates or returns molarmass for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let molarMass =
         function
@@ -36,7 +36,7 @@ module GasProps =
     /// Calculates or returns cpCoef for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let private cpCoef =
         function
@@ -54,7 +54,7 @@ module GasProps =
     /// Calculates or returns sutherland for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let private sutherland =
         function
@@ -72,7 +72,7 @@ module GasProps =
     /// Calculates or returns cpmolar for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let cpMolar (sp: Species) (tK: float) =
         let (a, b, c, d) = cpCoef sp
@@ -82,7 +82,7 @@ module GasProps =
     /// Calculates or returns hform for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let hForm =
         function
@@ -94,7 +94,7 @@ module GasProps =
     /// Calculates or returns hmolar for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let hMolar (sp: Species) (tK: float) =
         let (a, b, c, d) = cpCoef sp
@@ -108,7 +108,7 @@ module GasProps =
     /// Calculates or returns hmolarabs for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let hMolarAbs (sp: Species) (tK: float) = hForm sp + hMolar sp tK
 
@@ -116,7 +116,7 @@ module GasProps =
     /// Calculates or returns mupure for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let muPure (sp: Species) (tK: float) =
         match sp with
@@ -129,7 +129,7 @@ module GasProps =
     /// Calculates or returns kpure for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let kPure (sp: Species) (tK: float) =
         match sp with
@@ -144,7 +144,7 @@ module GasProps =
     /// Represents composition data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     type Composition = (Species * float) list
 
@@ -152,7 +152,7 @@ module GasProps =
     /// Calculates or returns normalize for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let normalize (c: Composition) : Composition =
         let s = c |> List.sumBy snd
@@ -164,7 +164,7 @@ module GasProps =
     /// Calculates or returns mixmolarmass for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let mixMolarMass (c: Composition) =
         c |> List.sumBy (fun (sp, y) -> y * molarMass sp)
@@ -173,7 +173,7 @@ module GasProps =
     /// Provides virial functionality for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     module Virial =
 
@@ -251,7 +251,7 @@ module GasProps =
     /// Calculates or returns departure for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let departure (real: bool) (c: Composition) (tK: float) (pPa: float) =
         if not real then 0.0
@@ -261,7 +261,7 @@ module GasProps =
     /// Calculates or returns phiWilke for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let private phiWilke (mi: float) (mj: float) (mui: float) (muj: float) =
         let a = 1.0 + sqrt (mui / muj) * Math.Pow(mj / mi, 0.25)
@@ -271,7 +271,7 @@ module GasProps =
     /// Represents mixprops data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     type MixProps =
         { T: float          // K
@@ -288,7 +288,7 @@ module GasProps =
     /// Represents mixingrule data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     type MixingRule =
         | Wilke
@@ -298,7 +298,7 @@ module GasProps =
     /// Calculates or returns mixingrulename for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let mixingRuleName = function
         | Wilke -> "Wilke (µ) / Wassiljewa-Mason-Saxena (k)"
@@ -308,7 +308,7 @@ module GasProps =
     /// Calculates or returns mixreal for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let mixReal (rule: MixingRule) (real: bool) (c: Composition) (tK: float) (pPa: float) (z: float) : MixProps =
         let cn = normalize c
@@ -342,7 +342,7 @@ module GasProps =
     /// Calculates or returns mixwith for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let mixWith (rule: MixingRule) (c: Composition) (tK: float) (pPa: float) (z: float) : MixProps =
         mixReal rule false c tK pPa z
@@ -351,7 +351,7 @@ module GasProps =
     /// Calculates or returns mix for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let mix (c: Composition) (tK: float) (pPa: float) (z: float) : MixProps =
         let cn = normalize c
@@ -382,7 +382,7 @@ module GasProps =
     /// Calculates or returns enthalpy for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let enthalpy (c: Composition) (tK: float) =
         let cn = normalize c
@@ -392,7 +392,7 @@ module GasProps =
     /// Calculates or returns temperaturefromenthalpy for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let temperatureFromEnthalpy (c: Composition) (h: float) =
         bisect (fun t -> enthalpy c t - h) 250.0 2500.0 1e-4 200
@@ -401,7 +401,7 @@ module GasProps =
     /// Calculates or returns enthalpyabs for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let enthalpyAbs (c: Composition) (tK: float) =
         let cn = normalize c
@@ -411,7 +411,7 @@ module GasProps =
     /// Calculates or returns enthalpyabsreal for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let enthalpyAbsReal (real: bool) (c: Composition) (tK: float) (pPa: float) =
         let cn = normalize c
@@ -422,7 +422,7 @@ module GasProps =
     /// Calculates or returns molfrac for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let molFrac (c: Composition) (sp: Species) =
         c |> List.tryFind (fun (s, _) -> s = sp) |> Option.map snd |> Option.defaultValue 0.0
@@ -431,7 +431,7 @@ module GasProps =
     /// Calculates or returns gasemissivity for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let gasEmissivity (rH2O: float) (rCO2: float) (pPa: float) (sBeam: float) (tK: float) =
         let rn = rH2O + rCO2
@@ -449,7 +449,7 @@ module GasProps =
     /// Calculates or returns hradiation for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides gas-mixture process properties using ideal and real-gas correlations, mixture rules, radiation factors, and enthalpy calculations. Validate composition normalization, pressure range, temperature range, and species data before using results for final design.
     /// </remarks>
     let hRadiation (epsGas: float) (epsWall: float) (tGasK: float) (tWallK: float) =
         if abs (tGasK - tWallK) < 1e-6 then 0.0
@@ -457,3 +457,5 @@ module GasProps =
             let effWall = 0.5 * (epsWall + 1.0)      // parete grigia in cavità
             let e = epsGas * effWall
             e * sigmaSB * (tGasK ** 4.0 - tWallK ** 4.0) / (tGasK - tWallK)
+
+

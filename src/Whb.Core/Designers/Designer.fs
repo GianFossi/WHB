@@ -3,10 +3,10 @@ namespace Whb.Core.Designers
 open Whb.Core.Optimizer
 
 /// <summary>
-/// Provides designer functionality for the WHB calculation model.
+/// Provides high-level WHB design orchestration over the thermal, process, vibration, and mechanical calculation modules.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Exposes high-level design orchestration for WHB calculations. Results inherit the assumptions and validity limits of the underlying empirical and theoretical correlations.
 /// </remarks>
 module Designer =
 
@@ -15,7 +15,7 @@ module Designer =
     /// Represents designbasis data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Exposes high-level design orchestration for WHB calculations. Results inherit the assumptions and validity limits of the underlying empirical and theoretical correlations.
     /// </remarks>
     type DesignBasis =
         { Name: string
@@ -30,7 +30,7 @@ module Designer =
     /// Represents designcandidate data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Exposes high-level design orchestration for WHB calculations. Results inherit the assumptions and validity limits of the underlying empirical and theoretical correlations.
     /// </remarks>
     type DesignCandidate =
         { Name: string
@@ -40,3 +40,5 @@ module Designer =
           ShellInnerDiameter: float
           Score: float
           Notes: string list }
+
+

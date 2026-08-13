@@ -5,10 +5,10 @@ open Constants
 open Types
 
 /// <summary>
-/// Provides design functionality for the WHB calculation model.
+/// Coordinates WHB process, thermal, hydraulic, vibration, mechanical, and equipment calculations into a design result.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
 /// </remarks>
 module Design =
 
@@ -16,7 +16,7 @@ module Design =
     /// Calculates or returns w for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
     /// </remarks>
     let private w fmt = Printf.kprintf id fmt
 
@@ -24,7 +24,7 @@ module Design =
     /// Calculates or returns sev for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
     /// </remarks>
     let private sev = function Critical -> "CRITICO" | Warning -> "ATTENZIONE" | Note -> "NOTA"
 
@@ -32,7 +32,7 @@ module Design =
     /// Represents private data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
     /// </remarks>
     type private MapPt =
         { X: float
@@ -51,7 +51,7 @@ module Design =
     /// Calculates or returns interpMap for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
     /// </remarks>
     let private interpMap (pts: MapPt list) (sel: MapPt -> float) (x: float) =
         let a = pts |> List.toArray
@@ -67,7 +67,7 @@ module Design =
     /// Calculates or returns invertMap for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
     /// </remarks>
     let private invertMap (pts: MapPt list) (sel: MapPt -> float) (target: float) =
         let f (x: float) = interpMap pts sel x - target
@@ -81,7 +81,7 @@ module Design =
     /// Calculates or returns buildfindings for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
     /// </remarks>
     let buildFindings (case: DesignCase) (sat: Steam.SatProps) (cells: CellResult list)
                       (axial: AxialResult list) (circ: CirculationResult)
@@ -419,7 +419,7 @@ module Design =
     /// Calculates or returns run for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
     /// </remarks>
     let run (caseIn: DesignCase) : DesignResult =
         let allRisers = caseIn.Loop.Risers
@@ -1282,3 +1282,5 @@ module Design =
           UMean = (if lm > 0.0 then out.Duty / (areaOut * lm) else 0.0)
           LmtdMean = lm
           Warnings = warnings }
+
+

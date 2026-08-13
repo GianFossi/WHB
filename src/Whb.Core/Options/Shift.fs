@@ -5,10 +5,10 @@ open Constants
 open GasProps
 
 /// <summary>
-/// Provides shift functionality for the WHB calculation model.
+/// Provides water-gas shift chemistry models used by WHB gas-composition and enthalpy calculations.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Models water-gas shift equilibrium or frozen-composition behavior for process calculations. The selected mode affects gas composition, enthalpy inversion, and thermal balance; confirm equilibrium assumptions against process chemistry requirements.
 /// </remarks>
 module Shift =
 
@@ -16,7 +16,7 @@ module Shift =
     /// Represents mode data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Models water-gas shift equilibrium or frozen-composition behavior for process calculations. The selected mode affects gas composition, enthalpy inversion, and thermal balance; confirm equilibrium assumptions against process chemistry requirements.
     /// </remarks>
     type Mode =
         | Frozen
@@ -27,7 +27,7 @@ module Shift =
     /// Calculates or returns modename for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Models water-gas shift equilibrium or frozen-composition behavior for process calculations. The selected mode affects gas composition, enthalpy inversion, and thermal balance; confirm equilibrium assumptions against process chemistry requirements.
     /// </remarks>
     let modeName =
         function
@@ -40,7 +40,7 @@ module Shift =
     /// Calculates or returns kp for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Models water-gas shift equilibrium or frozen-composition behavior for process calculations. The selected mode affects gas composition, enthalpy inversion, and thermal balance; confirm equilibrium assumptions against process chemistry requirements.
     /// </remarks>
     let kp (tK: float) = exp (4577.8 / tK - 4.33)
 
@@ -48,7 +48,7 @@ module Shift =
     /// Calculates or returns extent for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Models water-gas shift equilibrium or frozen-composition behavior for process calculations. The selected mode affects gas composition, enthalpy inversion, and thermal balance; confirm equilibrium assumptions against process chemistry requirements.
     /// </remarks>
     let private extent (nCO: float) (nH2O: float) (nCO2: float) (nH2: float) (k: float) =
         let a = k - 1.0
@@ -75,7 +75,7 @@ module Shift =
     /// Calculates or returns applyExtent for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Models water-gas shift equilibrium or frozen-composition behavior for process calculations. The selected mode affects gas composition, enthalpy inversion, and thermal balance; confirm equilibrium assumptions against process chemistry requirements.
     /// </remarks>
     let private applyExtent (c: Composition) (xi: float) : Composition =
         let get sp = molFrac c sp
@@ -93,7 +93,7 @@ module Shift =
     /// Calculates or returns equilibrate for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Models water-gas shift equilibrium or frozen-composition behavior for process calculations. The selected mode affects gas composition, enthalpy inversion, and thermal balance; confirm equilibrium assumptions against process chemistry requirements.
     /// </remarks>
     let equilibrate (mode: Mode) (c0: Composition) (tK: float) : Composition =
         match mode with
@@ -114,7 +114,7 @@ module Shift =
     /// Calculates or returns statefromenthalpyat for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Models water-gas shift equilibrium or frozen-composition behavior for process calculations. The selected mode affects gas composition, enthalpy inversion, and thermal balance; confirm equilibrium assumptions against process chemistry requirements.
     /// </remarks>
     let stateFromEnthalpyAt (mode: Mode) (real: bool) (pPa: float) (cIn: Composition) (h: float) =
         let hOf (c: Composition) (t: float) =
@@ -134,7 +134,9 @@ module Shift =
     /// Calculates or returns statefromenthalpy for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Models water-gas shift equilibrium or frozen-composition behavior for process calculations. The selected mode affects gas composition, enthalpy inversion, and thermal balance; confirm equilibrium assumptions against process chemistry requirements.
     /// </remarks>
     let stateFromEnthalpy (mode: Mode) (cIn: Composition) (h: float) =
         stateFromEnthalpyAt mode false 0.0 cIn h
+
+

@@ -5,10 +5,10 @@ open Constants
 open Types
 
 /// <summary>
-/// Provides bundlesolver functionality for the WHB calculation model.
+/// Solves WHB bundle heat transfer, gas cooling, steam generation, wall temperatures, and pressure losses.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
 /// </remarks>
 module BundleSolver =
 
@@ -16,7 +16,7 @@ module BundleSolver =
     /// Calculates or returns ferruleresistance for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
     /// </remarks>
     let ferruleResistance (f: Ferrule) (di: float) (tMeanC: float) =
         if not f.Enabled then 0.0
@@ -33,7 +33,7 @@ module BundleSolver =
     /// Calculates or returns ferruleclasses for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
     /// </remarks>
     let ferruleClasses (f: Ferrule) =
         if not f.Enabled || f.Lengths.IsEmpty then [ (1.0, 0.0) ]
@@ -45,7 +45,7 @@ module BundleSolver =
     /// Calculates or returns shellhtc for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
     /// </remarks>
     let shellHtc (case: DesignCase) (sat: Steam.SatProps) (qOut: float) (x: float) (gCross: float) =
         let t = case.Tube
@@ -64,7 +64,7 @@ module BundleSolver =
     /// Calculates or returns solveCell for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
     /// </remarks>
     let private solveCell
         (case: DesignCase) (sat: Steam.SatProps) (props: GasProps.MixProps)
@@ -121,7 +121,7 @@ module BundleSolver =
     /// Represents solveoutput data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
     /// </remarks>
     type SolveOutput =
         { Cells: CellResult[,,]
@@ -140,7 +140,7 @@ module BundleSolver =
     /// Calculates or returns solve for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
     /// </remarks>
     let solve (case: DesignCase) (bands: Bundle.Band list)
               (wLinField: float[]) (xInField: float[]) : SolveOutput =
@@ -308,3 +308,5 @@ module BundleSolver =
           Classes = classes
           Dz = dzArr
           ZC = zc }
+
+

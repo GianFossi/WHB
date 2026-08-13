@@ -5,10 +5,10 @@ open Constants
 open Types
 
 /// <summary>
-/// Provides nozzles functionality for the WHB calculation model.
+/// Sizes and positions WHB nozzles using process flow, velocity, density, and rho-v-squared limits.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Sizes and positions nozzles using process flow, velocity, density, and allowable rho-v-squared criteria. Treat selections as preliminary engineering checks and verify pipe schedules, connection limits, and vendor or code requirements.
 /// </remarks>
 module Nozzles =
 
@@ -16,7 +16,7 @@ module Nozzles =
     /// Calculates or returns pipetable for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Sizes and positions nozzles using process flow, velocity, density, and allowable rho-v-squared criteria. Treat selections as preliminary engineering checks and verify pipe schedules, connection limits, and vendor or code requirements.
     /// </remarks>
     let pipeTable =
         [ "2\"",   52.50,  49.25,  42.85
@@ -38,7 +38,7 @@ module Nozzles =
     /// Represents schedule data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Sizes and positions nozzles using process flow, velocity, density, and allowable rho-v-squared criteria. Treat selections as preliminary engineering checks and verify pipe schedules, connection limits, and vendor or code requirements.
     /// </remarks>
     type Schedule = Sch40 | Sch80 | Sch160
 
@@ -46,7 +46,7 @@ module Nozzles =
     /// Calculates or returns idOf for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Sizes and positions nozzles using process flow, velocity, density, and allowable rho-v-squared criteria. Treat selections as preliminary engineering checks and verify pipe schedules, connection limits, and vendor or code requirements.
     /// </remarks>
     let private idOf (sch: Schedule) (nps: string, s40, s80, s160) =
         match sch with
@@ -58,7 +58,7 @@ module Nozzles =
     /// Calculates or returns selectpipe for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Sizes and positions nozzles using process flow, velocity, density, and allowable rho-v-squared criteria. Treat selections as preliminary engineering checks and verify pipe schedules, connection limits, and vendor or code requirements.
     /// </remarks>
     let selectPipe (sch: Schedule) (idReq: float) =
         pipeTable
@@ -70,7 +70,7 @@ module Nozzles =
     /// Calculates or returns equaldutypositions for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Sizes and positions nozzles using process flow, velocity, density, and allowable rho-v-squared criteria. Treat selections as preliminary engineering checks and verify pipe schedules, connection limits, and vendor or code requirements.
     /// </remarks>
     let equalDutyPositions (n: int) (zs: float[]) (rate: float[]) =
         let m = zs.Length
@@ -100,7 +100,7 @@ module Nozzles =
     /// Calculates or returns sizeset for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Sizes and positions nozzles using process flow, velocity, density, and allowable rho-v-squared criteria. Treat selections as preliminary engineering checks and verify pipe schedules, connection limits, and vendor or code requirements.
     /// </remarks>
     let sizeSet
         (service: string) (w: float) (rho: float) (vTarget: float)
@@ -141,7 +141,7 @@ module Nozzles =
     /// Calculates or returns staggeredpositions for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Sizes and positions nozzles using process flow, velocity, density, and allowable rho-v-squared criteria. Treat selections as preliminary engineering checks and verify pipe schedules, connection limits, and vendor or code requirements.
     /// </remarks>
     let staggeredPositions (n: int) (riser: float list) (l: float) =
         let sorted = riser |> List.sort
@@ -159,7 +159,7 @@ module Nozzles =
     /// Calculates or returns design for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Sizes and positions nozzles using process flow, velocity, density, and allowable rho-v-squared criteria. Treat selections as preliminary engineering checks and verify pipe schedules, connection limits, and vendor or code requirements.
     /// </remarks>
     let design (case: DesignCase) (sat: Steam.SatProps) (axial: AxialResult list) (circ: CirculationResult) =
         let group (svc: string) (lines: Piping.Line list) (rho: float) (note: string) =
@@ -189,4 +189,6 @@ module Nozzles =
             "Estrazione della miscela; cappello antitrascinamento sopra la bocca."
         @ group "Downcomer (fondo mantello)" case.Loop.Downcomers sat.RhoL
             "Rientro dell'acqua; deflettore per evitare impingement sul fascio."
+
+
 

@@ -5,10 +5,10 @@ open Constants
 open Types
 
 /// <summary>
-/// Provides circulation functionality for the WHB calculation model.
+/// Solves WHB natural-circulation flow distribution using thermal duty, riser/downcomer hydraulics, and two-phase pressure balance.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
 /// </remarks>
 module Circulation =
 
@@ -16,7 +16,7 @@ module Circulation =
     /// Calculates or returns heights for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let heights (case: DesignCase) =
         let l = case.Loop
@@ -28,7 +28,7 @@ module Circulation =
     /// Calculates or returns brancharea for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let branchArea (bs: Piping.Line list) = Piping.totalArea bs
 
@@ -36,7 +36,7 @@ module Circulation =
     /// Calculates or returns branchdescription for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let branchDescription (bs: Piping.Line list) =
         bs |> List.map (fun b -> sprintf "%d x %s %s (ID %.1f mm)" b.Count b.Tag b.Nps (b.Id * 1000.0))
@@ -46,7 +46,7 @@ module Circulation =
     /// Calculates or returns velLiquid for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let private velLiquid (rho: float) (mu: float) (l: Piping.Line) (dp: float) =
         let mutable v = 1.0
@@ -60,7 +60,7 @@ module Circulation =
     /// Calculates or returns dpparallelliquid for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let dpParallelLiquid (bs: Piping.Line list) (rho: float) (mu: float) (wTot: float) =
         let flowAt (dp: float) =
@@ -73,7 +73,7 @@ module Circulation =
     /// Calculates or returns dplinetwophase for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let dpLineTwoPhase (case: DesignCase) (sat: Steam.SatProps) (x: float) (l: Piping.Line) (w: float) =
         let rhoH = TwoPhase.homogeneousDensity x sat
@@ -89,7 +89,7 @@ module Circulation =
     /// Calculates or returns dpparalleltwophase for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let dpParallelTwoPhase (case: DesignCase) (bs: Piping.Line list)
                            (sat: Steam.SatProps) (x: float) (wTot: float) =
@@ -109,7 +109,7 @@ module Circulation =
     /// Calculates or returns lineflows for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let lineFlows (case: DesignCase) (sat: Steam.SatProps) (bs: Piping.Line list)
                   (twoPhase: bool) (x: float) (wTot: float) =
@@ -125,7 +125,7 @@ module Circulation =
     /// Calculates or returns dpdruminternalsdefault for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let dpDrumInternalsDefault = 5000.0
 
@@ -133,7 +133,7 @@ module Circulation =
     /// Calculates or returns dpfieldcolumn for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let dpFieldColumn (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
                       (wLin: float) (steamLin: float) (xIn: float) =
@@ -162,7 +162,7 @@ module Circulation =
     /// Calculates or returns dpfieldfriction for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let dpFieldFriction (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
                         (wLin: float) (steamLin: float) (xIn: float) =
@@ -173,7 +173,7 @@ module Circulation =
     /// Calculates or returns driftvelocity for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let driftVelocity (sat: Steam.SatProps) =
         1.53 * Math.Pow(sat.Sigma * g * (sat.RhoL - sat.RhoV) / (sat.RhoL * sat.RhoL), 0.25)
@@ -182,7 +182,7 @@ module Circulation =
     /// Calculates or returns annulusstate for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let annulusState (sat: Steam.SatProps) (aByp: float) (alphaTop: float) (wLin: float) =
         if wLin >= 0.0 || aByp <= 1e-9 then (sat.RhoL, 0.0, 0.0)
@@ -198,7 +198,7 @@ module Circulation =
     /// Calculates or returns dpAnnulus for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let private dpAnnulus (sat: Steam.SatProps) (aByp: float) (alphaTop: float)
                           (h: float) (wLin: float) =
@@ -211,7 +211,7 @@ module Circulation =
     /// Calculates or returns splitslice for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let splitSlice (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
                    (aByp: float) (wExt: float) (steamLin: float) =
@@ -242,7 +242,7 @@ module Circulation =
     /// Represents distribution data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     type Distribution =
         { WExtLin: float[]
@@ -255,7 +255,7 @@ module Circulation =
     /// Calculates or returns solve for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let solve (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
               (steamLin: float[]) (dzArr: float[]) : Distribution =
@@ -368,7 +368,7 @@ module Circulation =
     /// Calculates or returns axialvelocities for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Combines process heat balance, two-phase hydraulics, and circulation-loop pressure balance calculations. Review the selected correlations, riser/downcomer geometry, saturation properties, and SI-unit basis when interpreting circulation margins.
     /// </remarks>
     let axialVelocities (case: DesignCase) (sat: Steam.SatProps)
                         (axial: AxialResult list) (wExtLin: float[]) (dzArr: float[])
@@ -413,3 +413,5 @@ module Circulation =
                     VelAxialBottom = wB.[i] / (sat.RhoL * aPlenum)
                     VelAxialTop = wT.[i] / (rhoH * aPlenum) })
             |> List.ofArray
+
+

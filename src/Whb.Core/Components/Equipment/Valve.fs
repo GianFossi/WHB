@@ -4,10 +4,10 @@ open System
 open Constants
 
 /// <summary>
-/// Provides valve functionality for the WHB calculation model.
+/// Provides empirical valve-loss, opening, coefficient, and velocity calculations for WHB process sizing.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
 /// </remarks>
 module Valve =
 
@@ -15,7 +15,7 @@ module Valve =
     /// Calculates or returns table for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let private table =
         [ 0.0,  0.20
@@ -38,7 +38,7 @@ module Valve =
     /// Calculates or returns arr for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let private arr = table |> List.toArray
 
@@ -46,7 +46,7 @@ module Valve =
     /// Calculates or returns zetaclosure for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let zetaClosure (alphaDeg: float) =
         let a = max 0.0 alphaDeg
@@ -67,7 +67,7 @@ module Valve =
     /// Calculates or returns zetaopening for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let zetaOpening (openDeg: float) = zetaClosure (90.0 - openDeg)
 
@@ -75,7 +75,7 @@ module Valve =
     /// Calculates or returns closureforzeta for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let closureForZeta (z: float) =
         let zz = max (snd arr.[0]) z
@@ -96,7 +96,7 @@ module Valve =
     /// Calculates or returns openingforzeta for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let openingForZeta (z: float) = 90.0 - closureForZeta z
 
@@ -104,7 +104,7 @@ module Valve =
     /// Calculates or returns zetaflatdisc for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let zetaFlatDisc (thicknessRatio: float) (closureDeg: float) =
         let a = max 0.0 (min 89.9 closureDeg) * Math.PI / 180.0
@@ -118,7 +118,7 @@ module Valve =
     /// Calculates or returns zetaflatdisccalibrated for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let zetaFlatDiscCalibrated (thicknessRatio: float) (closureDeg: float) =
         0.82 * (zetaFlatDisc thicknessRatio closureDeg - 0.20) + 0.20
@@ -127,7 +127,7 @@ module Valve =
     /// Calculates or returns cvfromzeta for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let cvFromZeta (idM: float) (zeta: float) =
         let dIn = idM / 0.0254
@@ -137,7 +137,7 @@ module Valve =
     /// Calculates or returns kvfromzeta for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let kvFromZeta (idM: float) (zeta: float) = cvFromZeta idM zeta / 1.156
 
@@ -145,7 +145,7 @@ module Valve =
     /// Calculates or returns kvrequired for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let kvRequired (wKgS: float) (rho: float) (dpPa: float) =
         let w = wKgS * 3600.0
@@ -155,7 +155,7 @@ module Valve =
     /// Calculates or returns pressuredropratio for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let pressureDropRatio (dpPa: float) (p1Pa: float) = dpPa / p1Pa
 
@@ -163,7 +163,7 @@ module Valve =
     /// Calculates or returns gain for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let gain (openDeg: float) =
         let d = 0.5
@@ -175,7 +175,7 @@ module Valve =
     /// Calculates or returns throatvelocity for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let throatVelocity (dp: float) (rho: float) = sqrt (2.0 * max 0.0 dp / max 1e-6 rho)
 
@@ -183,6 +183,8 @@ module Valve =
     /// Calculates or returns sonic for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Provides empirical valve-loss, opening, flow coefficient, pressure-ratio, and velocity relationships for bypass and process calculations. Confirm valve geometry, calibration data, fluid density, pressure drop, and vendor performance curves before selection.
     /// </remarks>
     let sonic (gamma: float) (mw: float) (tK: float) = sqrt (gamma * R * tK / mw)
+
+

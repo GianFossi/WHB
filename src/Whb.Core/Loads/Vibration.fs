@@ -4,10 +4,10 @@ open System
 open Constants
 
 /// <summary>
-/// Provides vibration functionality for the WHB calculation model.
+/// Provides tube-bundle vibration screening calculations using empirical stability, shedding, damping, and acoustic checks.
 /// </summary>
 /// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
 /// </remarks>
 module Vibration =
 
@@ -15,7 +15,7 @@ module Vibration =
     /// Represents layout data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     type Layout =
         | Triangular30
@@ -27,7 +27,7 @@ module Vibration =
     /// Represents jointtype data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     type JointType =
         | CreviceFreeWeld
@@ -37,7 +37,7 @@ module Vibration =
     /// Calculates or returns jointname for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let jointName =
         function
@@ -48,7 +48,7 @@ module Vibration =
     /// Calculates or returns lambda2of for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let lambda2Of (clampedEnds: int) =
         match clampedEnds with
@@ -60,7 +60,7 @@ module Vibration =
     /// Calculates or returns layoutname for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let layoutName =
         function
@@ -73,7 +73,7 @@ module Vibration =
     /// Calculates or returns connorsk for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let connorsK (lay: Layout) (massDamping: float) =
         match lay with
@@ -85,7 +85,7 @@ module Vibration =
     /// Represents result data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     type Result =
         { Band: int
@@ -113,7 +113,7 @@ module Vibration =
     /// Calculates or returns addedmasscoef for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let addedMassCoef (pitchRatio: float) =
         let de = (0.96 + 0.5 * pitchRatio) * pitchRatio
@@ -124,7 +124,7 @@ module Vibration =
     /// Calculates or returns naturalfrequency for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let naturalFrequency (lambda2: float) (e: float) (i: float) (m: float) (l: float) =
         lambda2 / (2.0 * Math.PI) * sqrt (e * i / (m * Math.Pow(l, 4.0)))
@@ -133,7 +133,7 @@ module Vibration =
     /// Calculates or returns inertia for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let inertia (dOut: float) (dIn: float) =
         Math.PI / 64.0 * (Math.Pow(dOut, 4.0) - Math.Pow(dIn, 4.0))
@@ -142,7 +142,7 @@ module Vibration =
     /// Calculates or returns criticalvelocity for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let criticalVelocity (k: float) (fn: float) (d: float) (m: float)
                          (delta: float) (rho: float) =
@@ -152,7 +152,7 @@ module Vibration =
     /// Calculates or returns strouhal for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let strouhal (pitchRatio: float) =
         max 0.2 (min 0.6 (0.85 / pitchRatio - 0.13))
@@ -161,7 +161,7 @@ module Vibration =
     /// Calculates or returns buffetfrequency for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let buffetFrequency (v: float) (d: float) (pitch: float) =
         let r = 1.0 - d / pitch
@@ -171,7 +171,7 @@ module Vibration =
     /// Calculates or returns check for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let check (band: int) (y: float) (span: float) (lambda2: float)
               (layout: Layout) (delta: float)
@@ -215,7 +215,7 @@ module Vibration =
     /// Calculates or returns maxspan for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let maxSpan (limit: float) (r: Result) =
         r.Span * sqrt (limit / max 1e-9 r.FeiRatio)
@@ -224,7 +224,7 @@ module Vibration =
     /// Calculates or returns maxspanwith for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let maxSpanWith (limit: float) (kNew: float) (deltaNew: float) (r: Result) =
         let scale = (kNew / r.KConnors) * sqrt (deltaNew / r.Delta)
@@ -234,7 +234,9 @@ module Vibration =
     /// Calculates or returns ratiowith for the WHB calculation model.
     /// </summary>
     /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// Applies empirical and theoretical vibration checks for tube bundles, including shedding, acoustic, turbulence, damping, and frequency estimates. Use as screening analysis and validate against project criteria, vendor data, and applicable heat-exchanger standards.
     /// </remarks>
     let ratioWith (kNew: float) (deltaNew: float) (r: Result) =
         r.FeiRatio / ((kNew / r.KConnors) * sqrt (deltaNew / r.Delta))
+
+
