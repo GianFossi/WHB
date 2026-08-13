@@ -2,6 +2,19 @@
 
 This list records candidate improvements for later WHB versions.
 
+## Thermal Precision Improvement Status
+
+| Improvement | Current status |
+|---|---|
+| Adaptive bypass map | Implemented. `calculation.bypassMapMode` supports `adaptive`, `fast`, `full`, and `fixed`. Adaptive mode starts from the useful base points and adds points until the target mixed temperature is bracketed or `calculation.bypassTargetToleranceK` is met. |
+| Gas/property calculation cache | Partially implemented. `calculation.gasPropertyCache` reuses repeated `GasProps.mixReal` evaluations during one design run. Local tabulation for shift calculations and inverse enthalpy remains future work. |
+| Separate tube-bundle solve and bypass solve | Not fully implemented. The adaptive bypass map reduces unnecessary complete solves, but a validated surrogate/interpolation between few full bundle solves is still future work. |
+| Explicit convergence tolerances | Partially implemented. `calculation.bypassTargetToleranceK` is used for bypass targeting and `calculation.dutyToleranceFraction` is reserved for regression/report acceptance checks. Additional tolerances for outlet gas temperature, circulation and steam production remain future work. |
+| Correlation validity checks | Partially implemented. Current findings cover gas Reynolds number, gas Prandtl number and ideal-gas use at high pressure. Additional checks for vapor quality, pressure, heat flux, mass flux, boiling and two-phase methods remain future work. |
+| More validated radiation model | Not implemented as a new model. Future work should improve gas emissivity, optical path length, CO2/H2O pressure broadening and local wall emissivity handling. |
+| Complete steam/water properties | Not implemented in this increment. Region-3 and high-pressure coverage, with explicit out-of-range warnings, remain future work. |
+| Published/vendor benchmark campaign | Partially covered by existing regression tests. Extended heat-transfer, pressure-drop, boiling, circulation and bypass benchmarks against published or vendor examples remain future work. |
+
 ## Validation
 
 - Add additional regression tests against independent published heat-transfer and pressure-drop examples.
