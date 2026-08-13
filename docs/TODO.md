@@ -58,7 +58,9 @@ This list records candidate improvements for later WHB versions.
 
 - Improve the CLI progress/status bar so it clearly shows the current
   calculation phase, a stable progress estimate, and a second line below the
-  bar with the task currently being executed.
+  bar with the task currently being executed. Add a classic rotating spinner
+  indicator so the user can see that the calculation is still alive even when
+  the percentage does not change for several seconds.
 - Add machine-readable JSON output for integration with other tools.
 - Add richer CSV exports for audit trails.
 - Add versioned input schema documentation.
