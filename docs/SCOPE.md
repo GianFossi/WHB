@@ -5,11 +5,12 @@ WHB is an F#/.NET calculation tool for preliminary and diagnostic engineering st
 ## Main Workflow
 
 1. Read a built-in or JSON-defined WHB case.
-2. Calculate gas and water/steam properties.
-3. Solve bundle heat transfer and pressure drop.
-4. Solve natural circulation and two-phase behavior.
-5. Evaluate bypass, drum, nozzle, vibration, and mechanical diagnostics.
-6. Generate text, CSV, and HTML reports, including mandatory client PDS
+2. Run preflight checks on active WHB processes, case readability, output/log/temp write access, and available disk space.
+3. Calculate gas and water/steam properties.
+4. Solve bundle heat transfer and pressure drop.
+5. Solve natural circulation and two-phase behavior.
+6. Evaluate bypass, drum, nozzle, vibration, and mechanical diagnostics.
+7. Generate text, CSV, and HTML reports, including mandatory client PDS
    comparison and water/metal inventory summaries.
 
 ## Main Results

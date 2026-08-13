@@ -86,10 +86,19 @@ diagnostics for CLI runs:
 |---|---|
 | `folders.resultsFolder` | Default output folder when `--out` is not supplied. |
 | `folders.tempFolder` | Folder for temporary/service files and preflight probes. |
+| `folders.casesFolder` | Default folder convention for case files used by local workflow. |
+| `folders.databasesFolder` | Folder convention for local property/reference databases. |
+| `folders.reportsFolder` | Folder convention for report templates or exported report material. |
+| `folders.packagesFolder` | Folder convention for local package artifacts. |
 | `logging.enabled` | Enables or disables timestamped phase logging. |
 | `logging.logFile` | Log file path used when phase logging is enabled. |
 | `reporting.generateFullReport` | Writes `report.txt`, the complete engineering report. |
 | `reporting.generateHtmlReport` | Writes `report.html`, the complete self-contained HTML report. |
+| `calculation.useRealGas` | Legacy compatibility switch; newer files should prefer `gas.modello_gas`. |
+| `calculation.axialSections` | Default axial grid section count for generated workflows/options. |
+| `calculation.verticalBands` | Default vertical band count for generated workflows/options. |
+| `calculation.parallelism` | Suggested CPU parallelism for calculation phases where supported. |
+| `calculation.strictValidation` | Enables stricter input/consistency checks in operational workflow. |
 | `calculation.bypassMapMode` | `adaptive`, `fast`, `full`, or `fixed`; controls bypass-map precision/performance. |
 | `calculation.bypassTargetToleranceK` | Temperature tolerance used by adaptive bypass targeting. |
 | `calculation.dutyToleranceFraction` | Reserved duty tolerance for regression/report acceptance checks. |

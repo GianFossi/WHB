@@ -64,7 +64,8 @@ This list records candidate improvements for later WHB versions.
 - Add machine-readable JSON output for integration with other tools.
 - Add richer CSV exports for audit trails.
 - Add versioned input schema documentation.
-- Add examples for NuGet library use and CLI use.
+- Expand the existing README NuGet and CLI examples with additional end-to-end
+  sample datasets and expected output snippets.
 - Add configurable client PDS comparison data instead of relying only on the built-in reference values.
 - Add explicit pipe OD / wall-thickness input for material take-off accuracy.
 

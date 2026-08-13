@@ -102,6 +102,39 @@ Run internal correlation checks:
 dotnet run --project src/Whb.Cli -- --selftest
 ```
 
+## Examples
+
+Generate both input templates:
+
+```bash
+dotnet run --project src/Whb.Cli -- --template my-case.json
+dotnet run --project src/Whb.Cli -- --options-template my-options.json
+```
+
+Run the reference case with explicit options and output folder:
+
+```bash
+dotnet run --project src/Whb.Cli -- --options whb.options.json --out results/reference
+```
+
+Run a custom case and store outputs in a dedicated folder:
+
+```bash
+dotnet run --project src/Whb.Cli -- my-case.json --options whb.options.json --out results/my-case
+```
+
+Generate partial-load curves from a case file:
+
+```bash
+dotnet run --project src/Whb.Cli -- --carichi my-case.json --out results/load-curves
+```
+
+Check installed correlations and reference values:
+
+```bash
+dotnet run --project src/Whb.Cli -- --selftest
+```
+
 ## CLI Commands
 
 ```text
@@ -230,15 +263,22 @@ The built-in `--selftest` command checks:
 - selected gas-property values for air and the reference syngas mixture;
 - real-gas virial correction traces used by the gas model.
 
-The repository test suite currently covers core numerical utilities, unit
-conversions, grid generation, piping geometry helpers, material lookup,
-heat-transfer behavior, two-phase multipliers, validation tables and reporting
-contracts.
+The repository test suite currently covers 21 tests across core numerical
+utilities, unit conversions, grid generation, piping geometry helpers, material
+lookup, heat-transfer behavior, two-phase multipliers, validation tables and
+reporting contracts.
 
 Run:
 
 ```powershell
 .\build.ps1 -Task Test
+```
+
+Or directly with `dotnet`:
+
+```bash
+dotnet build WhbDesign.sln -c Release
+dotnet test WhbDesign.sln -c Release
 ```
 
 ## Reference Case Check
