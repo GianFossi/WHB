@@ -14,6 +14,7 @@ an elevated steam drum.
 - [Theory recap](docs/THEORY.md)
 - [Limitations and simplifications](docs/LIMITATIONS.md)
 - [Acronyms and terms](docs/ACRONYMS.md)
+- [Validation and regression benchmarks](docs/VALIDATION.md)
 - [Future implementation TODO](docs/TODO.md)
 - [Detailed correlation and issue notes](DOC_correlazioni_e_problematiche.md)
 
