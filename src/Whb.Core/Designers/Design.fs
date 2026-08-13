@@ -421,7 +421,9 @@ module Design =
     /// <remarks>
     /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
     /// </remarks>
-    let run (caseIn: DesignCase) : DesignResult =
+    let runWithProgress (reportProgress: string -> unit) (caseIn: DesignCase) : DesignResult =
+        let phase text = reportProgress text
+        phase "Preparing connected risers, downcomers, steam properties, and tube bands"
         let allRisers = caseIn.Loop.Risers
         let allDowncomers = caseIn.Loop.Downcomers
         let case =
@@ -525,8 +527,23 @@ module Design =
               TValve = tV }
         let xGrid =
             if not case.Bypass.Enabled then [ 0.0 ]
-            else [ 0.0; 0.003; 0.006; 0.010; 0.015; 0.021; 0.030; 0.045; 0.065; 0.090; 0.125; 0.170 ]
-        let pmap = xGrid |> List.map mapPoint
+            elif case.Bypass.ValveOpenDeg.IsSome then
+                [ 0.0; 0.003; 0.006; 0.010; 0.015; 0.021; 0.030; 0.045; 0.065; 0.090; 0.125; 0.170 ]
+            else
+                match case.Bypass.Fraction with
+                | Some f ->
+                    [ 0.0; 0.5 * f; f; min 0.170 (1.5 * f); min 0.170 (f + 0.015) ]
+                    |> List.map (fun x -> Math.Round(max 0.0 (min 0.170 x), 6))
+                    |> List.distinct
+                    |> List.sort
+                | None ->
+                    [ 0.0; 0.006; 0.010 ]
+        phase "Evaluating bypass map and coupled thermal/circulation points"
+        let pmap =
+            xGrid
+            |> List.map (fun x ->
+                phase (sprintf "Evaluating bypass map point x = %.3f" x)
+                mapPoint x)
 
         let qDyn (x: float) =
             let rho = max 1e-3 (interpMap pmap (fun p -> p.RhoValve) x)
@@ -560,17 +577,9 @@ module Design =
                     | Some f -> max 0.0 (min 0.5 f)
                     | None ->
                         if (List.head pmap).TMix >= case.Bypass.TargetMixOut then 0.0
-                        else
-                            let x0 = invertMap pmap (fun p -> p.TMix) case.Bypass.TargetMixOut
-                            let lo = max 0.0 (x0 - 0.004)
-                            let hi = min 0.35 (x0 + 0.004)
-                            let f (x: float) =
-                                let (tm, _, _, _) = evaluate x
-                                tm - case.Bypass.TargetMixOut
-                            if f lo >= 0.0 then lo
-                            elif f hi <= 0.0 then hi
-                            else bisect f lo hi 1e-5 12
+                        else invertMap pmap (fun p -> p.TMix) case.Bypass.TargetMixOut
 
+        phase "Solving final coupled thermal and natural-circulation case"
         let (tMixed, out, dist, bpRes) = evaluate xUsed
         let circ = dist.Global
         let axial0 =
@@ -608,6 +617,7 @@ module Design =
         let tRoom = case.AssemblyTemperature
         let segsFor (ci: int) (j: int) =
             [ for i in 0 .. nz - 1 -> (out.Dz.[i], out.Cells.[i, j, ci].TMetalWallAvg) ]
+        phase "Calculating expansion, tubesheet loads, and mechanical stresses"
         let allExp =
             [ for ci in 0 .. ncls - 1 do
                 for j in 0 .. ny - 1 ->
@@ -942,6 +952,7 @@ module Design =
                   "Pressione esterna: i diaframmi di supporto lavorano come anelli di irrigidimento. Il gioco foro/tubo e' di 0.40 mm sul diametro (0.20 mm radiali), cioe' lo 0.5 % del raggio: il vincolo radiale e' effettivo e l'ipotesi e' confermata."
                   "Il carico di estremita' di pressione presuppone l'apparecchio CHIUSO alle due estremita' e privo di giunto di dilatazione sul mantello." ] }
 
+        phase "Calculating CHF, fouling, and correlation sensitivity cases"
         let hotCells = cells |> List.filter (fun c -> not c.InFerrule)
         let cellDnb = hotCells |> List.minBy (fun c -> c.DNBR)
         let cellQmax = hotCells |> List.maxBy (fun c -> c.QFluxOut)
@@ -1061,6 +1072,7 @@ module Design =
                     z <- z1 + case.BaffleThickness
                     (z0, z1, sp) ]
         let nSpans = List.length spanRanges
+        phase "Running vibration screening over tube bands and support spans"
         let vibrationAll =
             [ for (si, (z0, z1, sp)) in List.indexed spanRanges do
                 let clamped =
@@ -1082,6 +1094,7 @@ module Design =
         let vibration =
             [ for j in 0 .. ny - 1 ->
                 vibrationAll |> List.filter (fun v -> v.Band = j) |> List.maxBy (fun v -> v.FeiRatio) ]
+        phase "Running maldistribution sensitivity campaign"
         let maldist =
             let jb = cellDnb.J
             let wTube0 = wGasTot * (1.0 - xUsed) / float t.NTubes
@@ -1131,6 +1144,7 @@ module Design =
                   QFluxMax = qMax; ZQMax = zMax; TMetalInMax = tmiMax
                   TGasOut = tOut; DNBRMin = dnbMin; DutyTube = duty } ]
 
+        phase "Calculating transient dry-out screening and water inventory basis"
         let transient =
             let aMetal = Math.PI / 4.0 * (t.Do * t.Do - t.Di * t.Di)
             let mMetal = 7850.0 * aMetal
@@ -1181,6 +1195,7 @@ module Design =
                   "Si distinguono DUE scenari. (1) PERDITA DI ACQUA ALIMENTO con circolazione attiva: e' disponibile tutto l'inventario, mantello piu' corpo cilindrico, perche' i downcomer continuano a scendere per gravita'. (2) BLOCCO DELLA CIRCOLAZIONE con downcomer ostruiti: resta il solo inventario del mantello, ed e' il caso severo."
                   "La temperatura di equilibrio dopo il dry-out assume raffreddamento per solo vapore con h = 800 W/(m2 K): valore indicativo, il transitorio reale dipende dalla portata residua." ] }
 
+        phase "Checking risers, downcomers, findings, and final result tables"
         let riserFlows = Circulation.lineFlows case sat case.Loop.Risers true circ.XOutRiser circ.CircFlow
         let dcFlows = Circulation.lineFlows case sat case.Loop.Downcomers false 0.0 circ.CircFlow
         let riserChecks =
@@ -1282,5 +1297,14 @@ module Design =
           UMean = (if lm > 0.0 then out.Duty / (areaOut * lm) else 0.0)
           LmtdMean = lm
           Warnings = warnings }
+
+    /// <summary>
+    /// Runs the complete WHB design calculation without progress callbacks.
+    /// </summary>
+    /// <remarks>
+    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Use <c>runWithProgress</c> when the caller needs phase-level diagnostics.
+    /// </remarks>
+    let run (caseIn: DesignCase) : DesignResult =
+        runWithProgress ignore caseIn
 
 

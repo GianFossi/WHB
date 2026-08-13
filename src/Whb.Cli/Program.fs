@@ -243,7 +243,7 @@ module Progress =
         let remainingText =
             match remaining with
             | Some value -> formatDuration value
-            | None -> "estimating"
+            | None -> "running longer than expected"
         let line1 = sprintf "%s %s" header (bar fraction)
         let line2 = sprintf "Running: %s" description
         let line3 = sprintf "Elapsed: %s | Estimated remaining: %s" (formatDuration elapsed) remainingText
@@ -259,7 +259,7 @@ module Progress =
     /// <remarks>
     /// The calculation itself remains unchanged; the progress estimate is time based and intended as user feedback, not a solver convergence metric.
     /// </remarks>
-    let runWithStatus<'T> (description: string) (estimatedSeconds: float) (work: unit -> 'T) =
+    let runWithStatusDynamic<'T> (description: unit -> string) (estimatedSeconds: float) (work: unit -> 'T) =
         let estimate = TimeSpan.FromSeconds(max 1.0 estimatedSeconds)
         use finished = new ManualResetEventSlim(false)
         let sw = Diagnostics.Stopwatch.StartNew()
@@ -271,15 +271,25 @@ module Progress =
             let elapsed = sw.Elapsed
             let fraction = min 0.98 (elapsed.TotalSeconds / estimate.TotalSeconds)
             let remaining =
-                if fraction > 0.0 then Some(TimeSpan.FromSeconds(max 0.0 (estimate.TotalSeconds - elapsed.TotalSeconds)))
+                if elapsed <= estimate && fraction > 0.0 then
+                    Some(TimeSpan.FromSeconds(max 0.0 (estimate.TotalSeconds - elapsed.TotalSeconds)))
                 else None
-            render "WHB status" description fraction elapsed remaining
+            render "WHB status" (description()) fraction elapsed remaining
             finished.Wait(TimeSpan.FromMilliseconds(500.0)) |> ignore
         sw.Stop()
         if not Console.IsOutputRedirected then
             Console.SetCursorPosition(0, Console.CursorTop + 2)
-        render "WHB status" description 1.0 sw.Elapsed (Some TimeSpan.Zero)
+        render "WHB status" (description()) 1.0 sw.Elapsed (Some TimeSpan.Zero)
         task.GetAwaiter().GetResult()
+
+    /// <summary>
+    /// Runs a calculation while showing a fixed task description.
+    /// </summary>
+    /// <remarks>
+    /// Use <c>runWithStatusDynamic</c> when the operation can report phase-level diagnostics.
+    /// </remarks>
+    let runWithStatus<'T> (description: string) (estimatedSeconds: float) (work: unit -> 'T) =
+        runWithStatusDynamic (fun () -> description) estimatedSeconds work
 
 
 /// <summary>
@@ -1306,11 +1316,13 @@ let runCase (case: DesignCase) (outDir: string) =
     /// <remarks>
     /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
     /// </remarks>
+    let currentTask =
+        ref "Starting design run"
     let r =
-        Progress.runWithStatus
-            "Design run: thermal, hydraulic, bypass, vibration, mechanical, report-preparation calculations"
+        Progress.runWithStatusDynamic
+            (fun () -> currentTask.Value)
             25.0
-            (fun () -> Design.run case)
+            (fun () -> Design.runWithProgress (fun text -> currentTask.Value <- text) case)
     sw.Stop()
     /// <summary>
     /// Calculates or returns rep for the WHB calculation model.
@@ -1319,7 +1331,6 @@ let runCase (case: DesignCase) (outDir: string) =
     /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
     /// </remarks>
     let rep = Report.text r
-    printfn "%s" rep
     File.WriteAllText(Path.Combine(outDir, "report.txt"), rep)
     /// <summary>
     /// Calculates or returns syn for the WHB calculation model.
@@ -1329,7 +1340,6 @@ let runCase (case: DesignCase) (outDir: string) =
     /// </remarks>
     let syn = Report.synthesis r
     File.WriteAllText(Path.Combine(outDir, "criticita.txt"), syn)
-    printfn "%s" syn
     /// <summary>
     /// Calculates or returns pdsText for the WHB calculation model.
     /// </summary>
@@ -1339,7 +1349,6 @@ let runCase (case: DesignCase) (outDir: string) =
     let pdsText = PdsComparison.text r
     File.WriteAllText(Path.Combine(outDir, "pds_comparison.txt"), pdsText)
     File.WriteAllText(Path.Combine(outDir, "pds_comparison.csv"), PdsComparison.csv r)
-    printfn "%s" pdsText
     /// <summary>
     /// Calculates or returns inventoryText for the WHB calculation model.
     /// </summary>
@@ -1349,7 +1358,6 @@ let runCase (case: DesignCase) (outDir: string) =
     let inventoryText = Report.inventoryText r
     File.WriteAllText(Path.Combine(outDir, "inventory_summary.txt"), inventoryText)
     File.WriteAllText(Path.Combine(outDir, "inventory_summary.csv"), Report.inventoryCsv r)
-    printfn "%s" inventoryText
     File.WriteAllText(Path.Combine(outDir, "celle.csv"), Report.csvCells r)
     File.WriteAllText(Path.Combine(outDir, "profilo_assiale.csv"), Report.csvAxial r)
     File.WriteAllText(Path.Combine(outDir, "tensioni.csv"), Report.csvStress r)
@@ -1357,6 +1365,8 @@ let runCase (case: DesignCase) (outDir: string) =
     File.WriteAllText(Path.Combine(outDir, "maldistribuzione.txt"), Report.maldistributionText r)
     File.WriteAllText(Path.Combine(outDir, "vibrazioni.txt"), Report.vibrationText r)
     File.WriteAllText(Path.Combine(outDir, "report.html"), HtmlReport.build r)
+    printfn "%s" syn
+    printfn "%s" pdsText
     printfn "Calcolo completato in %.1f s. File scritti in: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
     0
 
