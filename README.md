@@ -224,6 +224,8 @@ checked against the available client PDS data.
 
 - Do not use results as the sole basis for pressure-part design, relief-system
   sizing, trip settings, warranty guarantees or code compliance.
+- Operating pressures are absolute (`bara` in inputs and reports where marked);
+  pressure drops are differential values.
 - Material properties are indicative and must be checked against the governing
   code edition, material certificates and design temperature range.
 - Correlations may be outside their original experimental range for unusual

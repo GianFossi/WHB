@@ -33,5 +33,8 @@
 | kg/s | Kilogram per second |
 | Pa | Pascal |
 | bar | Pressure unit equal to 100,000 Pa |
+| bara | Bar absolute; pressure referenced to vacuum |
+| barg | Bar gauge; pressure referenced to local atmospheric pressure |
+| mbar | Millibar; used mainly for differential pressure drops in this project |
 | degC | Degree Celsius |
 | K | Kelvin |

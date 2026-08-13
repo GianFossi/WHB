@@ -14,8 +14,10 @@ This document summarizes the main engineering assumptions used by WHB.
 
 - Internal calculations use SI units.
 - Temperatures are generally handled in kelvin inside the calculation model.
-- Pressures are generally handled in pascal inside the calculation model.
-- CLI input and report values may expose common engineering units such as degC, bar, mm, kg/h, and MW.
+- Operating and thermodynamic pressures are handled as absolute pressures in pascal inside the calculation model.
+- Pressure drops are handled as differential pressures in pascal.
+- CLI input names using `bara` are absolute pressures in bar. Reported pressure drops in `bar`, `mbar`, or `Pa` are differential values unless explicitly marked as absolute.
+- CLI input and report values may expose common engineering units such as degC, bara, bar, mbar, mm, kg/h, and MW.
 
 ## Process Basis
 
