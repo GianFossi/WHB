@@ -58,6 +58,25 @@ and must be validated for final design use.
 - Ferrule fields also drive the ferrule component pressure-drop estimate and the
   radial insulation-paper thickness check.
 
+### Drum Calm-Box Fields
+
+| Field | Meaning |
+|---|---|
+| `drum.calm_box_n` | Number of calm boxes or equivalent internal channels. |
+| `drum.calm_box_risers_per_box` | Number of risers attached to each calm box for reporting and sizing context. |
+| `drum.calm_box_area_m2` | Flow area through each calm box. |
+| `drum.calm_box_lunghezza_m` | Effective calm-box transit length. |
+| `drum.calm_box_dh_m` | Hydraulic diameter for calm-box friction. |
+| `drum.calm_box_top_opening_m2` | Top opening or outlet-window area for each calm box. |
+| `drum.calm_box_opening_above_level` | `true` when the opening discharges above normal water level. |
+| `drum.calm_box_k_extra` | Extra local-loss coefficient for internal frames, transitions and non-ideal geometry. |
+| `drum.calm_box_waterfall_m` | Water-fall height from the calm-box top opening to drum water level. |
+| `drum.downcomer_entry_area_m2` | Downcomer entry area; `0.0` uses the connected downcomer flow area. |
+| `drum.downcomer_vortex_breaker_k` | Minor-loss coefficient for water entering the downcomer with vortex breaker. |
+
+Backward-compatible Italian `convogliatore` / `canale` fields are still accepted,
+but new input files should prefer the `calm_box_*` names.
+
 ## Generated Output Contracts
 
 Every normal run writes:

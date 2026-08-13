@@ -144,7 +144,9 @@ to your release process. This repository currently builds the CLI from source.
 - Shell-side boiling model with local heat flux, void fraction and circulation
   diagnostics.
 - Natural-circulation loop model with downcomer/riser branch losses.
-- Steam drum and drum-internals pressure-drop representation.
+- Steam drum and drum-internals pressure-drop representation, including
+  preliminary calm-box sizing, top-opening/waterfall losses, and downcomer
+  entry loss with vortex breaker.
 - Internal bypass model with mixing temperature and valve-position checks.
 - Water-gas shift modes: frozen, equilibrium above a freeze temperature, and
   fractional approach.
@@ -174,6 +176,8 @@ The code can estimate:
 - gas-side and water-side pressure losses;
 - bypass fraction, mixed outlet temperature and valve opening;
 - riser/downcomer velocities and `rho v^2`;
+- calm-box hydraulic losses for riser discharge, box transit, outlet opening,
+  water fall and downcomer entry;
 - tube vibration margins and load diagnostics;
 - partial and total water inventory in the WHB shell, risers, downcomers and
   steam drum;

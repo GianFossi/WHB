@@ -2,7 +2,7 @@
 
 These tables describe the regression tests used by the repository. They are not a replacement for independent engineering validation, but they make numerical drift visible during development.
 
-The current automated suite contains 17 tests.
+The current automated suite contains 20 tests.
 
 ## Heat Transfer And Pressure Drop
 
@@ -33,6 +33,13 @@ The ferrule component test campaign checks that:
 - ferrule pressure-drop estimate is positive for the reference geometry;
 - insulation paper radial thickness matches the 1.0 mm reference fit;
 - ferrule fit status reports `OK` for the reference geometry.
+
+The steam-drum calm-box tests check that:
+
+- the circulation-loss path includes riser discharge into the calm box, box
+  outlet/waterfall behavior and downcomer entry with vortex breaker;
+- increasing the downcomer vortex-breaker loss coefficient increases the
+  calculated circulation pressure loss.
 
 ## Reference Case Report
 

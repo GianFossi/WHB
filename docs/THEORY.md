@@ -34,6 +34,27 @@ Natural circulation is driven by density difference between the heated riser sid
 
 Two-phase pressure-drop methods are empirical and should be validated for the selected geometry and flow regime.
 
+## Steam Drum Calm Box Methodology
+
+The calm-box model is a preliminary sizing and pressure-drop method for drum
+internals connected to one or multiple risers. The implemented pressure-loss
+path is:
+
+- two-phase riser discharge into the calm box by sudden area-change loss;
+- liquid/mixture transit through the calm-box duct, including friction, bend and
+  an extra local-loss coefficient;
+- release through the top opening or outlet window;
+- optional water-fall head when the opening discharges above the normal water
+  level;
+- liquid entry into the downcomers, including the selected vortex-breaker minor
+  loss coefficient.
+
+The method uses homogeneous two-phase density for abrupt two-phase singularities
+and saturated-liquid density for the downcomer-entry term. It is suitable for
+early engineering comparison only. Cyclones are intentionally outside the
+current scope. A future alternative may model individual riser chimneys with
+top hats instead of shared calm boxes.
+
 ## Process Chemistry
 
 The process-gas model can treat water-gas shift as frozen, equilibrium above a freeze temperature, or fractional approach to equilibrium. This affects molecular composition, enthalpy, gas properties, and therefore calculated thermal performance.

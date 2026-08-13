@@ -43,6 +43,11 @@ This document summarizes the main engineering assumptions used by WHB.
 - Natural circulation is calculated from loop driving head and branch losses.
 - Two-phase density, void fraction, and friction behavior are correlation based.
 - Drum and internals pressure losses are preliminary unless vendor data is entered.
+- Steam-drum calm boxes are treated as simple boxes attached to one or more
+  risers. The pressure-drop method includes riser discharge into the box,
+  transit through the box, the top opening or outlet window, optional water fall
+  from the top opening, and water entry into downcomers with a vortex breaker.
+- Cyclones are not considered in the current drum-internals method.
 
 ## Mechanical And Vibration Basis
 

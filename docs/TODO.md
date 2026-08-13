@@ -26,6 +26,10 @@ This list records candidate improvements for later WHB versions.
 ## Equipment Modeling
 
 - Allow vendor drum-internals data to override default estimates more completely.
+- Add cyclone separators in the steam-drum internals model with documented
+  applicability and pressure-drop basis.
+- Add riser-mounted chimneys with top hats as an alternative to shared calm
+  boxes.
 - Add more detailed bypass-valve characteristic input.
 - Add nozzle reinforcement and code-check placeholders.
 - Add additional tube layouts, support patterns, and ferrule details.

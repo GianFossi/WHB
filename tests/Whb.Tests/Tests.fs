@@ -196,6 +196,55 @@ let ``water side heat transfer supports boiling and convection screening correla
     approx (hBoil * 1.5 + hConv) 1e-9 hShell
 
 [<Fact>]
+let ``steam drum calm box method includes outlet waterfall and downcomer entry`` () =
+    /// <summary>
+    /// Calculates or returns saturated steam properties for the calm-box pressure-drop test.
+    /// </summary>
+    /// <remarks>
+    /// The test checks the implemented methodology for riser discharge, box transit, top opening, waterfall and downcomer entry with vortex breaker.
+    /// </remarks>
+    let sat = Steam.sat (barToPa 100.0)
+
+    /// <summary>
+    /// Calculates or returns the reference drum internals with an explicit calm-box water fall.
+    /// </summary>
+    /// <remarks>
+    /// The drum model intentionally excludes cyclones; future chimney and top-hat alternatives should add separate tests.
+    /// </remarks>
+    let drum =
+        { Defaults.referenceCase.Loop.Drum with
+            CalmBoxWaterFallHeight = 0.25
+            DowncomerEntryArea = 1.0
+            DowncomerVortexBreakerK = 0.5 }
+
+    let result = Drum.solve drum sat 500.0 0.10 20.0 0.85 1.25
+
+    Assert.True(result.DpCirculation > 0.0)
+    Assert.Contains(result.CircItems, fun i -> i.Label.Contains("riser discharge into calm box"))
+    Assert.Contains(result.CircItems, fun i -> i.Label.Contains("calm box water fall"))
+    Assert.Contains(result.CircItems, fun i -> i.Label.Contains("downcomer entry with vortex breaker"))
+
+[<Fact>]
+let ``steam drum vortex breaker coefficient affects downcomer entry loss`` () =
+    /// <summary>
+    /// Calculates or returns saturated steam properties for the vortex-breaker sensitivity test.
+    /// </summary>
+    /// <remarks>
+    /// The test confirms that the downcomer-entry minor-loss coefficient is active in the circulation balance.
+    /// </remarks>
+    let sat = Steam.sat (barToPa 100.0)
+    let baseDrum =
+        { Defaults.referenceCase.Loop.Drum with
+            DowncomerEntryArea = 1.0
+            DowncomerVortexBreakerK = 0.25 }
+
+    let highLossDrum = { baseDrum with DowncomerVortexBreakerK = 2.0 }
+    let low = Drum.solve baseDrum sat 500.0 0.10 20.0 0.85 1.25
+    let high = Drum.solve highLossDrum sat 500.0 0.10 20.0 0.85 1.25
+
+    Assert.True(high.DpCirculation > low.DpCirculation)
+
+[<Fact>]
 let ``ferrule component checks pressure drop and insulation paper thickness`` () =
     /// <summary>
     /// Calculates or returns the reference ferrule component.

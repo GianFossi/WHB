@@ -647,14 +647,18 @@ let loadCase (path: string) : DesignCase =
                 ShellId = Json.f r "drum.id_mm" (l.Drum.ShellId * 1000.0) / 1000.0
                 Length = Json.f r "drum.lunghezza_tt_mm" (l.Drum.Length * 1000.0) / 1000.0
                 NormalLevel = Json.f r "drum.livello_normale_mm" (l.Drum.NormalLevel * 1000.0) / 1000.0
-                ConveyorCount = Json.i r "drum.convogliatori" l.Drum.ConveyorCount
-                ConvDuctArea = Json.f r "drum.canale_area_m2" l.Drum.ConvDuctArea
-                ConvLength = Json.f r "drum.canale_lunghezza_m" l.Drum.ConvLength
-                ConvHydDia = Json.f r "drum.canale_dh_m" l.Drum.ConvHydDia
+                ConveyorCount = Json.i r "drum.calm_box_n" (Json.i r "drum.convogliatori" l.Drum.ConveyorCount)
+                CalmBoxRisersPerBox = Json.i r "drum.calm_box_risers_per_box" l.Drum.CalmBoxRisersPerBox
+                ConvDuctArea = Json.f r "drum.calm_box_area_m2" (Json.f r "drum.canale_area_m2" l.Drum.ConvDuctArea)
+                ConvLength = Json.f r "drum.calm_box_lunghezza_m" (Json.f r "drum.canale_lunghezza_m" l.Drum.ConvLength)
+                ConvHydDia = Json.f r "drum.calm_box_dh_m" (Json.f r "drum.canale_dh_m" l.Drum.ConvHydDia)
                 ConvBendAngle = Json.f r "drum.canale_curvatura_gradi" l.Drum.ConvBendAngle
-                ConvOutletArea = Json.f r "drum.finestra_area_m2" l.Drum.ConvOutletArea
-                ConvOutletAboveLevel = Json.b r "drum.scarico_sopra_livello" l.Drum.ConvOutletAboveLevel
-                ConvExtraK = Json.f r "drum.canale_k_extra" l.Drum.ConvExtraK
+                ConvOutletArea = Json.f r "drum.calm_box_top_opening_m2" (Json.f r "drum.finestra_area_m2" l.Drum.ConvOutletArea)
+                ConvOutletAboveLevel = Json.b r "drum.calm_box_opening_above_level" (Json.b r "drum.scarico_sopra_livello" l.Drum.ConvOutletAboveLevel)
+                ConvExtraK = Json.f r "drum.calm_box_k_extra" (Json.f r "drum.canale_k_extra" l.Drum.ConvExtraK)
+                CalmBoxWaterFallHeight = Json.f r "drum.calm_box_waterfall_m" l.Drum.CalmBoxWaterFallHeight
+                DowncomerEntryArea = Json.f r "drum.downcomer_entry_area_m2" l.Drum.DowncomerEntryArea
+                DowncomerVortexBreakerK = Json.f r "drum.downcomer_vortex_breaker_k" l.Drum.DowncomerVortexBreakerK
                 DemisterArea = Json.f r "drum.demister_area_m2" l.Drum.DemisterArea
                 DemisterK = Json.f r "drum.demister_k" l.Drum.DemisterK
                 ChimneyCount = Json.i r "drum.camini_numero" l.Drum.ChimneyCount
@@ -864,6 +868,31 @@ let template = """{
       { "tag": "DC9", "nps": "4\" Sch.120", "id_mm": 92.1, "n": 1, "diritti_mm": [500,3000,1500],
         "curve": [ {"gradi":90,"r_su_d":1.5,"n":2} ], "z_m": 12.70, "angolo_gradi": 180, "nota": "estremita' fredda" }
     ]
+  },
+
+  "drum": {
+    "modello_attivo": true,
+    "id_mm": 3000.0,
+    "lunghezza_tt_mm": 13000.0,
+    "livello_normale_mm": 1650.0,
+    "calm_box_n": 4,
+    "calm_box_risers_per_box": 1,
+    "calm_box_area_m2": 0.22799999999999998,
+    "calm_box_lunghezza_m": 2.30,
+    "calm_box_dh_m": 0.47010309278350513,
+    "canale_curvatura_gradi": 150.0,
+    "calm_box_top_opening_m2": 0.35,
+    "calm_box_opening_above_level": true,
+    "calm_box_k_extra": 1.0,
+    "calm_box_waterfall_m": 0.30,
+    "downcomer_entry_area_m2": 0.0,
+    "downcomer_vortex_breaker_k": 0.5,
+    "demister_area_m2": 20.8,
+    "demister_k": 2.0,
+    "camini_numero": 8,
+    "camini_id_mm": 202.7,
+    "vapore_esterno_kgs": 14.12,
+    "dp_costruttore_mbar": -1.0
   },
 
   "bocchelli": {

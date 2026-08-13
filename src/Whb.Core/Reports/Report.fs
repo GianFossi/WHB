@@ -979,9 +979,13 @@ module Report =
             kv sb "Geometria" (sprintf "ID %s mm x %s mm T-T, livello normale %s mm dal fondo"
                                    (f0 (dm.ShellId * 1000.0)) (f0 (dm.Length * 1000.0)) (f0 (dm.NormalLevel * 1000.0)))
             kv sb "Interne sul percorso di circolazione"
-                (sprintf "%d convogliatori, canale %s m2, finestra di scarico %s m2, scarico %s"
-                     dm.ConveyorCount (f3 dm.ConvDuctArea) (f3 dm.ConvOutletArea)
+                (sprintf "%d calm box, %d riser(s)/box, canale %s m2, apertura superiore %s m2, caduta acqua %s m, ingresso downcomer %s m2, K vortex breaker %s, scarico %s"
+                     dm.ConveyorCount dm.CalmBoxRisersPerBox (f3 dm.ConvDuctArea) (f3 dm.ConvOutletArea)
+                     (f2 dm.CalmBoxWaterFallHeight)
+                     (if dm.DowncomerEntryArea > 0.0 then f3 dm.DowncomerEntryArea else "auto")
+                     (f2 dm.DowncomerVortexBreakerK)
                      (if dm.ConvOutletAboveLevel then "SOPRA il livello (spazio vapore)" else "SOMMERSO"))
+            para sb "  " "Metodo calm-box: la perdita di circolazione include uscita dei riser nella camera, transito nella scatola, apertura superiore con eventuale caduta dell'acqua e imbocco dei downcomer con vortex breaker. I cicloni non sono considerati in questa versione; camini con top-hat direttamente sui riser sono una futura alternativa di modellazione."
             sb.AppendLine() |> ignore
             sb.AppendLine("  A) PERCORSO DI CIRCOLAZIONE - e' l'unica perdita che entra nel bilancio del battente") |> ignore
             sb.AppendLine("  voce                                                     K      A[m2]   v[m/s]  rho[kg/m3]  dP[mbar]") |> ignore

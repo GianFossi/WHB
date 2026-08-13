@@ -24,6 +24,7 @@ module Drum =
           NormalLevel: float
 
           ConveyorCount: int
+          CalmBoxRisersPerBox: int
           ConvDuctArea: float
           ConvLength: float
           ConvHydDia: float
@@ -32,6 +33,9 @@ module Drum =
           ConvOutletArea: float
           ConvOutletAboveLevel: bool
           ConvExtraK: float
+          CalmBoxWaterFallHeight: float
+          DowncomerEntryArea: float
+          DowncomerVortexBreakerK: float
 
           DemisterArea: float
           DemisterK: float
@@ -146,22 +150,27 @@ module Drum =
             items.Add { Label = lab; K = k; Area = a; Velocity = v; Rho = rho; Dp = dp; Note = note }
 
         let nConv = max 1 d.ConveyorCount
+        let risersPerBox = max 1 d.CalmBoxRisersPerBox
         let wPerConv = wCirc / float nConv
-        let aNoz = riserArea / float nConv
+        let aNoz = max 1e-6 (riserArea / float nConv)
         let gNoz = wPerConv / aNoz
         let vNoz = gNoz / rhoH
         let headNoz = 0.5 * rhoH * vNoz * vNoz
-        let rDuct = aNoz / max 1e-6 d.ConvDuctArea      // Area ratio
-        let rWin = aNoz / max 1e-6 d.ConvOutletArea
+        let aDuct = max 1e-6 d.ConvDuctArea
+        let aWin = max 1e-6 d.ConvOutletArea
+        let rDuct = aNoz / aDuct      // Area ratio
+        let rWin = aNoz / aWin
 
         let kExp =
-            if rDuct < 1.0 then (1.0 - rDuct) ** 2.0     // allargamento (Borda-Carnot)
-            else 0.5 * (1.0 - 1.0 / rDuct)               // restringimento
-        add "bocchello riser -> canale del convogliatore" kExp aNoz vNoz rhoH (kExp * headNoz)
-            "variazione brusca di sezione (Borda-Carnot / Idelchik)"
-        let gDuct = wPerConv / d.ConvDuctArea
-        let reDuct = gDuct * d.ConvHydDia / sat.MuL
-        let kFric = ductFriction reDuct d.ConvLength d.ConvHydDia
+            if rDuct < 1.0 then (1.0 - rDuct) ** 2.0     // Expansion (Borda-Carnot)
+            else 0.5 * (1.0 - 1.0 / rDuct)               // Contraction
+        add "riser discharge into calm box" kExp aNoz vNoz rhoH (kExp * headNoz)
+            (sprintf "sudden area change from riser nozzle to box; %d calm boxes, about %d riser(s) per box; cyclones are not included"
+                 nConv risersPerBox)
+        let gDuct = wPerConv / aDuct
+        let dhDuct = max 1e-6 d.ConvHydDia
+        let reDuct = gDuct * dhDuct / sat.MuL
+        let kFric = ductFriction reDuct d.ConvLength dhDuct
         let kBend =
             let th = d.ConvBendAngle
             let a1 =
@@ -171,17 +180,28 @@ module Drum =
             let rd = max 0.5 d.ConvBendROverD
             a1 * (0.21 / sqrt rd)
         let kDuct = (kFric + kBend + d.ConvExtraK) * rDuct * rDuct
-        add "canale del convogliatore (attrito + curvatura)" kDuct d.ConvDuctArea (gDuct / rhoH)
+        add "calm box transit (friction + bend + internals)" kDuct aDuct (gDuct / rhoH)
             rhoH (kDuct * headNoz)
-            (sprintf "K sul canale %.2f (attrito %.2f + curva %.2f + extra %.2f), riportato alla velocita' del bocchello con (A_noz/A_canale)^2 = %.2f"
+            (sprintf "box K %.2f (friction %.2f + bend %.2f + extra %.2f), referred to riser-nozzle velocity with (A_noz/A_box)^2 = %.2f"
                  (kFric + kBend + d.ConvExtraK) kFric kBend d.ConvExtraK (rDuct * rDuct))
         let kWin = 1.0 * rWin * rWin
-        add "finestra di scarico del convogliatore" kWin d.ConvOutletArea (wPerConv / (rhoH * d.ConvOutletArea))
+        add "calm box top opening / outlet window" kWin aWin (wPerConv / (rhoH * aWin))
             rhoH (kWin * headNoz)
-            (if d.ConvOutletAboveLevel then "scarico nello spazio vapore: l'energia cinetica e' persa per intero"
-             else "scarico sommerso: si aggiunge il battente di sommergenza")
-        add "DEDUZIONE: sbocco gia' contato nella linea del riser" -1.0 aNoz vNoz rhoH (-1.0 * headNoz)
-            "evita il doppio conteggio con Piping.totalK"
+            (if d.ConvOutletAboveLevel then "outlet is above normal level; discharged kinetic energy is treated as lost before liquid returns to the drum"
+             else "submerged outlet; liquid head is handled separately by the submergence term")
+        if d.ConvOutletAboveLevel && d.CalmBoxWaterFallHeight > 0.0 then
+            let dpFall = sat.RhoL * g * d.CalmBoxWaterFallHeight
+            add "calm box water fall from top opening" 0.0 aWin 0.0 sat.RhoL dpFall
+                "static head dissipated by liquid falling from the calm-box top opening to the drum water level"
+        add "DEDUCTION: riser outlet already counted in riser line" -1.0 aNoz vNoz rhoH (-1.0 * headNoz)
+            "avoids double counting with Piping.totalK"
+        let aDcEntry =
+            if d.DowncomerEntryArea > 0.0 then d.DowncomerEntryArea
+            else max 1e-6 dcArea
+        let vDcEntry = wCirc / (sat.RhoL * max 1e-6 aDcEntry)
+        let dpDcEntry = d.DowncomerVortexBreakerK * 0.5 * sat.RhoL * vDcEntry * vDcEntry
+        add "downcomer entry with vortex breaker" d.DowncomerVortexBreakerK aDcEntry vDcEntry sat.RhoL dpDcEntry
+            "minor loss for water entering the downcomer mouth; use vendor geometry where available, lower K assumes an effective vortex breaker"
 
         let level = d.NormalLevel
         let dpSub =
