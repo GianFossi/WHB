@@ -1917,6 +1917,66 @@ module Report =
                  (f0 (100.0 * r.FixedTubesheet.BucklingUtilisation)))
         kv2 "Carico per tubo sulla giunzione tubo-piastra" (sprintf "%s kN" (f1 (r.FixedTubesheet.ForcePerTube / 1000.0)))
         kv2 "dP lato gas" (sprintf "%s mbar su ammesso 300 mbar" (f0 (r.DpGas / 100.0)))
+        if c.Ferrule.Enabled then
+            let ferruleLength =
+                BundleSolver.ferruleClasses c.Ferrule
+                |> List.sumBy (fun (fr, l) -> fr * l)
+            let compIn = GasProps.normalize c.Gas.Composition
+            let propsIn = GasProps.mixReal c.Gas.MixingRule c.Gas.RealGas compIn c.Gas.TIn c.Gas.PIn c.Gas.Z
+            let dpFerrule =
+                BundleSolver.ferrulePressureDropEstimate
+                    c.Ferrule c.Tube.Di c.Tube.Roughness (c.Gas.MassFlow / float c.Tube.NTubes) propsIn ferruleLength
+            let dpShare = 100.0 * dpFerrule / max 1.0 r.DpGas
+            let paperThk = BundleSolver.ferruleInsulationThickness c.Ferrule c.Tube.Di
+            kv2 "Ferrula: dP stimata / quota dP gas"
+                (sprintf "%s mbar per tubo / %s%%" (f2 (dpFerrule / 100.0)) (f1 dpShare))
+            kv2 "Ferrula: carta isolante radiale"
+                (sprintf "%s mm - %s" (f2 (paperThk * 1000.0)) (BundleSolver.ferruleInsulationFitStatus c.Ferrule c.Tube.Di))
+        kv2 "dP circuito acqua/vapore"
+            (sprintf "DC %s | riser %s | fascio %s | drum/calm box %s mbar"
+                 (f0 (r.Circulation.DpDowncomer / 100.0))
+                 (f0 (r.Circulation.DpRiser / 100.0))
+                 (f0 (r.Circulation.DpBundle / 100.0))
+                 (f0 (r.Circulation.DpNozzles / 100.0)))
+        let whbWater =
+            max 0.0
+                (Math.PI / 4.0 * c.Tube.ShellId * c.Tube.ShellId * c.Tube.Length
+                 - Math.PI / 4.0 * c.Tube.Do * c.Tube.Do * c.Tube.Length * float c.Tube.NTubes
+                 - (if c.Bypass.Enabled then Math.PI / 4.0 * c.Bypass.PipeOd * c.Bypass.PipeOd * c.Tube.Length else 0.0))
+        let riserWater = c.Loop.Risers |> List.filter (fun l -> l.Connected) |> List.sumBy lineWaterVolume
+        let downcomerWater = c.Loop.Downcomers |> List.filter (fun l -> l.Connected) |> List.sumBy lineWaterVolume
+        let drumWater = if c.Loop.Drum.Enabled then drumWaterVolume c.Loop.Drum else 0.0
+        let rhoFerrule = densityOf c.FerruleMaterial
+        let ferruleMetal =
+            if c.Ferrule.Enabled then
+                let length = c.Ferrule.Lengths |> List.sumBy (fun (frac, len) -> frac * len)
+                Math.PI / 4.0 * max 0.0 (c.Ferrule.SleeveOd ** 2.0 - c.Ferrule.Bore ** 2.0) * length * float c.Tube.NTubes * rhoFerrule
+            else 0.0
+        let tubeMetal = Math.PI / 4.0 * (c.Tube.Do ** 2.0 - c.Tube.Di ** 2.0) * c.Tube.Length * float c.Tube.NTubes * densityOf c.Material
+        let shellMetal =
+            Math.PI / 4.0 * ((c.Tube.ShellId + 2.0 * c.ShellThickness) ** 2.0 - c.Tube.ShellId ** 2.0) * c.Tube.Length * densityOf c.ShellMaterial
+        let baffleMetal =
+            let count = max 0 (List.length c.BaffleSpans - 1)
+            let gross = Math.PI / 4.0 * c.Tube.BaffleOd * c.Tube.BaffleOd
+            let holes = Math.PI / 4.0 * c.Tube.Do * c.Tube.Do * float c.Tube.NTubes
+            max 0.0 (gross - holes) * c.BaffleThickness * float count * densityOf c.ShellMaterial
+        let riserMetal = c.Loop.Risers |> List.filter (fun l -> l.Connected) |> List.sumBy (lineMetalWeight (densityOf c.ShellMaterial))
+        let downcomerMetal = c.Loop.Downcomers |> List.filter (fun l -> l.Connected) |> List.sumBy (lineMetalWeight (densityOf c.ShellMaterial))
+        let drumMetal =
+            if c.Loop.Drum.Enabled then
+                let d = c.Loop.Drum
+                Math.PI / 4.0 * ((d.ShellId + 2.0 * c.ShellThickness) ** 2.0 - d.ShellId ** 2.0) * d.Length * densityOf c.ShellMaterial
+            else 0.0
+        let bypassMetal =
+            if c.Bypass.Enabled then
+                let liner = Math.PI / 4.0 * (c.Bypass.LinerOd ** 2.0 - c.Bypass.LinerId ** 2.0) * c.Tube.Length * densityOf c.Bypass.LinerMaterial
+                let pipe = Math.PI / 4.0 * (c.Bypass.PipeOd ** 2.0 - c.Bypass.InsulOd ** 2.0) * c.Tube.Length * densityOf c.Bypass.PipeMaterial
+                liner + pipe
+            else 0.0
+        kv2 "Inventory acqua / peso metallo"
+            (sprintf "%s m3 / %s t"
+                 (f1 (whbWater + riserWater + downcomerWater + drumWater))
+                 (f1 ((tubeMetal + shellMetal + baffleMetal + ferruleMetal + riserMetal + downcomerMetal + drumMetal + bypassMetal) / 1000.0)))
         (let vw = r.Vibration |> List.maxBy (fun v -> v.FeiRatio)
          kv2 "VIBRAZIONI - V/Vcrit (istab. fluido-elastica)"
              (sprintf "%s  su limite 0.8   [reticolo %s, K = %s]"
@@ -1942,10 +2002,21 @@ module Report =
             kv2 "Farfalla del by-pass in esercizio normale"
                 (sprintf "%s° di apertura (finestra ammessa %s° - %s°)"
                      (f1 v.Normal.OpenDeg) (f1 v.MinOpen.OpenDeg) (f1 v.MaxOpen.OpenDeg))
+            kv2 "By-pass: frazione / dP libero / dP valvola"
+                (sprintf "%s%% / %s mbar / %s mbar"
+                     (f2 (100.0 * v.Normal.Fraction))
+                     (f1 ((v.Normal.DpBypassTot - v.Normal.DpValve) / 100.0))
+                     (f1 (v.Normal.DpValve / 100.0)))
             kv2 "  sensibilita' della regolazione"
                 (sprintf "%s K di T miscelata per grado di stelo"
                      (f2 (abs (v.MaxOpen.TMixed - v.MinOpen.TMixed) / max 1.0 (v.MaxOpen.OpenDeg - v.MinOpen.OpenDeg))))
          | None -> ())
+        let validityWarnings =
+            r.Findings
+            |> List.filter (fun f -> f.Area.Contains("VALIDITA"))
+            |> List.length
+        if validityWarnings > 0 then
+            kv2 "Warning validita' correlazioni/proprieta'" (sprintf "%d da verificare" validityWarnings)
         (match r.LineChecks |> List.filter (fun l -> not l.Connected) with
          | [] -> ()
          | nc -> kv2 "BOCCHELLI NON COLLEGATI" (nc |> List.map (fun l -> l.Tag) |> String.concat ", "))
