@@ -3,8 +3,9 @@ obj/
 publish/
 
 TestResults/
-risultati/
-risultati_check/
+results/
+results_check/
+results_pds_check/
 .ai/
 .vscode/
 

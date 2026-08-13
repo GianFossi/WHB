@@ -74,7 +74,7 @@ dotnet run --project src/Whb.Cli -- --template caso.json
 Run a custom case:
 
 ```bash
-dotnet run --project src/Whb.Cli -- caso.json --out risultati
+dotnet run --project src/Whb.Cli -- caso.json --out results
 ```
 
 During long calculations the CLI shows a console status window with an
@@ -188,7 +188,7 @@ The code can estimate:
 
 ## Output Files
 
-Default output is written to `risultati/` unless `--out` is provided.
+Default output is written to `results/` unless `--out` is provided.
 
 | File | Content |
 |---|---|

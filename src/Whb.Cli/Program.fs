@@ -1474,7 +1474,7 @@ let main argv =
     /// <remarks>
     /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
     /// </remarks>
-    let outDir = getOpt "--out" "risultati"
+    let outDir = getOpt "--out" "results"
     try
         match args with
         | [] | "--out" :: _ ->

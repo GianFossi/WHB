@@ -1,7 +1,7 @@
 {
   "folders": {
     "casesFolder": "cases",
-    "resultsFolder": "risultati",
+    "resultsFolder": "results",
     "databasesFolder": "databases",
     "reportsFolder": "reports",
     "packagesFolder": "packages"
