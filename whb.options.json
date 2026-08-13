@@ -2,9 +2,14 @@
   "folders": {
     "casesFolder": "cases",
     "resultsFolder": "results",
+    "tempFolder": "tmp",
     "databasesFolder": "databases",
     "reportsFolder": "reports",
     "packagesFolder": "packages"
+  },
+  "logging": {
+    "enabled": true,
+    "logFile": "logs/whb-run.log"
   },
   "calculation": {
     "useRealGas": true,

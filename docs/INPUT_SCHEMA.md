@@ -77,6 +77,22 @@ and must be validated for final design use.
 Backward-compatible Italian `convogliatore` / `canale` fields are still accepted,
 but new input files should prefer the `calm_box_*` names.
 
+## Project Options File
+
+The optional `whb.options.json` file controls project folders and operational
+diagnostics for CLI runs:
+
+| Field | Meaning |
+|---|---|
+| `folders.resultsFolder` | Default output folder when `--out` is not supplied. |
+| `folders.tempFolder` | Folder for temporary/service files and preflight probes. |
+| `logging.enabled` | Enables or disables timestamped phase logging. |
+| `logging.logFile` | Log file path used when phase logging is enabled. |
+
+Before a normal run, the CLI performs preflight checks for active `whb.exe`
+processes, case-file readability, output/temp/log write access, and available
+disk space.
+
 ## Generated Output Contracts
 
 Every normal run writes:

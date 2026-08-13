@@ -81,6 +81,11 @@ During long calculations the CLI shows a console status window with an
 estimated progress bar, the current task description, elapsed time and estimated
 remaining time.
 
+The CLI also supports timestamped phase logging through `whb.options.json`.
+By default logs are written to `logs/whb-run.log`, temporary/service files use
+`tmp/`, and preflight checks verify active runs, read/write access and disk
+space before the calculation starts.
+
 Run internal correlation checks:
 
 ```bash
@@ -90,7 +95,7 @@ dotnet run --project src/Whb.Cli -- --selftest
 ## CLI Commands
 
 ```text
-whb [caso.json] [--out <cartella>]
+whb [caso.json] [--out <cartella>] [--options <whb.options.json>]
 whb --template [file.json]
 whb --options-template [file.json]
 whb --selftest

@@ -10,6 +10,7 @@ open System
 open System.IO
 open System.Text.Json
 open System.Globalization
+open System.Diagnostics
 open System.Threading
 open System.Threading.Tasks
 open Whb.Core
@@ -201,6 +202,177 @@ module Json =
                 |> List.ofSeq
             if res.IsEmpty then def else res
         | _ -> def
+
+/// <summary>
+/// Writes timestamped phase and diagnostic log messages for CLI runs.
+/// </summary>
+/// <remarks>
+/// The logger is controlled by project options and is intentionally append-only so failed runs preserve their last visible phase.
+/// </remarks>
+module PhaseLogger =
+
+    /// <summary>
+    /// Represents one lightweight logging function.
+    /// </summary>
+    /// <remarks>
+    /// The function accepts a message and writes it with local date/time when logging is enabled.
+    /// </remarks>
+    type Logger = string -> unit
+
+    /// <summary>
+    /// Creates a phase logger from project options.
+    /// </summary>
+    /// <remarks>
+    /// Parent folders are created automatically; write errors are reported to stderr but do not stop the calculation.
+    /// </remarks>
+    let create (options: Options.ProjectOptions) : Logger =
+        if not options.Logging.Enabled then ignore
+        else
+            let logPath = Path.GetFullPath options.Logging.LogFile
+            let dir = Path.GetDirectoryName logPath
+            if not (String.IsNullOrWhiteSpace dir) then Directory.CreateDirectory dir |> ignore
+            fun message ->
+                try
+                    let stamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)
+                    File.AppendAllText(logPath, sprintf "%s | %s%s" stamp message Environment.NewLine)
+                with ex ->
+                    eprintfn "Logging disabled for this message: %s" ex.Message
+
+    /// <summary>
+    /// Writes a log message and updates a mutable current-task label.
+    /// </summary>
+    /// <remarks>
+    /// This keeps console progress and the diagnostic log synchronized.
+    /// </remarks>
+    let phase (logger: Logger) (currentTask: string ref) (message: string) =
+        currentTask.Value <- message
+        logger message
+
+/// <summary>
+/// Performs preliminary checks before starting long WHB calculations.
+/// </summary>
+/// <remarks>
+/// Preflight checks catch common operational blockers such as stale WHB processes, missing folders, low disk space, and read/write permission problems.
+/// </remarks>
+module Preflight =
+
+    /// <summary>
+    /// Represents one preflight check result.
+    /// </summary>
+    /// <remarks>
+    /// Failed checks stop the run; warnings are logged and printed but allow the calculation to continue.
+    /// </remarks>
+    type Check =
+        { Name: string
+          Ok: bool
+          WarningOnly: bool
+          Message: string }
+
+    /// <summary>
+    /// Creates a preflight result row.
+    /// </summary>
+    /// <remarks>
+    /// The row is used for both console messages and phase logging.
+    /// </remarks>
+    let private row name ok warningOnly message =
+        { Name = name; Ok = ok; WarningOnly = warningOnly; Message = message }
+
+    /// <summary>
+    /// Verifies that a directory can be created and written.
+    /// </summary>
+    /// <remarks>
+    /// A temporary probe file is created and deleted inside the directory.
+    /// </remarks>
+    let private canWriteDirectory name path =
+        try
+            Directory.CreateDirectory path |> ignore
+            let probe = Path.Combine(path, sprintf ".whb_write_probe_%s.tmp" (Guid.NewGuid().ToString("N")))
+            File.WriteAllText(probe, "probe")
+            File.Delete probe
+            row name true false (sprintf "Writable: %s" (Path.GetFullPath path))
+        with ex ->
+            row name false false (sprintf "Cannot write %s: %s" (Path.GetFullPath path) ex.Message)
+
+    /// <summary>
+    /// Verifies that an input file is readable.
+    /// </summary>
+    /// <remarks>
+    /// The check opens and closes the file before the calculation starts.
+    /// </remarks>
+    let private canReadFile name path =
+        try
+            use _stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+            row name true false (sprintf "Readable: %s" (Path.GetFullPath path))
+        with ex ->
+            row name false false (sprintf "Cannot read %s: %s" (Path.GetFullPath path) ex.Message)
+
+    /// <summary>
+    /// Checks available disk space on the output drive.
+    /// </summary>
+    /// <remarks>
+    /// The default threshold is intentionally modest because normal report output is small, but low space is still reported early.
+    /// </remarks>
+    let private diskSpace path =
+        try
+            let root = Path.GetPathRoot(Path.GetFullPath path)
+            let drive = DriveInfo root
+            let minBytes = 200L * 1024L * 1024L
+            let ok = drive.AvailableFreeSpace >= minBytes
+            row "Disk space" ok false (sprintf "Free space on %s: %.1f MB" root (float drive.AvailableFreeSpace / 1024.0 / 1024.0))
+        with ex ->
+            row "Disk space" false true (sprintf "Could not check disk space: %s" ex.Message)
+
+    /// <summary>
+    /// Checks whether another WHB executable is still active.
+    /// </summary>
+    /// <remarks>
+    /// Existing WHB processes can lock build outputs and make multitasking unreliable.
+    /// </remarks>
+    let private activeWhbProcesses () =
+        try
+            let currentId = Process.GetCurrentProcess().Id
+            let procs =
+                Process.GetProcessesByName("whb")
+                |> Array.filter (fun p -> p.Id <> currentId)
+                |> Array.toList
+            if List.isEmpty procs then
+                row "Active WHB processes" true true "No other whb.exe process detected"
+            else
+                let ids = procs |> List.map (fun p -> string p.Id) |> String.concat ", "
+                row "Active WHB processes" false false (sprintf "Other whb.exe process(es) detected: %s. Close them before starting a new run." ids)
+        with ex ->
+            row "Active WHB processes" false true (sprintf "Could not inspect WHB processes: %s" ex.Message)
+
+    /// <summary>
+    /// Runs preflight checks and raises an error when blocking checks fail.
+    /// </summary>
+    /// <remarks>
+    /// All results are logged so the user can diagnose what happened before the calculation started.
+    /// </remarks>
+    let run (options: Options.ProjectOptions) (casePath: string option) (outDir: string) (logger: PhaseLogger.Logger) =
+        logger "Preflight checks started"
+        let logFolder =
+            let folder = Path.GetDirectoryName(Path.GetFullPath options.Logging.LogFile)
+            if String.IsNullOrWhiteSpace folder then "." else folder
+        let checks =
+            [ activeWhbProcesses()
+              canWriteDirectory "Output folder" outDir
+              canWriteDirectory "Temp folder" options.Folders.TempFolder
+              canWriteDirectory "Log folder" logFolder
+              diskSpace outDir ]
+            @ (match casePath with Some p -> [ canReadFile "Case file" p ] | None -> [])
+        for c in checks do
+            let level = if c.Ok then "OK" elif c.WarningOnly then "WARNING" else "ERROR"
+            let msg = sprintf "Preflight %s | %s | %s" level c.Name c.Message
+            logger msg
+            if not c.Ok then
+                let printer = if c.WarningOnly then eprintfn else eprintfn
+                printer "%s" msg
+        let blocking = checks |> List.filter (fun c -> not c.Ok && not c.WarningOnly)
+        if not blocking.IsEmpty then
+            let details = blocking |> List.map (fun c -> sprintf "%s: %s" c.Name c.Message) |> String.concat "; "
+            failwithf "Preflight failed: %s" details
+        logger "Preflight checks completed"
 
 /// <summary>
 /// Provides console progress rendering for long-running WHB calculations.
@@ -1301,8 +1473,11 @@ let loadCurves (case0: DesignCase) (outDir: string) =
 /// <remarks>
 /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
 /// </remarks>
-let runCase (case: DesignCase) (outDir: string) =
+let runCase (options: Options.ProjectOptions) (casePath: string option) (case: DesignCase) (outDir: string) =
     Directory.CreateDirectory outDir |> ignore
+    Directory.CreateDirectory options.Folders.TempFolder |> ignore
+    let logger = PhaseLogger.create options
+    Preflight.run options casePath outDir logger
     /// <summary>
     /// Calculates or returns sw for the WHB calculation model.
     /// </summary>
@@ -1318,11 +1493,13 @@ let runCase (case: DesignCase) (outDir: string) =
     /// </remarks>
     let currentTask =
         ref "Starting design run"
+    logger "Run started"
     let r =
         Progress.runWithStatusDynamic
             (fun () -> currentTask.Value)
             25.0
-            (fun () -> Design.runWithProgress (fun text -> currentTask.Value <- text) case)
+            (fun () -> Design.runWithProgress (PhaseLogger.phase logger currentTask) case)
+    logger "Design calculation completed; writing reports"
     sw.Stop()
     /// <summary>
     /// Calculates or returns rep for the WHB calculation model.
@@ -1365,9 +1542,11 @@ let runCase (case: DesignCase) (outDir: string) =
     File.WriteAllText(Path.Combine(outDir, "maldistribuzione.txt"), Report.maldistributionText r)
     File.WriteAllText(Path.Combine(outDir, "vibrazioni.txt"), Report.vibrationText r)
     File.WriteAllText(Path.Combine(outDir, "report.html"), HtmlReport.build r)
+    logger "Report files written"
     printfn "%s" syn
     printfn "%s" pdsText
     printfn "Calcolo completato in %.1f s. File scritti in: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
+    logger (sprintf "Run completed in %.1f s; output folder: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir))
     0
 
 /// <summary>
@@ -1457,7 +1636,7 @@ let main argv =
     /// </remarks>
     let printUsage () =
         printfn "Uso:"
-        printfn "  whb [caso.json] [--out <cartella>]"
+        printfn "  whb [caso.json] [--out <cartella>] [--options <whb.options.json>]"
         printfn "  whb --template [file.json]"
         printfn "  whb --options-template [file.json]"
         printfn "  whb --selftest"
@@ -1484,12 +1663,14 @@ let main argv =
     /// <remarks>
     /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
     /// </remarks>
-    let outDir = getOpt "--out" "results"
+    let optionsPath = getOpt "--options" "whb.options.json"
+    let projectOptions = Options.load optionsPath
+    let outDir = getOpt "--out" projectOptions.Folders.ResultsFolder
     try
         match args with
         | [] | "--out" :: _ ->
             printfn "Nessun file di caso indicato: eseguo il caso di riferimento.\n"
-            runCase Defaults.referenceCase outDir
+            runCase projectOptions None Defaults.referenceCase outDir
         | "--help" :: _ | "-h" :: _ ->
             printUsage ()
             0
@@ -1521,7 +1702,7 @@ let main argv =
             eprintfn "Opzione non riconosciuta: %s" opt
             printUsage ()
             2
-        | file :: _ when File.Exists file -> runCase (loadCase file) outDir
+        | file :: _ when File.Exists file -> runCase projectOptions (Some file) (loadCase file) outDir
         | x :: _ ->
             eprintfn "File non trovato: %s" x
             printUsage ()

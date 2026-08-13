@@ -37,9 +37,21 @@ module Options =
     type FolderOptions =
         { CasesFolder: string
           ResultsFolder: string
+          TempFolder: string
           DatabasesFolder: string
           ReportsFolder: string
           PackagesFolder: string }
+
+    [<CLIMutable>]
+    /// <summary>
+    /// Represents phase logging options for WHB command-line runs.
+    /// </summary>
+    /// <remarks>
+    /// Phase logging is intended for operational diagnostics before and during long calculations.
+    /// </remarks>
+    type LoggingOptions =
+        { Enabled: bool
+          LogFile: string }
 
     [<CLIMutable>]
     /// <summary>
@@ -64,6 +76,7 @@ module Options =
     /// </remarks>
     type ProjectOptions =
         { Folders: FolderOptions
+          Logging: LoggingOptions
           Calculation: CalculationOptions
           Github: GithubOptions
           RecentFiles: string list }
@@ -87,9 +100,13 @@ module Options =
         { Folders =
             { CasesFolder = "cases"
               ResultsFolder = "results"
+              TempFolder = "tmp"
               DatabasesFolder = "databases"
               ReportsFolder = "reports"
               PackagesFolder = "packages" }
+          Logging =
+            { Enabled = true
+              LogFile = "logs/whb-run.log" }
           Calculation =
             { UseRealGas = true
               AxialSections = 90

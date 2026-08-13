@@ -12,6 +12,7 @@ risultati_check/
 risultati_pds_check/
 tmp/
 tmp_*.txt
+logs/
 .ai/
 .vscode/
 
