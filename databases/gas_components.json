@@ -1,0 +1,11 @@
+[
+  { "name": "H2", "molecularWeight": 2.01588 },
+  { "name": "N2", "molecularWeight": 28.0134 },
+  { "name": "O2", "molecularWeight": 31.9988 },
+  { "name": "CO", "molecularWeight": 28.0101 },
+  { "name": "CO2", "molecularWeight": 44.0095 },
+  { "name": "CH4", "molecularWeight": 16.0425 },
+  { "name": "H2O", "molecularWeight": 18.01528 },
+  { "name": "AR", "molecularWeight": 39.948 },
+  { "name": "NH3", "molecularWeight": 17.03052 }
+]

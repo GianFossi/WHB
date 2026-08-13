@@ -1,0 +1,4 @@
+[
+  { "pressureBarA": 1.0, "temperatureC": 99.61, "source": "IAPWS IF97 reference via Whb.Core.Steam" },
+  { "pressureBarA": 117.84, "temperatureC": 323.3, "source": "Reference WHB design case" }
+]

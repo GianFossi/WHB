@@ -1,0 +1,13 @@
+bin/
+obj/
+publish/
+
+TestResults/
+risultati/
+risultati_check/
+.ai/
+.vscode/
+
+*.user
+*.suo
+*.nupkg

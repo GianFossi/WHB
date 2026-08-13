@@ -1,0 +1,25 @@
+{
+  "folders": {
+    "casesFolder": "cases",
+    "resultsFolder": "risultati",
+    "databasesFolder": "databases",
+    "reportsFolder": "reports",
+    "packagesFolder": "packages"
+  },
+  "calculation": {
+    "useRealGas": true,
+    "axialSections": 90,
+    "verticalBands": 12,
+    "parallelism": 16,
+    "strictValidation": true
+  },
+  "github": {
+    "enabled": false,
+    "repositoryUrl": "",
+    "branch": "main",
+    "commitMessage": "Update WHB project",
+    "pushOnSave": false,
+    "createPullRequest": false
+  },
+  "recentFiles": []
+}

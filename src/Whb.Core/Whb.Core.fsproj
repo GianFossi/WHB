@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);3370;FS0064;FS1182;FS0025</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Options\Constants.fs" />
+    <Compile Include="Materials\SteamIF97.fs" />
+    <Compile Include="Materials\GasProps.fs" />
+    <Compile Include="Options\Shift.fs" />
+    <Compile Include="Materials\Materials.fs" />
+    <Compile Include="Components\Geometry\Geometry.fs" />
+    <Compile Include="Components\Catalog\WhbComponents.fs" />
+    <Compile Include="Components\Catalog\SteamDrumComponents.fs" />
+    <Compile Include="Components\Catalog\PipingComponents.fs" />
+    <Compile Include="Materials\PropertyDatabase.fs" />
+    <Compile Include="Materials\Water\WaterProperties.fs" />
+    <Compile Include="Materials\Gas\GasPropertySets.fs" />
+    <Compile Include="Solvers\SolverCatalog.fs" />
+    <Compile Include="Reports\ReportCatalog.fs" />
+    <Compile Include="Optimizer\Optimization.fs" />
+    <Compile Include="Designers\Designer.fs" />
+    <Compile Include="Loads\Loads.fs" />
+    <Compile Include="Options\Options.fs" />
+    <Compile Include="Options\Package.fs" />
+    <Compile Include="Options\Persistence.fs" />
+    <Compile Include="Options\GitHubTransfer.fs" />
+    <Compile Include="Solvers\GasSide.fs" />
+    <Compile Include="Solvers\WaterSide.fs" />
+    <Compile Include="Solvers\TwoPhase.fs" />
+    <Compile Include="Components\Equipment\Drum.fs" />
+    <Compile Include="Components\Equipment\Bundle.fs" />
+    <Compile Include="Components\Piping\Piping.fs" />
+    <Compile Include="Components\Equipment\Valve.fs" />
+    <Compile Include="Components\Equipment\Bypass.fs" />
+    <Compile Include="Loads\Vibration.fs" />
+    <Compile Include="Options\Types.fs" />
+    <Compile Include="Solvers\BundleSolver.fs" />
+    <Compile Include="Solvers\Circulation.fs" />
+    <Compile Include="Loads\Mechanics.fs" />
+    <Compile Include="Components\Equipment\Nozzles.fs" />
+    <Compile Include="Designers\Design.fs" />
+    <Compile Include="Reports\Report.fs" />
+    <Compile Include="Reports\HtmlReport.fs" />
+    <Compile Include="Options\Defaults.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Ganfoss.ROP" Version="1.0.2" />
+    <PackageReference Update="FSharp.Core" Version="10.1.301" />
+  </ItemGroup>
+
+</Project>

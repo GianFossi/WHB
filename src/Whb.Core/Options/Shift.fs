@@ -1,0 +1,112 @@
+namespace Whb.Core
+
+open System
+open Constants
+open GasProps
+
+/// Equilibrio della reazione di water-gas shift lungo il tubo:
+///     CO + H2O  <->  CO2 + H2      dH°(298) = -41.16 kJ/mol
+///
+/// Nei WHB syngas la reazione è di norma **congelata** (nessun catalizzatore,
+/// tempi di residenza brevi, temperature in discesa): il datasheet del caso
+/// reale riporta infatti MW 15.99 sia in ingresso sia in uscita.
+/// Il modulo consente comunque di attivarla per valutare il caso limite,
+/// con una temperatura di congelamento e/o un approccio all'equilibrio.
+module Shift =
+
+    type Mode =
+        /// Composizione congelata (default, coerente con i datasheet)
+        | Frozen
+        /// Equilibrio raggiunto finché T > TFreeze, poi congelamento
+        | EquilibriumAbove of tFreezeK: float
+        /// Frazione di avanzamento verso l'equilibrio (0 = congelato, 1 = equilibrio)
+        | FractionalApproach of frac: float * tFreezeK: float
+
+    let modeName =
+        function
+        | Frozen -> "congelata (nessuna reazione)"
+        | EquilibriumAbove t -> sprintf "equilibrio sopra %.0f °C, poi congelata" (kToC t)
+        | FractionalApproach(f, t) ->
+            sprintf "approccio %.0f%% all'equilibrio sopra %.0f °C" (100.0 * f) (kToC t)
+
+    /// Costante di equilibrio K_p (adimensionale) - correlazione di Moe (1962)
+    let kp (tK: float) = exp (4577.8 / tK - 4.33)
+
+    /// Avanzamento di reazione all'equilibrio (base 1 mol di miscela).
+    /// Restituisce xi in [ -min(nCO2,nH2) , min(nCO,nH2O) ].
+    let private extent (nCO: float) (nH2O: float) (nCO2: float) (nH2: float) (k: float) =
+        // K = (nCO2+x)(nH2+x) / ((nCO-x)(nH2O-x))
+        // (K-1) x^2 - [K(nCO+nH2O) + nCO2 + nH2] x + (K nCO nH2O - nCO2 nH2) = 0
+        let a = k - 1.0
+        let b = -(k * (nCO + nH2O) + nCO2 + nH2)
+        let c = k * nCO * nH2O - nCO2 * nH2
+        let loLim = -(min nCO2 nH2) + 1e-12
+        let hiLim = (min nCO nH2O) - 1e-12
+        if hiLim <= loLim then 0.0
+        else
+            let roots =
+                if abs a < 1e-12 then
+                    if abs b < 1e-15 then [] else [ -c / b ]
+                else
+                    let disc = b * b - 4.0 * a * c
+                    if disc < 0.0 then []
+                    else
+                        let sq = sqrt disc
+                        [ (-b + sq) / (2.0 * a); (-b - sq) / (2.0 * a) ]
+            match roots |> List.filter (fun x -> x > loLim && x < hiLim) with
+            | [] -> 0.0
+            | l -> l |> List.minBy abs
+
+    /// Applica l'avanzamento xi (per mole di miscela) alla composizione.
+    let private applyExtent (c: Composition) (xi: float) : Composition =
+        let get sp = molFrac c sp
+        let upd sp v (l: Composition) =
+            if l |> List.exists (fun (s, _) -> s = sp) then
+                l |> List.map (fun (s, y) -> if s = sp then (s, max 0.0 v) else (s, y))
+            else (sp, max 0.0 v) :: l
+        c
+        |> upd CO (get CO - xi)
+        |> upd H2O (get H2O - xi)
+        |> upd CO2 (get CO2 + xi)
+        |> upd H2 (get H2 + xi)
+
+    /// Composizione di equilibrio (o parziale) alla temperatura tK.
+    let equilibrate (mode: Mode) (c0: Composition) (tK: float) : Composition =
+        match mode with
+        | Frozen -> c0
+        | _ ->
+            let tFreeze, frac =
+                match mode with
+                | EquilibriumAbove t -> t, 1.0
+                | FractionalApproach(f, t) -> t, max 0.0 (min 1.0 f)
+                | Frozen -> 0.0, 0.0
+            if tK < tFreeze then c0
+            else
+                let c = normalize c0
+                let xiEq = extent (molFrac c CO) (molFrac c H2O) (molFrac c CO2) (molFrac c H2) (kp tK)
+                normalize (applyExtent c (frac * xiEq))
+
+    /// Stato del gas lungo il tubo con reazione: dato il flusso di entalpia
+    /// ASSOLUTA specifica h [J/kg] e la composizione di riferimento all'ingresso,
+    /// determina (T, composizione) coerenti.
+    ///
+    /// Nota: il numero di moli totali si conserva nella shift, quindi la massa
+    /// molare della miscela non cambia e h [J/kg] è una variabile di stato valida.
+    /// Variante con correzione di GAS REALE: l'entalpia dipende anche dalla
+    /// pressione, quindi l'inversione va fatta a p assegnata.
+    let stateFromEnthalpyAt (mode: Mode) (real: bool) (pPa: float) (cIn: Composition) (h: float) =
+        let hOf (c: Composition) (t: float) =
+            if real then enthalpyAbsReal true c t pPa else enthalpyAbs c t
+        match mode with
+        | Frozen ->
+            let t = bisect (fun t -> hOf cIn t - h) 250.0 2500.0 1e-4 200
+            (t, cIn)
+        | _ ->
+            let f (t: float) =
+                let c = equilibrate mode cIn t
+                hOf c t - h
+            let t = bisect f 250.0 2500.0 1e-4 200
+            (t, equilibrate mode cIn t)
+
+    let stateFromEnthalpy (mode: Mode) (cIn: Composition) (h: float) =
+        stateFromEnthalpyAt mode false 0.0 cIn h

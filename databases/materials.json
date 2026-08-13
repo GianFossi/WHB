@@ -1,0 +1,34 @@
+[
+  {
+    "name": "SA-192 / SA-210 A1",
+    "density": 7850.0,
+    "conductivity20C": 52.0,
+    "youngModulus20C": 207000000000.0,
+    "yield20C": 255000000.0,
+    "notes": "Tubi caldaia al carbonio."
+  },
+  {
+    "name": "SA-213 T11",
+    "density": 7850.0,
+    "conductivity20C": 42.0,
+    "youngModulus20C": 210000000000.0,
+    "yield20C": 275000000.0,
+    "notes": "1.25Cr-0.5Mo per zone calde WHB."
+  },
+  {
+    "name": "SA-533 Gr.B Cl.2",
+    "density": 7850.0,
+    "conductivity20C": 41.0,
+    "youngModulus20C": 207000000000.0,
+    "yield20C": 485000000.0,
+    "notes": "Lamiera corpo cilindrico e mantello."
+  },
+  {
+    "name": "Alloy 602 CA",
+    "density": 7600.0,
+    "conductivity20C": 10.5,
+    "youngModulus20C": 217000000000.0,
+    "yield20C": 270000000.0,
+    "notes": "Liner by-pass ad alta temperatura."
+  }
+]
