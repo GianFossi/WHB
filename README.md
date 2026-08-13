@@ -69,6 +69,10 @@ Run a custom case:
 dotnet run --project src/Whb.Cli -- caso.json --out risultati
 ```
 
+During long calculations the CLI shows a console status window with an
+estimated progress bar, the current task description, elapsed time and estimated
+remaining time.
+
 Run internal correlation checks:
 
 ```bash

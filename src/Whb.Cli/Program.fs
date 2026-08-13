@@ -10,6 +10,8 @@ open System
 open System.IO
 open System.Text.Json
 open System.Globalization
+open System.Threading
+open System.Threading.Tasks
 open Whb.Core
 open Whb.Core.Constants
 open Whb.Core.Types
@@ -199,6 +201,86 @@ module Json =
                 |> List.ofSeq
             if res.IsEmpty then def else res
         | _ -> def
+
+/// <summary>
+/// Provides console progress rendering for long-running WHB calculations.
+/// </summary>
+/// <remarks>
+/// The helper shows a status bar, current task description, elapsed time, and estimated remaining time while the calculation runs.
+/// </remarks>
+module Progress =
+
+    /// <summary>
+    /// Formats a duration as a compact human-readable time value.
+    /// </summary>
+    /// <remarks>
+    /// The formatted value is used by the CLI progress window and keeps output stable for redirected consoles.
+    /// </remarks>
+    let private formatDuration (span: TimeSpan) =
+        if span.TotalHours >= 1.0 then sprintf "%02d:%02d:%02d" (int span.TotalHours) span.Minutes span.Seconds
+        else sprintf "%02d:%02d" span.Minutes span.Seconds
+
+    /// <summary>
+    /// Builds a fixed-width progress bar line.
+    /// </summary>
+    /// <remarks>
+    /// Progress is estimated from elapsed time and the configured expected duration when the operation does not report internal steps.
+    /// </remarks>
+    let private bar (fraction: float) =
+        let width = 32
+        let filled = int (Math.Round((max 0.0 (min 1.0 fraction)) * float width))
+        let left = String('#', filled)
+        let right = String('-', width - filled)
+        sprintf "[%s%s] %3.0f%%" left right (100.0 * max 0.0 (min 1.0 fraction))
+
+    /// <summary>
+    /// Writes a progress update to the console.
+    /// </summary>
+    /// <remarks>
+    /// Interactive consoles are updated in place; redirected output receives separate progress lines.
+    /// </remarks>
+    let private render (header: string) (description: string) (fraction: float) (elapsed: TimeSpan) (remaining: TimeSpan option) =
+        let remainingText =
+            match remaining with
+            | Some value -> formatDuration value
+            | None -> "estimating"
+        let line1 = sprintf "%s %s" header (bar fraction)
+        let line2 = sprintf "Running: %s" description
+        let line3 = sprintf "Elapsed: %s | Estimated remaining: %s" (formatDuration elapsed) remainingText
+        if Console.IsOutputRedirected then
+            printfn "%s | %s | %s" line1 line2 line3
+        else
+            Console.Write("\r{0,-100}\n{1,-100}\n{2,-100}", line1, line2, line3)
+            Console.SetCursorPosition(0, max 0 (Console.CursorTop - 2))
+
+    /// <summary>
+    /// Runs a calculation while showing an estimated console progress window.
+    /// </summary>
+    /// <remarks>
+    /// The calculation itself remains unchanged; the progress estimate is time based and intended as user feedback, not a solver convergence metric.
+    /// </remarks>
+    let runWithStatus<'T> (description: string) (estimatedSeconds: float) (work: unit -> 'T) =
+        let estimate = TimeSpan.FromSeconds(max 1.0 estimatedSeconds)
+        use finished = new ManualResetEventSlim(false)
+        let sw = Diagnostics.Stopwatch.StartNew()
+        let task =
+            Task.Run<'T>(Func<'T>(fun () ->
+                try work ()
+                finally finished.Set()))
+        while not task.IsCompleted do
+            let elapsed = sw.Elapsed
+            let fraction = min 0.98 (elapsed.TotalSeconds / estimate.TotalSeconds)
+            let remaining =
+                if fraction > 0.0 then Some(TimeSpan.FromSeconds(max 0.0 (estimate.TotalSeconds - elapsed.TotalSeconds)))
+                else None
+            render "WHB status" description fraction elapsed remaining
+            finished.Wait(TimeSpan.FromMilliseconds(500.0)) |> ignore
+        sw.Stop()
+        if not Console.IsOutputRedirected then
+            Console.SetCursorPosition(0, Console.CursorTop + 2)
+        render "WHB status" description 1.0 sw.Elapsed (Some TimeSpan.Zero)
+        task.GetAwaiter().GetResult()
+
 
 /// <summary>
 /// Calculates or returns gasCorrelation for the WHB calculation model.
@@ -940,7 +1022,11 @@ let loadCurves (case0: DesignCase) (outDir: string) =
     let pts = ResizeArray<LoadPoint>()
     for l in loads do
         let c = { coarse with Gas = { coarse.Gas with MassFlow = case0.Gas.MassFlow * l } }
-        let r = Design.run c
+        let r =
+            Progress.runWithStatus
+                (sprintf "Partial-load calculation %.0f %%: thermal, hydraulic, bypass, vibration, and mechanical checks" (100.0 * l))
+                12.0
+                (fun () -> Design.run c)
         let hot = r.Cells |> List.filter (fun x -> not x.InFerrule)
         let p =
             { LoadFraction = l
@@ -1060,7 +1146,11 @@ let runCase (case: DesignCase) (outDir: string) =
     /// <remarks>
     /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
     /// </remarks>
-    let r = Design.run case
+    let r =
+        Progress.runWithStatus
+            "Design run: thermal, hydraulic, bypass, vibration, mechanical, report-preparation calculations"
+            25.0
+            (fun () -> Design.run case)
     sw.Stop()
     /// <summary>
     /// Calculates or returns rep for the WHB calculation model.
