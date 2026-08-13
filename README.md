@@ -175,6 +175,8 @@ Default output is written to `risultati/` unless `--out` is provided.
 | `report.txt` | Engineering report |
 | `report.html` | Self-contained HTML report with maps, charts and tables |
 | `criticita.txt` | Summary of findings and warnings |
+| `pds_comparison.txt` | Mandatory comparison between app output and available client PDS data |
+| `pds_comparison.csv` | Spreadsheet-ready PDS comparison table |
 | `celle.csv` | One row per calculation cell |
 | `profilo_assiale.csv` | Axial aggregate profile |
 | `tensioni.csv` | Stress/check table |
@@ -211,6 +213,10 @@ alignment against the available datasheet is:
 | Steam production | 347,743 kg/h | 347,798 kg/h | +0.02% |
 | Gas outlet temperature | 355.0 °C | 348.5 °C | -6.5 K |
 | Gas-side pressure drop | <= 0.30 bar | 0.113 bar | within limit |
+
+Every normal CLI run also writes `pds_comparison.txt` and `pds_comparison.csv`.
+These files must be reviewed with the main report so calculated output is always
+checked against the available client PDS data.
 
 ## Warnings
 

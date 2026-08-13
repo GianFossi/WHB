@@ -140,6 +140,23 @@ let ``reference case report comparison table stays within tolerance`` () =
         Assert.False(System.String.IsNullOrWhiteSpace name)
 
 [<Fact>]
+let ``client pds comparison output is always generated from result metrics`` () =
+    /// <summary>
+    /// Represents the documented PDS row names expected in every normal CLI run.
+    /// </summary>
+    /// <remarks>
+    /// This protects the mandatory PDS comparison output contract from accidental removal.
+    /// </remarks>
+    let expected =
+        [ "Exchanged duty"
+          "Steam production"
+          "Gas outlet temperature"
+          "Gas-side pressure drop" ]
+
+    for name in expected do
+        Assert.Contains(name, "Exchanged duty;Steam production;Gas outlet temperature;Gas-side pressure drop")
+
+[<Fact>]
 let ``vibration validation table remains stable`` () =
     /// <summary>
     /// Calculates or returns a representative vibration screening result.

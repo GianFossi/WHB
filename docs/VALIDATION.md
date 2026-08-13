@@ -29,6 +29,11 @@ These tables describe the regression tests used by the repository. They are not 
 
 The report text is also checked for key output markers so formatting changes do not accidentally remove main report sections.
 
+Normal CLI runs additionally write `pds_comparison.txt` and `pds_comparison.csv`.
+Those files compare the calculated output against the available client PDS values
+for exchanged duty, steam production, gas outlet temperature, and gas-side
+pressure drop.
+
 ## Vibration Screening
 
 | Quantity | Expected value | Test tolerance |
