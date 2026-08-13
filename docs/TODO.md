@@ -56,6 +56,9 @@ This list records candidate improvements for later WHB versions.
 
 ## Reporting And Workflow
 
+- Improve the CLI progress/status bar so it clearly shows the current
+  calculation phase, a stable progress estimate, and a second line below the
+  bar with the task currently being executed.
 - Add machine-readable JSON output for integration with other tools.
 - Add richer CSV exports for audit trails.
 - Add versioned input schema documentation.
