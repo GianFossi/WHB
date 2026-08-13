@@ -22,3 +22,5 @@ logs/
 *.user
 *.suo
 *.nupkg
+
+.fake
