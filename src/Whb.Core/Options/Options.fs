@@ -76,7 +76,12 @@ module Options =
           AxialSections: int
           VerticalBands: int
           Parallelism: int
-          StrictValidation: bool }
+          StrictValidation: bool
+          BypassMapMode: string
+          BypassTargetToleranceK: float
+          DutyToleranceFraction: float
+          GasPropertyCache: bool
+          CorrelationValidityWarnings: bool }
 
     [<CLIMutable>]
     /// <summary>
@@ -127,7 +132,12 @@ module Options =
               AxialSections = 90
               VerticalBands = 12
               Parallelism = max 1 Environment.ProcessorCount
-              StrictValidation = true }
+              StrictValidation = true
+              BypassMapMode = "adaptive"
+              BypassTargetToleranceK = 0.5
+              DutyToleranceFraction = 0.002
+              GasPropertyCache = true
+              CorrelationValidityWarnings = true }
           Github =
             { Enabled = false
               RepositoryUrl = ""

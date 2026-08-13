@@ -13,6 +13,30 @@ open Types
 module Design =
 
     /// <summary>
+    /// Represents runtime settings that influence numerical strategy without changing case geometry or process data.
+    /// </summary>
+    /// <remarks>
+    /// These settings are intended for precision/performance trade-offs such as bypass-map resolution and repeated gas-property evaluation.
+    /// </remarks>
+    type RunSettings =
+        { BypassMapMode: string
+          BypassTargetToleranceK: float
+          GasPropertyCache: bool
+          CorrelationValidityWarnings: bool }
+
+    /// <summary>
+    /// Provides conservative runtime settings for API callers that do not pass project options.
+    /// </summary>
+    /// <remarks>
+    /// The adaptive bypass map keeps normal runs responsive while refining around the target when needed.
+    /// </remarks>
+    let defaultRunSettings =
+        { BypassMapMode = "adaptive"
+          BypassTargetToleranceK = 0.5
+          GasPropertyCache = true
+          CorrelationValidityWarnings = true }
+
+    /// <summary>
     /// Calculates or returns w for the WHB calculation model.
     /// </summary>
     /// <remarks>
@@ -83,7 +107,7 @@ module Design =
     /// <remarks>
     /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
     /// </remarks>
-    let buildFindings (case: DesignCase) (sat: Steam.SatProps) (cells: CellResult list)
+    let buildFindings (correlationValidityWarnings: bool) (case: DesignCase) (sat: Steam.SatProps) (cells: CellResult list)
                       (axial: AxialResult list) (circ: CirculationResult)
                       (ft: FixedTubesheetResult) (risers: RiserCheck list)
                       (expansions: ExpansionResult list) (bp: Bypass.Result option) (dpGas: float)
@@ -108,6 +132,37 @@ module Design =
         let add s area title value limit where action detail =
             fs.Add { Severity = s; Area = area; Title = title; Value = value
                      Limit = limit; Where = where; Action = action; Detail = detail }
+
+        if correlationValidityWarnings then
+            let reMin = cells |> List.map (fun c -> c.ReGas) |> List.min
+            let reMax = cells |> List.map (fun c -> c.ReGas) |> List.max
+            if reMin < 10000.0 then
+                add Warning "VALIDITA' CORRELAZIONI" "Reynolds gas fuori dal campo pienamente turbolento"
+                    (sprintf "Re min = %.0f, Re max = %.0f" reMin reMax)
+                    "Re >= 10000 per uso robusto delle correlazioni forced-convection turbolente"
+                    "lato gas, celle a bassa portata/temperatura"
+                    "Verificare correlazione laminar/transitional o aumentare la confidenza con benchmark dedicato."
+                    "Dittus-Boelter, Gnielinski e simili sono piu' affidabili in moto turbolento sviluppato."
+            let compV = GasProps.normalize case.Gas.Composition
+            let prValues =
+                cells
+                |> List.map (fun c -> (GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas compV c.TGas c.PGas case.Gas.Z).Pr)
+            let prMin = prValues |> List.min
+            let prMax = prValues |> List.max
+            if prMin < 0.5 || prMax > 2.0 then
+                add Warning "VALIDITA' CORRELAZIONI" "Prandtl gas fuori dal range tipico"
+                    (sprintf "Pr = %.3f .. %.3f" prMin prMax)
+                    "range indicativo 0.5 .. 2.0 per screening gas-side"
+                    "lato gas"
+                    "Verificare proprieta' di trasporto e correlazione scelta."
+                    "Il limite e' pratico: non blocca il calcolo ma richiede review."
+            if case.Gas.PIn > barToPa 30.0 && not case.Gas.RealGas then
+                add Warning "VALIDITA' PROPRIETA'" "Gas ideale usato ad alta pressione"
+                    (sprintf "p ingresso = %.2f bar(a)" (paToBar case.Gas.PIn))
+                    "usare modello realistico/viriale sopra circa 30 bar(a)"
+                    "gas di processo"
+                    "Impostare gas.modello_gas = realistico e validare con dati di trasporto."
+                    "La densita' ideale puo' alterare velocita', Reynolds, dP e duty."
 
         if dnb.DNBR < 1.0 then
             add Critical "EBOLLIZIONE" "Margine su DNB insufficiente"
@@ -421,7 +476,7 @@ module Design =
     /// <remarks>
     /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
     /// </remarks>
-    let runWithProgress (reportProgress: string -> unit) (caseIn: DesignCase) : DesignResult =
+    let runWithSettingsAndProgress (settings: RunSettings) (reportProgress: string -> unit) (caseIn: DesignCase) : DesignResult =
         let phase text = reportProgress text
         phase "Preparing connected risers, downcomers, steam properties, and tube bands"
         let allRisers = caseIn.Loop.Risers
@@ -442,6 +497,20 @@ module Design =
         let nz = max 6 case.NZ
         let comp0 = GasProps.normalize case.Gas.Composition
         let wGasTot = case.Gas.MassFlow
+        let gasCache = System.Collections.Generic.Dictionary<string, GasProps.MixProps>()
+        let mixRealCached rule real comp tK pPa z =
+            if not settings.GasPropertyCache then GasProps.mixReal rule real comp tK pPa z
+            else
+                let key =
+                    sprintf "%s|%b|%.1f|%.0f|%.4f"
+                        (GasProps.mixingRuleName rule) real
+                        (Math.Round(tK, 1)) (Math.Round(pPa, 0)) z
+                match gasCache.TryGetValue key with
+                | true, value -> value
+                | _ ->
+                    let value = GasProps.mixReal rule real comp tK pPa z
+                    gasCache.[key] <- value
+                    value
         let dutyGuess = wGasTot * 2.2e3 * (case.Gas.TIn - sat.Tsat - 30.0)
         let steamGuess = dutyGuess / sat.Hfg
 
@@ -509,10 +578,10 @@ module Design =
                 match bp with
                 | Some b ->
                     let n = if bpSpec.ValveAtOutlet then List.last b.Nodes else List.head b.Nodes
-                    let pr = GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0 n.TGas case.Gas.PIn 1.0
+                    let pr = mixRealCached case.Gas.MixingRule case.Gas.RealGas comp0 n.TGas case.Gas.PIn 1.0
                     (b.TOutBypass, b.TLinerMax, pr.Rho, n.TGas)
                 | None ->
-                    let pr = GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0 sat.Tsat case.Gas.PIn 1.0
+                    let pr = mixRealCached case.Gas.MixingRule case.Gas.RealGas comp0 sat.Tsat case.Gas.PIn 1.0
                     (sat.Tsat, sat.Tsat, pr.Rho, sat.Tsat)
             { X = x
               TMix = tm
@@ -525,10 +594,17 @@ module Design =
               TLinerMax = tLin
               RhoValve = rhoV
               TValve = tV }
-        let xGrid =
+        let mode = (settings.BypassMapMode |> Option.ofObj |> Option.defaultValue "adaptive").Trim().ToLowerInvariant()
+        let xGridBase =
             if not case.Bypass.Enabled then [ 0.0 ]
-            elif case.Bypass.ValveOpenDeg.IsSome then
+            elif mode = "full" || case.Bypass.ValveOpenDeg.IsSome then
                 [ 0.0; 0.003; 0.006; 0.010; 0.015; 0.021; 0.030; 0.045; 0.065; 0.090; 0.125; 0.170 ]
+            elif mode = "fixed" then
+                match case.Bypass.Fraction with
+                | Some f -> [ 0.0; max 0.0 (min 0.170 f) ]
+                | None -> [ 0.0 ]
+            elif mode = "fast" then
+                [ 0.0; 0.006; 0.010 ]
             else
                 match case.Bypass.Fraction with
                 | Some f ->
@@ -539,11 +615,28 @@ module Design =
                 | None ->
                     [ 0.0; 0.006; 0.010 ]
         phase "Evaluating bypass map and coupled thermal/circulation points"
-        let pmap =
-            xGrid
-            |> List.map (fun x ->
+        let mapPointWithPhase x =
                 phase (sprintf "Evaluating bypass map point x = %.3f" x)
-                mapPoint x)
+                mapPoint x
+        let pmap =
+            let initial = xGridBase |> List.map (fun x -> x, mapPointWithPhase x)
+            if not case.Bypass.Enabled || mode <> "adaptive" || case.Bypass.Fraction.IsSome || case.Bypass.ValveOpenDeg.IsSome then
+                initial
+            else
+                let mutable points = initial
+                let mutable candidates = [ 0.015; 0.021; 0.030; 0.045; 0.065; 0.090; 0.125; 0.170 ]
+                let closeEnough (p: MapPt) = abs (p.TMix - case.Bypass.TargetMixOut) <= max 0.05 settings.BypassTargetToleranceK
+                let mutable done_ =
+                    (List.head points |> snd).TMix >= case.Bypass.TargetMixOut
+                    || (List.last points |> snd).TMix <= case.Bypass.TargetMixOut
+                    || (points |> List.exists (snd >> closeEnough))
+                while not done_ && not candidates.IsEmpty do
+                    let x = List.head candidates
+                    candidates <- List.tail candidates
+                    points <- points @ [ x, mapPointWithPhase x ]
+                    done_ <- (List.last points |> snd).TMix <= case.Bypass.TargetMixOut || (points |> List.exists (snd >> closeEnough))
+                points
+            |> List.map snd
 
         let qDyn (x: float) =
             let rho = max 1e-3 (interpMap pmap (fun p -> p.RhoValve) x)
@@ -982,7 +1075,7 @@ module Design =
                   (sprintf "FUORI CAMPO DI VALIDITA': il valore NON va usato. La correlazione e' tarata a bassa pressione, dove rho_l/rho_v vale centinaia; qui vale %.1f con We_D = %.0f. Il gruppo rho_v h_fg u su cui e' costruita esplode ad alta pressione e produce un flusso critico privo di significato fisico. E' riportata solo per documentare che e' stata verificata e scartata." ratio we) ]
         let sensCell = cellQmax
         let propsAt (c: CellResult) =
-            GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0 c.TGas c.PGas case.Gas.Z
+            mixRealCached case.Gas.MixingRule case.Gas.RealGas comp0 c.TGas c.PGas case.Gas.Z
         let chain (hGas: float) (hBoil: float) (rfIn: float) (rfOut: float) (c: CellResult) =
             let bore = if c.InFerrule then case.Ferrule.Bore else t.Di
             let km = case.Material.K (kToC c.TMetalWallAvg)
@@ -1035,7 +1128,7 @@ module Design =
             let mixItems =
                 [ GasProps.Wilke; GasProps.MolarAverage ]
                 |> List.map (fun rule ->
-                    let p2 = GasProps.mixReal rule case.Gas.RealGas comp0 sensCell.TGas sensCell.PGas case.Gas.Z
+                    let p2 = mixRealCached rule case.Gas.RealGas comp0 sensCell.TGas sensCell.PGas case.Gas.Z
                     let nu = GasSide.nusseltFD case.Gas.Correlation sensCell.ReGas p2.Pr 1.0
                     let fProp = GasSide.gasPropertyCorrection sensCell.TMetalIn p2.T
                     let ent = GasSide.entranceCorrection sensCell.Z bore case.Gas.EntranceC
@@ -1086,7 +1179,7 @@ module Design =
                         let w = inSpan |> List.maxBy (fun c -> c.VelCross)
                         let rhoH = TwoPhase.homogeneousDensity w.XOut sat
                         let rhoGas =
-                            (GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0 w.TGas w.PGas case.Gas.Z).Rho
+                            (mixRealCached case.Gas.MixingRule case.Gas.RealGas comp0 w.TGas w.PGas case.Gas.Z).Rho
                         yield
                             Vibration.check j w.Y sp lam case.TubeLayout case.VibrationDamping
                                 t.Do t.Di t.Pitch (case.Material.E (kToC w.TMetalWallAvg)) 7850.0
@@ -1112,7 +1205,7 @@ module Design =
                     let bc = out.Cells.[i, jb, 0]
                     let p = bc.PGas
                     let tG = fst (Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas p comp0 h)
-                    let pr = GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0 tG p case.Gas.Z
+                    let pr = mixRealCached case.Gas.MixingRule case.Gas.RealGas comp0 tG p case.Gas.Z
                     let bore = if bc.InFerrule then case.Ferrule.Bore else t.Di
                     let re = 4.0 * w / (Math.PI * bore * pr.Mu)
                     if i = 0 then reIn <- re
@@ -1228,7 +1321,7 @@ module Design =
                       Bom = "linea non realizzata"
                       Note = ln.Note }))
         let findings =
-            buildFindings case sat cells axial circ ftRes riserChecks expansions bpRes out.DpGas
+            buildFindings settings.CorrelationValidityWarnings case sat cells axial circ ftRes riserChecks expansions bpRes out.DpGas
                 stressRes valveRes notConnected vibration
         let warnings =
             findings
@@ -1299,12 +1392,21 @@ module Design =
           Warnings = warnings }
 
     /// <summary>
+    /// Runs the complete WHB design calculation with progress callbacks and default runtime settings.
+    /// </summary>
+    /// <remarks>
+    /// This overload preserves the earlier API while allowing callers to observe phase-level progress.
+    /// </remarks>
+    let runWithProgress (reportProgress: string -> unit) (caseIn: DesignCase) : DesignResult =
+        runWithSettingsAndProgress defaultRunSettings reportProgress caseIn
+
+    /// <summary>
     /// Runs the complete WHB design calculation without progress callbacks.
     /// </summary>
     /// <remarks>
-    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Use <c>runWithProgress</c> when the caller needs phase-level diagnostics.
+    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result.
     /// </remarks>
     let run (caseIn: DesignCase) : DesignResult =
-        runWithProgress ignore caseIn
+        runWithSettingsAndProgress defaultRunSettings ignore caseIn
 
 

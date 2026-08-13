@@ -18,6 +18,24 @@ Gas-side convection is estimated with empirical Nusselt correlations such as Dit
 
 Radiation can be added using gas emissivity estimates for species such as water vapor and carbon dioxide. Radiation assumptions are sensitive to pressure, optical path length, gas composition, and wall emissivity.
 
+The calculation can emit correlation-validity findings when screening values
+such as gas Reynolds number, gas Prandtl number, or pressure/model consistency
+move outside practical preliminary-design ranges. These findings are warnings,
+not automatic design rejection criteria.
+
+## Bypass Precision Controls
+
+The bypass map controls the trade-off between calculation time and mixed-outlet
+temperature resolution. `adaptive` starts from the useful base points and adds
+points only until the target is bracketed or the configured temperature
+tolerance is met. `full` forces the extended map for detailed review, `fast`
+keeps the compact map for interactive iterations, and `fixed` evaluates the
+specified bypass fraction directly.
+
+The adaptive mode was introduced because the full map repeated several complete
+WHB thermal/hydraulic solves at bypass fractions that do not affect the base
+case. For final issue or sensitivity work, the full mode remains available.
+
 ## Water-Side Heat Transfer
 
 Water-side calculations include convection, nucleate boiling, boiling-crisis margin, wall superheat, and deposit/fouling resistance. The results are correlation based and must be reviewed when mass flux, vapor quality, pressure, heat flux, or geometry move outside the intended range.

@@ -30,6 +30,13 @@ let ``unit conversions round trip`` () =
     Assert.Equal(0.032, mmToM 32.0, 12)
 
 [<Fact>]
+let ``default project options expose thermal precision controls`` () =
+    Assert.Equal("adaptive", Options.Options.defaultOptions.Calculation.BypassMapMode)
+    Assert.True(Options.Options.defaultOptions.Calculation.BypassTargetToleranceK > 0.0)
+    Assert.True(Options.Options.defaultOptions.Calculation.GasPropertyCache)
+    Assert.True(Options.Options.defaultOptions.Calculation.CorrelationValidityWarnings)
+
+[<Fact>]
 let ``bisect handles normal and reversed brackets`` () =
     /// <summary>
     /// Calculates or returns f for the WHB calculation model.

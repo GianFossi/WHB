@@ -6,6 +6,8 @@ This list records candidate improvements for later WHB versions.
 
 - Add additional regression tests against independent published heat-transfer and pressure-drop examples.
 - Add more benchmark cases for alternate gas-side correlations, boiling correlations, and two-phase multipliers.
+- Add benchmark timing cases for `fast`, `adaptive`, `full`, and `fixed`
+  bypass-map modes.
 - Add tolerance-based report comparisons for user-supplied acceptance cases.
 - Extend the vibration and mechanical screening campaign with independent vendor or standard examples.
 
@@ -18,7 +20,12 @@ This list records candidate improvements for later WHB versions.
 
 ## Thermal And Hydraulic Model
 
-- Add more explicit correlation validity checks and warnings.
+- Extend correlation validity checks to additional boiling, radiation, and
+  two-phase pressure-drop methods.
+- Add an optional higher-fidelity radiation model with documented emissivity,
+  optical-path, participating-species and wall-emissivity assumptions.
+- Separate the tube-bundle thermal solve from bypass-only sweeps with a
+  validated surrogate when the bypass heat loss is small.
 - Add selectable boiling-crisis and CHF methods with documented applicability ranges.
 - Improve maldistribution handling and blocked/plugged tube modeling.
 - Add optional internal recirculation and alternate circulation-network models.

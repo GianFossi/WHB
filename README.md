@@ -91,6 +91,11 @@ Summary, criticality, PDS comparison and inventory outputs are always written;
 `reporting.generateFullReport` and `reporting.generateHtmlReport` add the full
 text and HTML reports.
 
+Thermal precision/performance options include `calculation.bypassMapMode`
+(`adaptive`, `fast`, `full`, `fixed`), `calculation.bypassTargetToleranceK`,
+`calculation.gasPropertyCache`, and
+`calculation.correlationValidityWarnings`.
+
 Run internal correlation checks:
 
 ```bash

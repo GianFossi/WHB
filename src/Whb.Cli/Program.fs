@@ -1495,10 +1495,15 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
         ref "Starting design run"
     logger "Run started"
     let r =
+        let runSettings : Design.RunSettings =
+            { BypassMapMode = options.Calculation.BypassMapMode
+              BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
+              GasPropertyCache = options.Calculation.GasPropertyCache
+              CorrelationValidityWarnings = options.Calculation.CorrelationValidityWarnings }
         Progress.runWithStatusDynamic
             (fun () -> currentTask.Value)
             25.0
-            (fun () -> Design.runWithProgress (PhaseLogger.phase logger currentTask) case)
+            (fun () -> Design.runWithSettingsAndProgress runSettings (PhaseLogger.phase logger currentTask) case)
     logger "Design calculation completed; writing reports"
     sw.Stop()
     if options.Reporting.GenerateFullReport then

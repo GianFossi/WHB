@@ -90,10 +90,23 @@ diagnostics for CLI runs:
 | `logging.logFile` | Log file path used when phase logging is enabled. |
 | `reporting.generateFullReport` | Writes `report.txt`, the complete engineering report. |
 | `reporting.generateHtmlReport` | Writes `report.html`, the complete self-contained HTML report. |
+| `calculation.bypassMapMode` | `adaptive`, `fast`, `full`, or `fixed`; controls bypass-map precision/performance. |
+| `calculation.bypassTargetToleranceK` | Temperature tolerance used by adaptive bypass targeting. |
+| `calculation.dutyToleranceFraction` | Reserved duty tolerance for regression/report acceptance checks. |
+| `calculation.gasPropertyCache` | Reuses repeated gas-property evaluations during one design run. |
+| `calculation.correlationValidityWarnings` | Adds findings when common correlation validity ranges are exceeded. |
 
 Before a normal run, the CLI performs preflight checks for active `whb.exe`
 processes, case-file readability, output/temp/log write access, and available
 disk space.
+
+Bypass-map modes:
+
+- `adaptive`: starts with a small map and adds points only until the target
+  mixed outlet temperature is bracketed.
+- `fast`: uses the compact map directly for interactive checks.
+- `full`: evaluates the extended bypass map for detailed valve/report review.
+- `fixed`: uses the specified bypass fraction when one is supplied.
 
 ## Generated Output Contracts
 
