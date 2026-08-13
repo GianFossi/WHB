@@ -141,6 +141,7 @@ to your release process. This repository currently builds the CLI from source.
 - Water-gas shift modes: frozen, equilibrium above a freeze temperature, and
   fractional approach.
 - Gas mixture properties with Wilke and molar-average options.
+- Gas model selection with ideal-gas or `realistico`/virial real-gas correction.
 - IAPWS-IF97 water/steam helper properties for regions used by the model.
 - Metal temperature estimates through fouling, ferrule, wall and water-side
   deposit resistances.
@@ -242,8 +243,10 @@ checked against the available client PDS data.
 - Methanation is not modeled.
 - Water-gas shift is frozen by default, matching the reference datasheet
   assumption of unchanged molecular weight.
-- The default gas model is ideal-gas with user-provided compressibility factor;
-  optional virial corrections are limited.
+- The base gas model is ideal-gas with user-provided compressibility factor.
+  The built-in reference case and the `realistico` option enable the currently
+  implemented virial correction, which is still limited and should be validated
+  for high-pressure syngas.
 - The shell-side model assumes a distributed bundle representation, not a full
   CFD simulation.
 - Axial distribution uses a local circulation-ratio approach; the alternate

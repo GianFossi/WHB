@@ -13,7 +13,7 @@ This list records candidate improvements for later WHB versions.
 
 - Extend steam/water support where needed for higher-pressure or region-3 conditions.
 - Add more gas species and validated transport-property data.
-- Add stronger real-gas models for high-pressure syngas service.
+- Add stronger real-gas models for high-pressure syngas service beyond the current `realistico`/virial option.
 - Add optional reaction-chemistry models beyond water-gas shift.
 
 ## Thermal And Hydraulic Model

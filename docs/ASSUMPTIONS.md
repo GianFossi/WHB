@@ -25,7 +25,8 @@ This document summarizes the main engineering assumptions used by WHB.
 - Gas composition must be normalized before property calculations.
 - Water-gas shift can be frozen, equilibrium above a freeze temperature, or a fractional approach to equilibrium.
 - Methanation and detailed reaction kinetics are not modeled.
-- The default gas model is ideal-gas with optional limited real-gas corrections.
+- The CLI supports `gas.modello_gas`: use `ideale` for ideal gas, or `realistico`/`viriale` for the currently implemented real-gas virial correction.
+- The `realistico` option is the most realistic gas model currently implemented, but it remains a limited virial correction and must be validated for high-pressure syngas service.
 
 ## Thermal Basis
 

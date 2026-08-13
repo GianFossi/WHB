@@ -452,6 +452,19 @@ let private frictionModel (name: string) =
     | _ -> TwoPhase.Friedel
 
 /// <summary>
+/// Calculates or returns gasModelUsesRealGas for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// The CLI accepts explicit gas-model names while preserving the older gas.gas_reale boolean option.
+/// </remarks>
+let private gasModelUsesRealGas (name: string) (fallback: bool) =
+    match name.Trim().ToLowerInvariant() with
+    | "" -> fallback
+    | "ideale" | "ideal" | "ideal-gas" | "ideal gas" -> false
+    | "viriale" | "virial" | "reale" | "real" | "real-gas" | "real gas" | "realistico" | "realistic" -> true
+    | _ -> fallback
+
+/// <summary>
 /// Calculates or returns insulK for the WHB calculation model.
 /// </summary>
 /// <remarks>
@@ -584,7 +597,10 @@ let loadCase (path: string) : DesignCase =
             match (Json.s r "gas.miscelazione" "wilke").ToLowerInvariant() with
             | "molare" | "molar" -> GasProps.MolarAverage
             | _ -> GasProps.Wilke
-          RealGas = Json.b r "gas.gas_reale" g.RealGas }
+          RealGas =
+            gasModelUsesRealGas
+                (Json.s r "gas.modello_gas" "")
+                (Json.b r "gas.gas_reale" g.RealGas) }
     /// <summary>
     /// Calculates or returns wt for the WHB calculation model.
     /// </summary>
@@ -790,6 +806,7 @@ let template = """{
     "t_ingresso_C": 967.5,
     "p_ingresso_bara": 34.74,
     "z": 1.0,
+    "modello_gas": "realistico",
     "fouling_m2KW": 0.00050,
     "emissivita_parete": 0.85,
     "irraggiamento": true,
