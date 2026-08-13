@@ -153,6 +153,8 @@ to your release process. This repository currently builds the CLI from source.
 - IAPWS-IF97 water/steam helper properties for regions used by the model.
 - Metal temperature estimates through fouling, ferrule, wall and water-side
   deposit resistances.
+- Ferrule component checks for pressure drop and insulation paper radial
+  thickness fit.
 - Materials catalogue with indicative thermal/mechanical limits and metal
   dusting windows.
 - Vibration, nozzle, maldistribution and mechanical-stress diagnostics.

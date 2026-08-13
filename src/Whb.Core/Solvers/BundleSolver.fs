@@ -30,6 +30,59 @@ module BundleSolver =
             rSleeve + rIns
 
     /// <summary>
+    /// Calculates or returns the radial insulation paper thickness available around the ferrule sleeve.
+    /// </summary>
+    /// <remarks>
+    /// The value is half of the tube ID minus sleeve OD clearance and should be checked against drawing and installation tolerances.
+    /// </remarks>
+    let ferruleInsulationThickness (f: Ferrule) (di: float) =
+        if not f.Enabled then 0.0 else max 0.0 (0.5 * (di - f.SleeveOd))
+
+    /// <summary>
+    /// Calculates or returns whether the ferrule sleeve and insulation fit inside the tube ID.
+    /// </summary>
+    /// <remarks>
+    /// The fit check is geometric only; final acceptance still requires vendor drawing tolerances and installation details.
+    /// </remarks>
+    let ferruleInsulationFitStatus (f: Ferrule) (di: float) =
+        if not f.Enabled then "NOT INSTALLED"
+        elif f.Bore <= 0.0 || f.SleeveOd <= 0.0 || di <= 0.0 then "CHECK - invalid ferrule geometry"
+        elif f.Bore >= f.SleeveOd then "CHECK - bore is not smaller than sleeve OD"
+        elif f.SleeveOd >= di then "CHECK - no radial space for insulation paper"
+        else
+            let thk = ferruleInsulationThickness f di
+            if thk < 0.0005 then "CHECK - insulation paper thinner than 0.5 mm"
+            elif thk > 0.003 then "CHECK - insulation paper thicker than 3 mm"
+            else "OK"
+
+    /// <summary>
+    /// Estimates the gas-side pressure drop across the ferrule component.
+    /// </summary>
+    /// <remarks>
+    /// The estimate includes friction through the smaller ferrule bore and the local expansion from ferrule bore to tube ID.
+    /// </remarks>
+    let ferrulePressureDropEstimate
+        (f: Ferrule)
+        (tubeDi: float)
+        (roughness: float)
+        (mdotPerTube: float)
+        (props: GasProps.MixProps)
+        (length: float)
+        =
+        if not f.Enabled || length <= 0.0 then 0.0
+        else
+            let bore = max 1e-6 f.Bore
+            let area = Math.PI * bore * bore / 4.0
+            let gFlux = mdotPerTube / area
+            let velocity = gFlux / props.Rho
+            let re = gFlux * bore / props.Mu
+            let fDarcy = GasSide.darcyFriction re (roughness / bore)
+            let dpFriction = GasSide.dpFrictionPerM fDarcy bore props.Rho velocity * length
+            let kExpansion = (1.0 - (bore / tubeDi) ** 2.0) ** 2.0
+            let dpExpansion = GasSide.dpLocal kExpansion props.Rho velocity
+            dpFriction + dpExpansion
+
+    /// <summary>
     /// Calculates or returns ferruleclasses for the WHB calculation model.
     /// </summary>
     /// <remarks>

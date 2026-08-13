@@ -496,6 +496,18 @@ module Report =
         if c.Ferrule.Enabled then
             let rF = BundleSolver.ferruleResistance c.Ferrule c.Tube.Di 500.0
             kv sb "  resistenza ferrula a 500 °C" (sprintf "%s m·K/W" (f4 rF))
+            let ferruleLength =
+                BundleSolver.ferruleClasses c.Ferrule
+                |> List.sumBy (fun (fr, l) -> fr * l)
+            let compIn = GasProps.normalize c.Gas.Composition
+            let propsIn = GasProps.mixReal c.Gas.MixingRule c.Gas.RealGas compIn c.Gas.TIn c.Gas.PIn c.Gas.Z
+            let mdotPerTube = c.Gas.MassFlow / float c.Tube.NTubes
+            let dpFerrule =
+                BundleSolver.ferrulePressureDropEstimate
+                    c.Ferrule c.Tube.Di c.Tube.Roughness mdotPerTube propsIn ferruleLength
+            let paperThk = BundleSolver.ferruleInsulationThickness c.Ferrule c.Tube.Di
+            kv sb "  perdita pressione ferrula stimata" (sprintf "%s mbar per tubo" (f2 (dpFerrule / 100.0)))
+            kv sb "  spessore carta isolante radiale" (sprintf "%s mm - %s" (f2 (paperThk * 1000.0)) (BundleSolver.ferruleInsulationFitStatus c.Ferrule c.Tube.Di))
         kv sb "Bande: n. tubi (dal basso verso l'alto)"
             (r.Bands |> List.map (fun b -> f0 b.NTubes) |> String.concat " / ")
         kv sb "  verifica somma tubi" (f1 (Bundle.totalTubes r.Bands))

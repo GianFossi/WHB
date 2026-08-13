@@ -33,6 +33,8 @@ This document summarizes the main engineering assumptions used by WHB.
 - Gas-side heat transfer uses empirical forced-convection correlations with optional radiation contribution.
 - Water-side heat transfer uses boiling and convection correlations suitable for preliminary engineering checks.
 - Fouling, ferrule, tube wall, deposit, and shell-side resistances are treated as one-dimensional thermal resistances.
+- Ferrule pressure drop is checked as a component estimate using ferrule bore, weighted length, inlet gas properties and bore-to-tube expansion.
+- Ferrule insulation paper thickness is checked geometrically from tube ID and sleeve OD; drawing tolerances remain a vendor/design check.
 - Local peaks depend on grid resolution and input maldistribution assumptions.
 
 ## Hydraulic Basis

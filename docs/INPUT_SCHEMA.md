@@ -55,6 +55,8 @@ and must be validated for final design use.
 - `bypass` enables bypass heat-transfer, pressure-drop, valve and mixing checks.
 - Tube, ferrule, baffle and shell dimensions drive both thermal calculations and
   the water-volume / metal-weight summary.
+- Ferrule fields also drive the ferrule component pressure-drop estimate and the
+  radial insulation-paper thickness check.
 
 ## Generated Output Contracts
 

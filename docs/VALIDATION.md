@@ -27,6 +27,13 @@ Additional behavioral tests check that:
   preliminary coefficients;
 - shell-side HTC combines boiling, bundle factor and convection consistently.
 
+The ferrule component test campaign checks that:
+
+- ferrule thermal resistance is positive when a ferrule is installed;
+- ferrule pressure-drop estimate is positive for the reference geometry;
+- insulation paper radial thickness matches the 1.0 mm reference fit;
+- ferrule fit status reports `OK` for the reference geometry.
+
 ## Reference Case Report
 
 | Quantity | Expected value | Test tolerance |

@@ -196,6 +196,55 @@ let ``water side heat transfer supports boiling and convection screening correla
     approx (hBoil * 1.5 + hConv) 1e-9 hShell
 
 [<Fact>]
+let ``ferrule component checks pressure drop and insulation paper thickness`` () =
+    /// <summary>
+    /// Calculates or returns the reference ferrule component.
+    /// </summary>
+    /// <remarks>
+    /// The reference case has a 26.7 mm bore, 30.0 mm sleeve OD, and 32.0 mm tube ID.
+    /// </remarks>
+    let ferrule = Defaults.referenceCase.Ferrule
+
+    /// <summary>
+    /// Calculates or returns reference inlet gas properties for the ferrule pressure-drop check.
+    /// </summary>
+    /// <remarks>
+    /// The pressure-drop estimate is a component check based on inlet gas properties and average ferrule length.
+    /// </remarks>
+    let props =
+        GasProps.mixReal
+            Defaults.referenceCase.Gas.MixingRule
+            Defaults.referenceCase.Gas.RealGas
+            Defaults.referenceComposition
+            Defaults.referenceCase.Gas.TIn
+            Defaults.referenceCase.Gas.PIn
+            Defaults.referenceCase.Gas.Z
+
+    /// <summary>
+    /// Calculates or returns weighted average ferrule length.
+    /// </summary>
+    /// <remarks>
+    /// Length classes are normalized before averaging.
+    /// </remarks>
+    let length =
+        BundleSolver.ferruleClasses ferrule |> List.sumBy (fun (fraction, value) -> fraction * value)
+
+    let paperThickness = BundleSolver.ferruleInsulationThickness ferrule Defaults.referenceCase.Tube.Di
+    let dp =
+        BundleSolver.ferrulePressureDropEstimate
+            ferrule
+            Defaults.referenceCase.Tube.Di
+            Defaults.referenceCase.Tube.Roughness
+            (Defaults.referenceCase.Gas.MassFlow / float Defaults.referenceCase.Tube.NTubes)
+            props
+            length
+
+    approx 0.001 1e-12 paperThickness
+    Assert.Equal("OK", BundleSolver.ferruleInsulationFitStatus ferrule Defaults.referenceCase.Tube.Di)
+    Assert.True(BundleSolver.ferruleResistance ferrule Defaults.referenceCase.Tube.Di 500.0 > 0.0)
+    Assert.True(dp > 0.0)
+
+[<Fact>]
 let ``reference case report comparison table stays within tolerance`` () =
     /// <summary>
     /// Represents documented reference-case comparison rows.
