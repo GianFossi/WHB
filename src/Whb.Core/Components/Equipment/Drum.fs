@@ -66,7 +66,7 @@ module Drum =
     /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
     /// </remarks>
     type Result =
-        { /// Perdita sul percorso di circolazione [Pa] - entra nel bilancio
+        { /// Pressure loss along the circulation path [Pa]; included in the balance.
           DpCirculation: float
           DpCirculationNet: float
           CircItems: Item list
@@ -118,10 +118,16 @@ module Drum =
     /// </remarks>
     let surfaceArea (id_: float) (length: float) (level: float) =
         let r = 0.5 * id_
-        let y = level - r                      // quota del pelo rispetto all'asse
+        let y = level - r                      // Free-surface elevation relative to the axis
         let halfChord = sqrt (max 0.0 (r * r - y * y))
         2.0 * halfChord * length
 
+    /// <summary>
+    /// Calculates or returns ductFriction for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private ductFriction (re: float) (l: float) (dh: float) =
         let f = GasSide.darcyFriction (max 2000.0 re) (5e-5 / dh)
         f * l / dh
@@ -145,7 +151,7 @@ module Drum =
         let gNoz = wPerConv / aNoz
         let vNoz = gNoz / rhoH
         let headNoz = 0.5 * rhoH * vNoz * vNoz
-        let rDuct = aNoz / max 1e-6 d.ConvDuctArea      // rapporto di area
+        let rDuct = aNoz / max 1e-6 d.ConvDuctArea      // Area ratio
         let rWin = aNoz / max 1e-6 d.ConvOutletArea
 
         let kExp =

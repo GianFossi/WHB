@@ -14,16 +14,52 @@ open Types
 /// </remarks>
 module HtmlReport =
 
+    /// <summary>
+    /// Calculates or returns ci for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private ci = CultureInfo.InvariantCulture
+    /// <summary>
+    /// Calculates or returns n for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private n (x: float) =
         if Double.IsNaN x || Double.IsInfinity x then "null" else x.ToString("G6", ci)
+    /// <summary>
+    /// Calculates or returns arr for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private arr (xs: seq<float>) = "[" + String.Join(",", xs |> Seq.map n) + "]"
+    /// <summary>
+    /// Calculates or returns sarr for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private sarr (xs: seq<string>) =
         "[" + String.Join(",", xs |> Seq.map (fun s -> "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"")) + "]"
 
+    /// <summary>
+    /// Calculates or returns esc for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private esc (s: string) =
         s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
 
+    /// <summary>
+    /// Calculates or returns css for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private css = """
 :root{color-scheme:light dark}
 *{box-sizing:border-box}
@@ -101,6 +137,12 @@ summary{cursor:pointer;font-size:13px;color:var(--text-secondary)}
 footer{margin-top:36px;font-size:12px;color:var(--text-muted)}
 """
 
+    /// <summary>
+    /// Calculates or returns js for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private js = """
 const $=(q,e=document)=>e.querySelector(q);
 const TT=document.createElement('div');TT.className='tt';document.body.appendChild(TT);

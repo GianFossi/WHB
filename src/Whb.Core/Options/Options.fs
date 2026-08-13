@@ -68,6 +68,12 @@ module Options =
           Github: GithubOptions
           RecentFiles: string list }
 
+    /// <summary>
+    /// Calculates or returns serializerOptions for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private serializerOptions =
         JsonSerializerOptions(WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
 

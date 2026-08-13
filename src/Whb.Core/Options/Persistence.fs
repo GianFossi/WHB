@@ -11,6 +11,12 @@ open System.Text.Json
 /// </remarks>
 module Persistence =
 
+    /// <summary>
+    /// Calculates or returns jsonOptions for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private jsonOptions =
         JsonSerializerOptions(WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
 

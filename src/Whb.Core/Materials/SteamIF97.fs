@@ -11,6 +11,12 @@ open Constants
 /// </remarks>
 module Steam =
 
+    /// <summary>
+    /// Calculates or returns n4 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private n4 =
         [| 0.11670521452767e4; -0.72421316703206e6; -0.17073846940092e2;
            0.12020824702470e5; -0.32325550322333e7;  0.14915108613530e2;
@@ -45,6 +51,12 @@ module Steam =
         let d = 2.0 * gg / (-f - sqrt (f * f - 4.0 * e * gg))
         0.5 * (n4.[9] + d - sqrt ((n4.[9] + d) * (n4.[9] + d) - 4.0 * (n4.[8] + n4.[9] * d)))
 
+    /// <summary>
+    /// Calculates or returns r1 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private r1 =
         [| (0, -2, 0.14632971213167);   (0, -1, -0.84548187169114)
            (0,  0, -0.37563603672040e1);(0,  1,  0.33855169168385e1)
@@ -69,6 +81,12 @@ module Steam =
            (31,-40, 0.18228094581404e-23)
            (32,-41,-0.93537087292458e-25) |]
 
+    /// <summary>
+    /// Calculates or returns reg1 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private reg1 (pMPa: float) (tK: float) =
         let pi = pMPa / 16.53
         let tau = 1386.0 / tK
@@ -93,13 +111,31 @@ module Steam =
         let s = (tau * gtau - gam) * Rw
         (v, h, cp, s)
 
+    /// <summary>
+    /// Calculates or returns r2j0 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private r2j0 = [| 0; 1; -5; -4; -3; -2; -1; 2; 3 |]
 
+    /// <summary>
+    /// Calculates or returns r2n0 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private r2n0 =
         [| -0.96927686500217e1;  0.10086655968018e2; -0.56087911283020e-2;
            0.71452738081455e-1; -0.40710498223928;    0.14240819171444e1;
            -0.43839511319450e1; -0.28408632460772;    0.21268463753307e-1 |]
 
+    /// <summary>
+    /// Calculates or returns r2r for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private r2r =
         [| (1, 0,  -0.17731742473213e-2); (1, 1, -0.17834862292358e-1)
            (1, 2,  -0.45996013696365e-1); (1, 3, -0.57581259083432e-1)
@@ -124,6 +160,12 @@ module Steam =
            (24,26,  0.73087610595061e-28);(24,40, 0.55414715350778e-16)
            (24,58, -0.94369707241210e-6) |]
 
+    /// <summary>
+    /// Calculates or returns reg2 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private reg2 (pMPa: float) (tK: float) =
         let pi = pMPa
         let tau = 540.0 / tK
@@ -157,8 +199,20 @@ module Steam =
         let s = (tau * (g0t + grt) - (g0 + gr)) * Rw
         (v, h, cp, s)
 
+    /// <summary>
+    /// Calculates or returns hVisc0 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private hVisc0 = [| 1.67752; 2.20462; 0.6366564; -0.241605 |]
 
+    /// <summary>
+    /// Calculates or returns hVisc1 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private hVisc1 =
         [| (0,0, 5.20094e-1); (1,0, 8.50895e-2); (2,0,-1.08374);    (3,0,-2.89555e-1)
            (0,1, 2.22531e-1); (1,1, 9.99115e-1); (2,1, 1.88797);    (3,1, 1.26613)
@@ -189,8 +243,20 @@ module Steam =
         let mu1 = exp (rb * s)
         mu0 * mu1 * 1e-6
 
+    /// <summary>
+    /// Calculates or returns lam0 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private lam0 = [| 2.443221e-3; 1.323095e-2; 6.770357e-3; -3.454586e-3; 4.096266e-4 |]
 
+    /// <summary>
+    /// Calculates or returns lam1 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private lam1 =
         array2D
             [ [  1.60397357; -0.646013523;  0.111443906;  0.102997357; -0.0504123634;  0.00609859258 ]

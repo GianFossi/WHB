@@ -44,6 +44,12 @@ module Shift =
     /// </remarks>
     let kp (tK: float) = exp (4577.8 / tK - 4.33)
 
+    /// <summary>
+    /// Calculates or returns extent for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private extent (nCO: float) (nH2O: float) (nCO2: float) (nH2: float) (k: float) =
         let a = k - 1.0
         let b = -(k * (nCO + nH2O) + nCO2 + nH2)
@@ -65,6 +71,12 @@ module Shift =
             | [] -> 0.0
             | l -> l |> List.minBy abs
 
+    /// <summary>
+    /// Calculates or returns applyExtent for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private applyExtent (c: Composition) (xi: float) : Composition =
         let get sp = molFrac c sp
         let upd sp v (l: Composition) =

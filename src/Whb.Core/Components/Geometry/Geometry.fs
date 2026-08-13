@@ -50,7 +50,19 @@ module Geometry =
           ExternalArea = 0.0
           Weight = 0.0 }
 
+    /// <summary>
+    /// Calculates or returns circleArea for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private circleArea d = Math.PI * d * d / 4.0
+    /// <summary>
+    /// Calculates or returns cylArea for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private cylArea d l = Math.PI * d * l
 
     /// <summary>

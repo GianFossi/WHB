@@ -51,6 +51,12 @@ module GitHubTransfer =
               $"git push -u origin {branch}"
               if g.CreatePullRequest then "gh pr create --draft --fill" ] }
 
+    /// <summary>
+    /// Calculates or returns runCommand for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private runCommand (workingDir: string) (fileName: string) (args: string) =
         let psi = ProcessStartInfo(fileName, args)
         psi.WorkingDirectory <- workingDir

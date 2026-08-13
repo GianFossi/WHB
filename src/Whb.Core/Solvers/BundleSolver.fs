@@ -60,6 +60,12 @@ module BundleSolver =
         let hnc = WaterSide.hNaturalConvection d (max 1.0 (qOut / 5000.0)) sat
         hnb * WaterSide.bundleFactor wc.BundleFactor * s + max (hLo * fChen) hnc
 
+    /// <summary>
+    /// Calculates or returns solveCell for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private solveCell
         (case: DesignCase) (sat: Steam.SatProps) (props: GasProps.MixProps)
         (z: float) (mdotPerTube: float) (inFerrule: bool)

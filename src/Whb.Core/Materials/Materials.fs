@@ -24,6 +24,12 @@ module Materials =
           MetalDusting: (float * float) option
           Note: string }
 
+    /// <summary>
+    /// Calculates or returns lin for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private lin (k0: float) (slope: float) = fun (t: float) -> k0 + slope * t
 
     /// <summary>

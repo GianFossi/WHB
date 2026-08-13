@@ -32,6 +32,12 @@ module GasProps =
         | CO -> 0.0280101  | CO2 -> 0.0440095 | CH4 -> 0.01604246
         | H2O -> 0.01801528 | Ar -> 0.039948 | NH3 -> 0.01703052
 
+    /// <summary>
+    /// Calculates or returns cpCoef for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private cpCoef =
         function
         | H2  -> (3.249, 0.422e-3, 0.0,       0.083e5)
@@ -44,6 +50,12 @@ module GasProps =
         | Ar  -> (2.500, 0.0,      0.0,       0.0)
         | NH3 -> (3.578, 3.020e-3, 0.0,      -0.186e5)
 
+    /// <summary>
+    /// Calculates or returns sutherland for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private sutherland =
         function
         | H2  -> (8.411e-6, 273.15, 97.0)
@@ -191,6 +203,12 @@ module GasProps =
             let b = (z - 1.0) * R * t / p
             if tK <= 1073.15 then b else b * Math.Pow(1073.15 / tK, 1.6)
 
+        /// <summary>
+        /// Calculates or returns bPair for the WHB calculation model.
+        /// </summary>
+        /// <remarks>
+        /// Keep this private helper synchronized with the implemented WHB calculation behavior and engineering units.
+        /// </remarks>
         let private bPair (a: Species) (b: Species) (tK: float) =
             if a = b then
                 if a = H2O then bWater tK
@@ -239,6 +257,12 @@ module GasProps =
         if not real then 0.0
         else let (_, h, _) = Virial.residual c tK pPa in h
 
+    /// <summary>
+    /// Calculates or returns phiWilke for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private phiWilke (mi: float) (mj: float) (mui: float) (muj: float) =
         let a = 1.0 + sqrt (mui / muj) * Math.Pow(mj / mi, 0.25)
         a * a / sqrt (8.0 * (1.0 + mi / mj))

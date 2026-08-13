@@ -42,6 +42,12 @@ module Nozzles =
     /// </remarks>
     type Schedule = Sch40 | Sch80 | Sch160
 
+    /// <summary>
+    /// Calculates or returns idOf for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private idOf (sch: Schedule) (nps: string, s40, s80, s160) =
         match sch with
         | Sch40 -> (nps, s40 / 1000.0)

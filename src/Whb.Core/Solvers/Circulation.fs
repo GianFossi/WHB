@@ -42,6 +42,12 @@ module Circulation =
         bs |> List.map (fun b -> sprintf "%d x %s %s (ID %.1f mm)" b.Count b.Tag b.Nps (b.Id * 1000.0))
            |> String.concat " + "
 
+    /// <summary>
+    /// Calculates or returns velLiquid for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private velLiquid (rho: float) (mu: float) (l: Piping.Line) (dp: float) =
         let mutable v = 1.0
         for _ in 1 .. 6 do
@@ -188,6 +194,12 @@ module Circulation =
             let rho = a * sat.RhoV + (1.0 - a) * sat.RhoL
             (rho, a, a * sat.RhoV / max 1e-9 rho)
 
+    /// <summary>
+    /// Calculates or returns dpAnnulus for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private dpAnnulus (sat: Steam.SatProps) (aByp: float) (alphaTop: float)
                           (h: float) (wLin: float) =
         let (rho, _, _) = annulusState sat aByp alphaTop wLin

@@ -12,8 +12,20 @@ open Types
 /// </remarks>
 module Design =
 
+    /// <summary>
+    /// Calculates or returns w for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private w fmt = Printf.kprintf id fmt
 
+    /// <summary>
+    /// Calculates or returns sev for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private sev = function Critical -> "CRITICO" | Warning -> "ATTENZIONE" | Note -> "NOTA"
 
     /// <summary>
@@ -35,6 +47,12 @@ module Design =
           RhoValve: float
           TValve: float }
 
+    /// <summary>
+    /// Calculates or returns interpMap for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private interpMap (pts: MapPt list) (sel: MapPt -> float) (x: float) =
         let a = pts |> List.toArray
         if x <= a.[0].X then sel a.[0]
@@ -45,6 +63,12 @@ module Design =
             let f = (x - a.[i].X) / (a.[i + 1].X - a.[i].X)
             sel a.[i] + f * (sel a.[i + 1] - sel a.[i])
 
+    /// <summary>
+    /// Calculates or returns invertMap for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private invertMap (pts: MapPt list) (sel: MapPt -> float) (target: float) =
         let f (x: float) = interpMap pts sel x - target
         let x0 = (List.head pts).X

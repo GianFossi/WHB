@@ -11,6 +11,12 @@ open Constants
 /// </remarks>
 module Valve =
 
+    /// <summary>
+    /// Calculates or returns table for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private table =
         [ 0.0,  0.20
           5.0,  0.24
@@ -28,6 +34,12 @@ module Valve =
           65.0, 256.0
           70.0, 751.0 ]
 
+    /// <summary>
+    /// Calculates or returns arr for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private arr = table |> List.toArray
 
     /// <summary>

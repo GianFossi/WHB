@@ -14,16 +14,52 @@ open Types
 /// </remarks>
 module Report =
 
+    /// <summary>
+    /// Calculates or returns ci for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private ci = CultureInfo.InvariantCulture
+    /// <summary>
+    /// Calculates or returns line for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private line = String('-', 96)
+    /// <summary>
+    /// Calculates or returns dline for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private dline = String('=', 96)
 
+    /// <summary>
+    /// Calculates or returns hdr for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private hdr (sb: StringBuilder) (t: string) =
         sb.AppendLine().AppendLine(dline).AppendLine(t.ToUpperInvariant()).AppendLine(dline) |> ignore
 
+    /// <summary>
+    /// Calculates or returns kv for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private kv (sb: StringBuilder) (k: string) (v: string) =
         sb.AppendLine(sprintf "  %-50s %s" k v) |> ignore
 
+    /// <summary>
+    /// Calculates or returns para for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private para (sb: StringBuilder) (indent: string) (txt: string) =
         let words = txt.Split(' ')
         let mutable cur = ""
@@ -34,6 +70,12 @@ module Report =
             else cur <- (if cur = "" then wd else cur + " " + wd)
         if cur <> "" then sb.AppendLine(indent + cur) |> ignore
 
+    /// <summary>
+    /// Calculates or returns legend for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private legend (sb: StringBuilder) (items: (string * string) list) =
         sb.AppendLine() |> ignore
         sb.AppendLine("  LEGENDA DELLE COLONNE") |> ignore
@@ -1728,6 +1770,12 @@ module Report =
                   f0 (x.QCritLocal / 1000.0); f2 x.DNBR; (if x.InFerrule then "1" else "0") ])) |> ignore
         sb.ToString()
 
+    /// <summary>
+    /// Calculates or returns extract for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private extract (r: DesignResult) (titolo: string) (marker: string) (fine: string) =
         let full = text r
         let i = full.IndexOf(marker, StringComparison.OrdinalIgnoreCase)

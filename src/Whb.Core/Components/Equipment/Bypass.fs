@@ -78,6 +78,12 @@ module Bypass =
           DpBypass: float          // Pa
           Converged: bool }
 
+    /// <summary>
+    /// Calculates or returns wallResistance for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let private wallResistance (s: Spec) (tLinerC: float) (tPipeC: float) =
         let rLiner = log (s.LinerOd / s.LinerId) / (2.0 * Math.PI * s.LinerMaterial.K tLinerC)
         let rIns = log (s.InsulOd / s.LinerOd) / (2.0 * Math.PI * s.InsulK (0.5 * (tLinerC + tPipeC)))
