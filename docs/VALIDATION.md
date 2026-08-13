@@ -2,7 +2,7 @@
 
 These tables describe the regression tests used by the repository. They are not a replacement for independent engineering validation, but they make numerical drift visible during development.
 
-The current automated suite contains 14 tests.
+The current automated suite contains 17 tests.
 
 ## Heat Transfer And Pressure Drop
 
@@ -57,6 +57,14 @@ for water-volume and estimated metal-weight review.
 | Vortex ratio | 0.855396975251 | 1e-12 |
 | Buffet ratio | 1.212356527264 | 1e-12 |
 | Screening result | false | exact |
+
+The vibration testing campaign also checks:
+
+- empirical added-mass, Strouhal and Connors coefficient behavior;
+- theoretical natural-frequency scaling with unsupported span and boundary
+  condition eigenvalue;
+- low-velocity versus high-velocity screening response;
+- allowable-span reduction when the fluid-elastic ratio is high.
 
 ## Mechanical Screening
 

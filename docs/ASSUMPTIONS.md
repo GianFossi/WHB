@@ -46,6 +46,7 @@ This document summarizes the main engineering assumptions used by WHB.
 
 - Mechanical checks are screening calculations, not code-stamped pressure-part design.
 - Vibration checks are screening checks based on empirical and theoretical relationships.
+- The automated vibration testing campaign covers empirical coefficients, theoretical frequency scaling, velocity sensitivity, allowable-span response and one frozen validation row.
 - Tube support, damping, acoustic behavior, and boundary conditions must be validated against project rules and vendor data.
 
 ## Inventory Basis

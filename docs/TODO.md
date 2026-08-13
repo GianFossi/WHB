@@ -7,7 +7,7 @@ This list records candidate improvements for later WHB versions.
 - Add additional regression tests against independent published heat-transfer and pressure-drop examples.
 - Add more benchmark cases for alternate gas-side correlations, boiling correlations, and two-phase multipliers.
 - Add tolerance-based report comparisons for user-supplied acceptance cases.
-- Extend validation tables for vibration and mechanical screening checks with independent vendor or standard examples.
+- Extend the vibration and mechanical screening campaign with independent vendor or standard examples.
 
 ## Thermodynamics And Properties
 

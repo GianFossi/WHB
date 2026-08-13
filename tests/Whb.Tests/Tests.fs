@@ -251,6 +251,85 @@ let ``vibration validation table remains stable`` () =
     Assert.False(result.Ok)
 
 [<Fact>]
+let ``vibration empirical coefficients stay within screening expectations`` () =
+    /// <summary>
+    /// Represents pitch ratios used by the vibration empirical-coefficient campaign.
+    /// </summary>
+    /// <remarks>
+    /// The campaign checks monotonic and bounded behavior instead of only one frozen benchmark row.
+    /// </remarks>
+    let pitchRatios = [ 1.25; 1.50; 2.00 ]
+
+    for pitchRatio in pitchRatios do
+        Assert.True(Vibration.addedMassCoef pitchRatio > 1.0)
+        Assert.InRange(Vibration.strouhal pitchRatio, 0.2, 0.6)
+
+    Assert.Equal(4.0, Vibration.connorsK Vibration.Triangular30 0.1, 12)
+    Assert.Equal(4.0, Vibration.connorsK Vibration.Square90 0.1, 12)
+    Assert.Equal(1.1, Vibration.connorsK Vibration.RotatedTriangular60 0.5, 12)
+    Assert.Equal(1.5, Vibration.connorsK Vibration.RotatedTriangular60 0.6, 12)
+
+[<Fact>]
+let ``vibration theoretical frequency follows span and boundary condition scaling`` () =
+    /// <summary>
+    /// Calculates or returns tube inertia for the vibration theory campaign.
+    /// </summary>
+    /// <remarks>
+    /// Frequency should scale with the eigenvalue coefficient and with span to the inverse square.
+    /// </remarks>
+    let inertia = Vibration.inertia 0.05 0.04
+
+    /// <summary>
+    /// Calculates or returns base natural frequency for the vibration theory campaign.
+    /// </summary>
+    /// <remarks>
+    /// The base case uses a simply supported style eigenvalue and a 1.5 m span.
+    /// </remarks>
+    let baseFrequency = Vibration.naturalFrequency (Vibration.lambda2Of 0) 2.0e11 inertia 6.5 1.5
+
+    /// <summary>
+    /// Calculates or returns natural frequency after doubling the unsupported span.
+    /// </summary>
+    /// <remarks>
+    /// Euler-Bernoulli screening theory gives frequency proportional to one over span squared.
+    /// </remarks>
+    let doubledSpanFrequency = Vibration.naturalFrequency (Vibration.lambda2Of 0) 2.0e11 inertia 6.5 3.0
+
+    approx (baseFrequency / 4.0) 1e-12 doubledSpanFrequency
+    Assert.True(Vibration.lambda2Of 2 > Vibration.lambda2Of 1)
+    Assert.True(Vibration.lambda2Of 1 > Vibration.lambda2Of 0)
+
+[<Fact>]
+let ``vibration screening campaign responds to velocity and allowable span`` () =
+    /// <summary>
+    /// Calculates or returns a low-velocity vibration screening case.
+    /// </summary>
+    /// <remarks>
+    /// Low velocity should remain below fluid-elastic and vortex screening limits.
+    /// </remarks>
+    let lowVelocity =
+        Vibration.check
+            0 0.0 1.5 (Vibration.lambda2Of 1) Vibration.Triangular30 0.02
+            0.05 0.04 0.075 2.0e11 7850.0 1.0 12.0 700.0
+
+    /// <summary>
+    /// Calculates or returns a high-velocity vibration screening case.
+    /// </summary>
+    /// <remarks>
+    /// High velocity should increase the screening ratios and fail the simplified check.
+    /// </remarks>
+    let highVelocity =
+        Vibration.check
+            0 0.0 1.5 (Vibration.lambda2Of 1) Vibration.Triangular30 0.02
+            0.05 0.04 0.075 2.0e11 7850.0 30.0 12.0 700.0
+
+    Assert.True(lowVelocity.Ok)
+    Assert.False(highVelocity.Ok)
+    Assert.True(highVelocity.FeiRatio > lowVelocity.FeiRatio)
+    Assert.True(highVelocity.VortexRatio > lowVelocity.VortexRatio)
+    Assert.True(Vibration.maxSpan 0.8 highVelocity < highVelocity.Span)
+
+[<Fact>]
 let ``mechanical screening validation table remains stable`` () =
     /// <summary>
     /// Calculates or returns a representative axial expansion result.
