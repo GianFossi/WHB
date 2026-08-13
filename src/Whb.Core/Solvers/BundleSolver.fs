@@ -4,20 +4,20 @@ open System
 open Constants
 open Types
 
-/// Risolutore bidimensionale: Nz sezioni lungo l'asse dell'apparecchio
-/// × Ny bande orizzontali del fascio tubiero, × Nc classi di lunghezza
-/// della ferrula.
-///
-/// - il gas marcia lungo z indipendentemente per ciascuna banda e classe
-///   (i tubi sono canali paralleli);
-/// - l'acqua attraversa il fascio dal basso verso l'alto, quindi il titolo
-///   cresce da banda a banda nella stessa sezione assiale;
-/// - le classi di ferrula rappresentano una popolazione di tubi con protezione
-///   d'imbocco di lunghezza diversa: il tubo con la ferrula più corta è quello
-///   che dimensiona il progetto.
+/// <summary>
+/// Provides bundlesolver functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module BundleSolver =
 
-    /// Resistenza termica della ferrula per unità di lunghezza [m·K/W]
+    /// <summary>
+    /// Calculates or returns ferruleresistance for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let ferruleResistance (f: Ferrule) (di: float) (tMeanC: float) =
         if not f.Enabled then 0.0
         else
@@ -29,14 +29,24 @@ module BundleSolver =
                 else 0.0
             rSleeve + rIns
 
-    /// Classi di ferrula normalizzate: (frazione, lunghezza [m])
+    /// <summary>
+    /// Calculates or returns ferruleclasses for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let ferruleClasses (f: Ferrule) =
         if not f.Enabled || f.Lengths.IsEmpty then [ (1.0, 0.0) ]
         else
             let s = f.Lengths |> List.sumBy fst
             if s <= 0.0 then [ (1.0, 0.0) ] else f.Lengths |> List.map (fun (a, b) -> (a / s, b))
 
-    /// Coefficiente lato mantello per una cella, con titolo e flusso locali.
+    /// <summary>
+    /// Calculates or returns shellhtc for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let shellHtc (case: DesignCase) (sat: Steam.SatProps) (qOut: float) (x: float) (gCross: float) =
         let t = case.Tube
         let d = t.Do
@@ -101,6 +111,12 @@ module BundleSolver =
 
         (qlin, gasRes, hb, twi, tmi, tmo, rBoil, rFoulOut, rMetal)
 
+    /// <summary>
+    /// Represents solveoutput data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type SolveOutput =
         { Cells: CellResult[,,]
           Axial: AxialResult list
@@ -114,9 +130,12 @@ module BundleSolver =
           Dz: float[]
           ZC: float[] }
 
-    /// Esegue la marcia 2-D.
-    ///   wLinField : portata nel campo tubi per metro assiale [kg/(s·m)]
-    ///   xInField  : titolo con cui l'acqua entra nella banda più bassa
+    /// <summary>
+    /// Calculates or returns solve for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let solve (case: DesignCase) (bands: Bundle.Band list)
               (wLinField: float[]) (xInField: float[]) : SolveOutput =
         let t = case.Tube
@@ -184,8 +203,6 @@ module BundleSolver =
                     let qOut = qlin / (Math.PI * t.Do)
                     let km = case.Material.K (kToC (0.5 * (tmi + tmo)))
                     let rm = 0.5 * (t.Di + t.Do) / 2.0
-                    // temperatura media dello spessore pesata sull'area:
-                    // T(r) = Tmo + q'/(2 pi k) ln(ro/r)
                     let ri = t.Di / 2.0
                     let ro = t.Do / 2.0
                     let tWallAvg =

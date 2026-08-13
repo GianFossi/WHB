@@ -1,58 +1,132 @@
 namespace Whb.Core
 
-/// Costanti fisiche e conversioni di unità.
+/// <summary>
+/// Provides constants functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Constants =
 
-    /// Costante universale dei gas [J/(mol·K)]
+    /// <summary>
+    /// Calculates or returns r for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let R = 8.31446261815324
 
-    /// Costante di Stefan-Boltzmann [W/(m²·K⁴)]
+    /// <summary>
+    /// Calculates or returns sigmasb for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let sigmaSB = 5.670374419e-8
 
-    /// Accelerazione di gravità [m/s²]
+    /// <summary>
+    /// Calculates or returns g for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let g = 9.80665
 
-    /// Temperatura critica dell'acqua [K]
+    /// <summary>
+    /// Calculates or returns tc_water for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let Tc_water = 647.096
 
-    /// Pressione critica dell'acqua [Pa]
+    /// <summary>
+    /// Calculates or returns pc_water for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let Pc_water = 22.064e6
 
-    /// Densità critica dell'acqua [kg/m³]
+    /// <summary>
+    /// Calculates or returns rhoc_water for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let Rhoc_water = 322.0
 
-    /// Costante specifica del vapor d'acqua [kJ/(kg·K)] (IAPWS-IF97)
+    /// <summary>
+    /// Calculates or returns rw for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let Rw = 0.461526
 
-    /// Converte una temperatura da gradi Celsius a kelvin.
+    /// <summary>
+    /// Calculates or returns ctok for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let inline cToK (t: float) = t + 273.15
 
-    /// Converte una temperatura da kelvin a gradi Celsius.
+    /// <summary>
+    /// Calculates or returns ktoc for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let inline kToC (t: float) = t - 273.15
 
-    /// Converte una pressione da bar a pascal.
+    /// <summary>
+    /// Calculates or returns bartopa for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let inline barToPa (p: float) = p * 1.0e5
 
-    /// Converte una pressione da pascal a bar.
+    /// <summary>
+    /// Calculates or returns patobar for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let inline paToBar (p: float) = p / 1.0e5
 
-    /// Converte una lunghezza da millimetri a metri.
+    /// <summary>
+    /// Calculates or returns mmtom for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let inline mmToM (x: float) = x / 1000.0
 
-    /// Media logaritmica di due valori positivi (con fallback su media aritmetica).
+    /// <summary>
+    /// Calculates or returns lmtd for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let lmtd (a: float) (b: float) =
         if a <= 0.0 || b <= 0.0 then 0.0
         elif abs (a - b) < 1e-9 then a
         else (a - b) / log (a / b)
 
-    /// Ricerca di radice con bisezione robusta.
+    /// <summary>
+    /// Calculates or returns bisect for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let bisect (f: float -> float) (lo: float) (hi: float) (tol: float) (maxIter: int) =
         let mutable a = min lo hi
         let mutable b = max lo hi
         let mutable fa = f a
         let mutable fb = f b
         if fa * fb > 0.0 then
-            // nessun cambio di segno: restituisce l'estremo con residuo minore
             if abs fa < abs fb then a else b
         else
             let mutable i = 0
@@ -69,12 +143,12 @@ module Constants =
                 i <- i + 1
             0.5 * (a + b)
 
-    /// Maglia assiale **graduata**: celle fini all'imbocco (dove il gradiente
-    /// termico e' ripido e dove finiscono le ferrule) e via via piu' grosse.
-    ///   l      : lunghezza [m]
-    ///   n      : numero di celle
-    ///   refine : rapporto fra la cella uniforme e la prima cella (1 = uniforme)
-    /// Restituisce (centri, ampiezze).
+    /// <summary>
+    /// Calculates or returns gradedaxialgrid for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let gradedAxialGrid (l: float) (n: int) (refine: float) =
         let n = max 4 n
         if refine <= 1.0001 then
@@ -97,7 +171,12 @@ module Constants =
                 acc <- acc + dz.[i]
             (zc, dz)
 
-    /// Iterazione di punto fisso con sotto-rilassamento.
+    /// <summary>
+    /// Calculates or returns fixedpoint for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let fixedPoint (f: float -> float) (x0: float) (relax: float) (tol: float) (maxIter: int) =
         let mutable x = x0
         let mutable i = 0

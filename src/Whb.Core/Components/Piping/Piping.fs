@@ -3,71 +3,89 @@ namespace Whb.Core
 open System
 open Constants
 
-/// Tubazioni del circuito di circolazione descritte come nella distinta di
-/// un disegno isometrico: **tratti diritti** + **curve di vario angolo**.
-/// La perdita di carico viene calcolata sulla lunghezza sviluppata reale
-/// (diritti + archi delle curve) piu' i coefficienti localizzati delle curve,
-/// invece che su una lunghezza equivalente stimata a occhio.
+/// <summary>
+/// Provides piping functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Piping =
 
-    /// Curva: angolo [gradi], raggio/diametro, quantita' nella linea
+    /// <summary>
+    /// Represents elbow data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Elbow =
         { AngleDeg: float
           ROverD: float
           Count: int }
 
-    /// Una linea del circuito (un bocchello e la sua tubazione).
+    /// <summary>
+    /// Represents line data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Line =
         { /// Sigla del bocchello (R1, DC1, ...)
           Tag: string
-          /// Diametro nominale come da distinta
           Nps: string
-          /// Diametro interno [m]
           Id: float
-          /// Numero di linee identiche rappresentate da questa voce
           Count: int
-          /// Tratti diritti [m]
           Straights: float list
-          /// Curve
           Elbows: Elbow list
-          /// Coefficienti localizzati aggiuntivi (valvole, tee, imbocchi speciali)
           ExtraK: float
-          /// Posizione assiale del bocchello sul mantello [m] dalla piastra calda
           ZNozzle: float
-          /// Posizione angolare [gradi]: 0 = cielo, 180 = fondo
           AngleDeg: float
-          /// **false** = bocchello presente sull'apparecchio ma NON collegato
-          /// (flangia cieca / linea non realizzata). Non partecipa
-          /// all'idraulica del circuito, ma resta in distinta perche' esiste
-          /// fisicamente ed e' una riserva di progetto.
           Connected: bool
-          /// Note (per esempio la fonte del dato)
           Note: string }
 
-    /// Crea una linea collegata convertendo il diametro interno da millimetri a metri.
+    /// <summary>
+    /// Calculates or returns line for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let line tag nps idMm count straights elbows extraK z ang note =
         { Tag = tag; Nps = nps; Id = idMm / 1000.0; Count = count
           Straights = straights; Elbows = elbows; ExtraK = extraK
           ZNozzle = z; AngleDeg = ang; Connected = true; Note = note }
 
-    /// Bocchello esistente ma non collegato
+    /// <summary>
+    /// Calculates or returns blind for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let blind (l: Line) (why: string) =
         { l with Connected = false
                  Note = (if l.Note = "" then why else l.Note + " - " + why) }
 
-    /// Crea una voce di curva con angolo, raggio relativo e quantita'.
+    /// <summary>
+    /// Calculates or returns elbow for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let elbow ang rod n = { AngleDeg = ang; ROverD = rod; Count = n }
 
-    /// Lunghezza dell'arco di una curva [m]
+    /// <summary>
+    /// Calculates or returns elbowarc for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let elbowArc (d: float) (e: Elbow) =
         float e.Count * Math.PI * e.AngleDeg / 180.0 * e.ROverD * d
 
-    /// Coefficiente di perdita di una curva liscia - metodo di Idelchik:
-    ///   zeta = A1 * B1 + zeta_attrito
-    ///   A1 (angolo): 0.9 sin(theta) per theta < 70°, 1.0 a 90°,
-    ///                0.7 + 0.35 theta/90 oltre 100°
-    ///   B1 (raggio): 0.21 / (R/D)^0.5  per R/D >= 1
-    ///   zeta_attrito = f * (pi*theta/180) * (R/D)
+    /// <summary>
+    /// Calculates or returns elbowk for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let elbowK (f: float) (e: Elbow) =
         let th = e.AngleDeg
         let a1 =
@@ -79,28 +97,56 @@ module Piping =
         let zFric = f * (Math.PI * th / 180.0) * rd
         float e.Count * (a1 * b1 + zFric)
 
-    /// Lunghezza sviluppata della linea [m] (diritti + archi)
+    /// <summary>
+    /// Calculates or returns developedlength for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let developedLength (l: Line) =
         List.sum l.Straights + (l.Elbows |> List.sumBy (elbowArc l.Id))
 
-    /// Numero totale di curve
+    /// <summary>
+    /// Calculates or returns elbowcount for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let elbowCount (l: Line) = l.Elbows |> List.sumBy (fun e -> e.Count)
 
-    /// Sezione di passaggio della singola linea [m²]
+    /// <summary>
+    /// Calculates or returns area for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let area (l: Line) = Math.PI * l.Id * l.Id / 4.0
 
-    /// Sezione totale di un insieme di linee [m²]
+    /// <summary>
+    /// Calculates or returns totalarea for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let totalArea (ls: Line list) = ls |> List.sumBy (fun l -> area l * float l.Count)
 
-    /// Coefficiente di resistenza complessivo della linea, riferito alla
-    /// velocita' nella linea: K_tot = f*L_dev/D + somma K curve + K extra
-    /// + imbocco (0.5) + sbocco (1.0).
+    /// <summary>
+    /// Calculates or returns totalk for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let totalK (f: float) (l: Line) =
         f * developedLength l / l.Id
         + (l.Elbows |> List.sumBy (elbowK f))
         + l.ExtraK + 0.5 + 1.0
 
-    /// Descrizione compatta della distinta della linea
+    /// <summary>
+    /// Calculates or returns billofmaterial for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let billOfMaterial (l: Line) =
         let st =
             l.Straights

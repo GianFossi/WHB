@@ -3,16 +3,32 @@ namespace Whb.Core
 open System
 open Constants
 
-/// Idraulica bifase: frazione di vuoto, moltiplicatori bifase,
-/// perdite di carico in tubo e in attraversamento di fascio tubiero.
+/// <summary>
+/// Provides twophase functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module TwoPhase =
 
+    /// <summary>
+    /// Represents voidmodel data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type VoidModel =
         | Homogeneous
         | ChisholmSlip
         | ZuberFindlay
         | Smith
 
+    /// <summary>
+    /// Calculates or returns voidmodelname for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let voidModelName =
         function
         | Homogeneous -> "Omogeneo (S = 1)"
@@ -20,9 +36,12 @@ module TwoPhase =
         | ZuberFindlay -> "Zuber-Findlay (drift-flux)"
         | Smith -> "Smith (1969)"
 
-    /// Frazione di vuoto α.
-    ///   x  : titolo massico
-    ///   g_ : flusso di massa [kg/(m²·s)] (serve solo al drift-flux)
+    /// <summary>
+    /// Calculates or returns voidfraction for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let voidFraction (model: VoidModel) (x: float) (s: Steam.SatProps) (g_: float) =
         let x = min 0.9999 (max 0.0 x)
         if x <= 0.0 then 0.0
@@ -48,23 +67,42 @@ module TwoPhase =
                 let a = jv / (c0 * j + vgj)
                 min 0.999 (max 0.0 a)
 
-    /// Densità della miscela bifase (per il carico statico) [kg/m³]
+    /// <summary>
+    /// Calculates or returns mixturedensity for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let mixtureDensity (alpha: float) (s: Steam.SatProps) =
         alpha * s.RhoV + (1.0 - alpha) * s.RhoL
 
-    /// Densità omogenea (per accelerazione e velocità media) [kg/m³]
+    /// <summary>
+    /// Calculates or returns homogeneousdensity for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let homogeneousDensity (x: float) (s: Steam.SatProps) =
         1.0 / (x / s.RhoV + (1.0 - x) / s.RhoL)
 
-    // ------------------------------------------------------------------
-    // Moltiplicatori bifase per attrito
-    // ------------------------------------------------------------------
+    /// <summary>
+    /// Represents frictionmodel data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type FrictionModel =
         | HomogeneousFriction
         | LockhartMartinelli
         | Friedel
         | ChisholmB
 
+    /// <summary>
+    /// Calculates or returns frictionmodelname for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let frictionModelName =
         function
         | HomogeneousFriction -> "Omogeneo (McAdams)"
@@ -72,21 +110,30 @@ module TwoPhase =
         | Friedel -> "Friedel (1979)"
         | ChisholmB -> "Chisholm B (1973)"
 
-    /// Parametro di Martinelli turbolento-turbolento
+    /// <summary>
+    /// Calculates or returns martinellixtt for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let martinelliXtt (x: float) (s: Steam.SatProps) =
         let x = min 0.999 (max 1e-6 x)
         Math.Pow((1.0 - x) / x, 0.9)
         * Math.Pow(s.RhoV / s.RhoL, 0.5)
         * Math.Pow(s.MuL / s.MuV, 0.1)
 
-    /// Moltiplicatore bifase φ²_lo (riferito al flusso totale come liquido).
+    /// <summary>
+    /// Calculates or returns phi2lo for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let phi2LO (model: FrictionModel) (x: float) (g_: float) (d: float) (s: Steam.SatProps) =
         let x = min 0.999 (max 0.0 x)
         if x <= 0.0 then 1.0
         else
             match model with
             | HomogeneousFriction ->
-                // viscosità omogenea di McAdams
                 let muH = 1.0 / (x / s.MuV + (1.0 - x) / s.MuL)
                 (1.0 + x * (s.RhoL / s.RhoV - 1.0)) * Math.Pow(muH / s.MuL, -0.25)
                 |> fun v -> max 1.0 v
@@ -94,7 +141,6 @@ module TwoPhase =
                 let xtt = martinelliXtt x s
                 let c = 20.0
                 let phi2l = 1.0 + c / xtt + 1.0 / (xtt * xtt)
-                // conversione da φ²_l a φ²_lo
                 phi2l * Math.Pow(1.0 - x, 1.75)
             | ChisholmB ->
                 let y2 =
@@ -121,7 +167,12 @@ module TwoPhase =
                 let we = g_ * g_ * d / (rhoH * s.Sigma)
                 e + 3.24 * f * h / (Math.Pow(fr, 0.045) * Math.Pow(we, 0.035))
 
-    /// Perdita di carico per attrito in tubo bifase [Pa]
+    /// <summary>
+    /// Calculates or returns dpfrictiontwophase for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpFrictionTwoPhase
         (model: FrictionModel) (x: float) (g_: float) (d: float) (l: float) (s: Steam.SatProps) =
         let reLO = max 1.0 (g_ * d / s.MuL)
@@ -129,7 +180,12 @@ module TwoPhase =
         let dpLO = fLO * l / d * g_ * g_ / (2.0 * s.RhoL)
         dpLO * phi2LO model x g_ d s
 
-    /// Perdita di carico per accelerazione [Pa] fra titolo xIn e xOut
+    /// <summary>
+    /// Calculates or returns dpacceleration for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpAcceleration (model: VoidModel) (xIn: float) (xOut: float) (g_: float) (s: Steam.SatProps) =
         let term x =
             let a = voidFraction model x s g_
@@ -138,16 +194,22 @@ module TwoPhase =
             else x * x / (s.RhoV * a) + (1.0 - x) ** 2.0 / (s.RhoL * (1.0 - a))
         g_ * g_ * (term xOut - term xIn)
 
-    /// Perdita di carico statica in un tratto verticale bifase [Pa]
+    /// <summary>
+    /// Calculates or returns dpstatic for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpStatic (model: VoidModel) (x: float) (g_: float) (h: float) (s: Steam.SatProps) =
         let a = voidFraction model x s g_
         mixtureDensity a s * g * h
 
-    // ------------------------------------------------------------------
-    // Attraversamento di fascio tubiero (crossflow)
-    // ------------------------------------------------------------------
-    /// Fattore d'attrito di Jakob per banchi di tubi.
-    ///   a = ST/d (passo trasversale), b = SL/d (passo longitudinale)
+    /// <summary>
+    /// Calculates or returns bundlefrictionfactor for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let bundleFrictionFactor (re: float) (a: float) (b: float) (staggered: bool) =
         let re = max 10.0 re
         if staggered then
@@ -156,18 +218,33 @@ module TwoPhase =
             (0.044 + 0.08 * b / Math.Pow(max 0.05 (a - 1.0), 0.43 + 1.13 / b))
             * Math.Pow(re, -0.15)
 
-    /// ΔP monofase di attraversamento fascio [Pa]:  Δp = f·Nr·G_max²/(2ρ)
+    /// <summary>
+    /// Calculates or returns dpcrossflow for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpCrossflow (re: float) (nRows: float) (gMax: float) (rho: float) (a: float) (b: float) (staggered: bool) =
         let f = bundleFrictionFactor re a b staggered
         f * nRows * gMax * gMax / (2.0 * rho)
 
-    /// Moltiplicatore bifase per crossflow su fascio (Ishihara et al., C = 8)
+    /// <summary>
+    /// Calculates or returns phi2crossflowliquid for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let phi2CrossflowLiquid (x: float) (s: Steam.SatProps) =
         let xtt = martinelliXtt x s
         let c = 8.0
         1.0 + c / xtt + 1.0 / (xtt * xtt)
 
-    /// ΔP bifase di attraversamento fascio [Pa]
+    /// <summary>
+    /// Calculates or returns dpcrossflowtwophase for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpCrossflowTwoPhase
         (x: float) (nRows: float) (gMax: float) (s: Steam.SatProps)
         (d: float) (a: float) (b: float) (staggered: bool) =

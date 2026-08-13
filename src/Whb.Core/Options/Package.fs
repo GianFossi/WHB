@@ -2,12 +2,21 @@ namespace Whb.Core
 
 open Whb.Core.Components
 
-/// Oggetto di alto livello del pacchetto: uno o piu' WHB, risers,
-/// downcomers e steam drum. Oggi si usa un solo WHB, ma il tipo e' gia'
-/// pronto per apparecchi multipli sullo stesso corpo cilindrico.
+/// <summary>
+/// Provides package functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Package =
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents package data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Package =
         { Name: string
           Whbs: WhbComponents.Whb list
@@ -16,6 +25,12 @@ module Package =
           SteamDrum: SteamDrumComponents.SteamDrum
           Notes: string }
 
+    /// <summary>
+    /// Calculates or returns totalmetrics for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let totalMetrics (p: Package) =
         Components.Geometry.combine
             [ yield! p.Whbs |> Seq.map (fun w -> w.Metrics)

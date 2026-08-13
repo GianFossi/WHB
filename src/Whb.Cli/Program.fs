@@ -1,4 +1,9 @@
-/// Entry point and command-line orchestration for the WHB calculation tool.
+/// <summary>
+/// Provides whb.cli.program functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Whb.Cli.Program
 
 open System
@@ -10,7 +15,12 @@ open Whb.Core.Constants
 open Whb.Core.Types
 open Whb.Core.Options
 
-/// Lightweight JSON readers that keep missing optional input fields on defaults.
+/// <summary>
+/// Provides json functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Json =
 
     let private tryPath (root: JsonElement) (path: string) =
@@ -26,32 +36,27 @@ module Json =
                 else ok <- false
         if ok then Some cur else None
 
-    /// Reads a floating-point value from a dotted JSON path, or returns the default.
     let f (root: JsonElement) (path: string) (def: float) =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.Number -> v.GetDouble()
         | _ -> def
 
-    /// Reads an integer value from a dotted JSON path, or returns the default.
     let i (root: JsonElement) (path: string) (def: int) =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.Number -> v.GetInt32()
         | _ -> def
 
-    /// Reads a boolean value from a dotted JSON path, or returns the default.
     let b (root: JsonElement) (path: string) (def: bool) =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.True -> true
         | Some v when v.ValueKind = JsonValueKind.False -> false
         | _ -> def
 
-    /// Reads a string value from a dotted JSON path, or returns the default.
     let s (root: JsonElement) (path: string) (def: string) =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.String -> v.GetString()
         | _ -> def
 
-    /// Reads gas composition from the input file and falls back to the reference composition.
     let composition (root: JsonElement) (def: GasProps.Composition) =
         match tryPath root "gas.composizione" with
         | Some v when v.ValueKind = JsonValueKind.Object ->
@@ -69,14 +74,12 @@ module Json =
             if res.IsEmpty then def else res
         | _ -> def
 
-    /// Array di numeri semplice
     let tryArray (root: JsonElement) (path: string) =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.Array ->
             Some(v.EnumerateArray() |> Seq.map (fun x -> x.GetDouble()) |> List.ofSeq)
         | _ -> None
 
-    /// Classi di ferrula: [{ "frazione": 0.25, "lunghezza_mm": 200 }, ...]
     let lengths (root: JsonElement) (path: string) =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.Array ->
@@ -92,11 +95,6 @@ module Json =
             if res.IsEmpty then None else Some res
         | _ -> None
 
-    /// Linee del circuito, con distinta tratti diritti e curve:
-    /// [ { "tag":"DC1", "nps":"18\" Sch.120", "id_mm":387.2, "n":1,
-    ///     "diritti_mm":[250,2623,2376],
-    ///     "curve":[ {"gradi":90,"r_su_d":1.5,"n":1}, {"gradi":30,"r_su_d":1.5,"n":2} ],
-    ///     "k_extra":0, "z_m":0.8, "angolo_gradi":150, "nota":"" } ]
     let lines (root: JsonElement) (path: string) (def: Piping.Line list) =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.Array ->
@@ -186,7 +184,12 @@ let private insulK (name: string) =
     | "leggero" | "castable" -> Materials.Refractory.castableLight
     | _ -> Materials.Refractory.saffilPaper
 
-/// Loads a JSON case file and overlays its values on the built-in reference case.
+/// <summary>
+/// Calculates or returns loadcase for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 let loadCase (path: string) : DesignCase =
     let d = Defaults.referenceCase
     use fs = File.OpenRead path
@@ -347,6 +350,12 @@ let loadCase (path: string) : DesignCase =
       AllowInternalRecirculation = Json.b r "ricircolo_interno" d.AllowInternalRecirculation
       BypassOpenFraction = Json.f r "bypass_frazione_aperta" d.BypassOpenFraction }
 
+/// <summary>
+/// Calculates or returns template for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 let template = """{
   "nome": "WHB reformer secondario - caso base",
   "materiale": "T11",
@@ -486,6 +495,12 @@ let template = """{
 }
 """
 
+/// <summary>
+/// Calculates or returns selftest for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 let selfTest () =
     let ci = CultureInfo.InvariantCulture
     let mutable fails = 0
@@ -582,11 +597,12 @@ let selfTest () =
     if fails = 0 then printfn "TUTTI I CONTROLLI SUPERATI" else printfn "%d CONTROLLI FALLITI" fails
     fails
 
-/// **Curve di carico parziale.** Si scala la portata di gas mantenendo
-/// composizione, temperatura d'ingresso e pressione del corpo cilindrico, e si
-/// lascia che la farfalla del by-pass si riposizioni per centrare la
-/// temperatura di uscita richiesta. Maglia ridotta: la convergenza di griglia
-/// e' gia' stata dimostrata, quindi il confronto fra carichi resta valido.
+/// <summary>
+/// Calculates or returns loadcurves for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 let loadCurves (case0: DesignCase) (outDir: string) =
     Directory.CreateDirectory outDir |> ignore
     let sb = Text.StringBuilder()
@@ -681,7 +697,12 @@ let loadCurves (case0: DesignCase) (outDir: string) =
     File.WriteAllText(Path.Combine(outDir, "carichi.csv"), csv.ToString())
     0
 
-/// Executes a design case and writes text, CSV and HTML reports to the output directory.
+/// <summary>
+/// Calculates or returns runcase for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 let runCase (case: DesignCase) (outDir: string) =
     Directory.CreateDirectory outDir |> ignore
     let sw = Diagnostics.Stopwatch.StartNew()
@@ -703,13 +724,23 @@ let runCase (case: DesignCase) (outDir: string) =
     printfn "Calcolo completato in %.1f s. File scritti in: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
     0
 
-/// Writes a default project-options JSON file.
+/// <summary>
+/// Calculates or returns writedefaultoptions for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 let writeDefaultOptions path =
     Options.save path Options.defaultOptions
     printfn "Opzioni progetto scritte in: %s" (Path.GetFullPath path)
     0
 
-/// Prints the Git commands that would transfer generated results to GitHub.
+/// <summary>
+/// Calculates or returns githubplan for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 let githubPlan optionsPath =
     let opts = Options.load optionsPath
     let plan = GitHubTransfer.plan opts
@@ -722,7 +753,12 @@ let githubPlan optionsPath =
         printfn "  %s" c
     0
 
-/// Executes the configured GitHub transfer workflow.
+/// <summary>
+/// Calculates or returns githubpush for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 let githubPush optionsPath =
     let opts = Options.load optionsPath
     match GitHubTransfer.execute (Directory.GetCurrentDirectory()) opts with
@@ -735,6 +771,12 @@ let githubPush optionsPath =
         3
 
 [<EntryPoint>]
+/// <summary>
+/// Calculates or returns main for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 let main argv =
     let args = List.ofArray argv
     let printUsage () =

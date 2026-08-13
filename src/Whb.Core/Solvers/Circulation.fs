@@ -4,35 +4,44 @@ open System
 open Constants
 open Types
 
-/// Circolazione naturale del termosifone WHB - corpo cilindrico, e
-/// **ricircolo interno al mantello** attraverso la corona anulare lasciata
-/// aperta dai diaframmi di supporto.
-///
-/// Il ricircolo interno è autolimitante: la corona riceve dal plenum superiore
-/// la stessa miscela bifase presente nel fascio e trascina verso il basso tanto
-/// più vapore quanto più la velocità di discesa supera la velocità di risalita
-/// delle bolle (drift velocity di Zuber). Quando la discesa è troppo veloce la
-/// corona si carica di vapore, la differenza di densità con il fascio si annulla
-/// e il ricircolo si ferma da solo.
+/// <summary>
+/// Provides circulation functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Circulation =
 
-    /// Altezze caratteristiche [m]:  (H_downcomer, H_fascio, H_riser)
+    /// <summary>
+    /// Calculates or returns heights for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let heights (case: DesignCase) =
         let l = case.Loop
         let ro = case.Tube.Otl / 2.0
         let zWl = l.DzDrumWhb + l.DrumLevelOffset
         (zWl + ro, case.Tube.Otl, max 0.1 (zWl - ro))
 
+    /// <summary>
+    /// Calculates or returns brancharea for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let branchArea (bs: Piping.Line list) = Piping.totalArea bs
 
+    /// <summary>
+    /// Calculates or returns branchdescription for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let branchDescription (bs: Piping.Line list) =
         bs |> List.map (fun b -> sprintf "%d x %s %s (ID %.1f mm)" b.Count b.Tag b.Nps (b.Id * 1000.0))
            |> String.concat " + "
 
-    // ------------------------------------------------------------------
-    // Rami di tubazione in parallelo
-    // ------------------------------------------------------------------
-    /// Velocita' in una linea a Δp assegnata (liquido), con K dalla distinta
     let private velLiquid (rho: float) (mu: float) (l: Piping.Line) (dp: float) =
         let mutable v = 1.0
         for _ in 1 .. 6 do
@@ -41,6 +50,12 @@ module Circulation =
             v <- sqrt (2.0 * dp / (rho * max 0.1 (Piping.totalK f l)))
         v
 
+    /// <summary>
+    /// Calculates or returns dpparallelliquid for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpParallelLiquid (bs: Piping.Line list) (rho: float) (mu: float) (wTot: float) =
         let flowAt (dp: float) =
             bs |> List.sumBy (fun l -> float l.Count * rho * velLiquid rho mu l dp * Piping.area l)
@@ -48,7 +63,12 @@ module Circulation =
         let vMax = bs |> List.map (fun l -> velLiquid rho mu l dp) |> List.max
         (dp, vMax)
 
-    /// Δp di una linea bifase per portata assegnata (della singola linea)
+    /// <summary>
+    /// Calculates or returns dplinetwophase for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpLineTwoPhase (case: DesignCase) (sat: Steam.SatProps) (x: float) (l: Piping.Line) (w: float) =
         let rhoH = TwoPhase.homogeneousDensity x sat
         let g_ = w / Piping.area l
@@ -59,6 +79,12 @@ module Circulation =
         + kLoc * TwoPhase.phi2LO case.Loop.FrictionModel x g_ l.Id sat * g_ * g_ / (2.0 * sat.RhoL)
         + TwoPhase.dpAcceleration case.Loop.VoidModel 0.0 x g_ sat
 
+    /// <summary>
+    /// Calculates or returns dpparalleltwophase for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpParallelTwoPhase (case: DesignCase) (bs: Piping.Line list)
                            (sat: Steam.SatProps) (x: float) (wTot: float) =
         let rhoH = TwoPhase.homogeneousDensity x sat
@@ -73,7 +99,12 @@ module Circulation =
             |> List.max
         (dp, vMix)
 
-    /// Ripartizione delle portate fra le linee, a Δp comune.
+    /// <summary>
+    /// Calculates or returns lineflows for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let lineFlows (case: DesignCase) (sat: Steam.SatProps) (bs: Piping.Line list)
                   (twoPhase: bool) (x: float) (wTot: float) =
         if twoPhase then
@@ -84,12 +115,20 @@ module Circulation =
             let dp = fst (dpParallelLiquid bs sat.RhoL sat.MuL wTot)
             bs |> List.map (fun l -> (l, sat.RhoL * velLiquid sat.RhoL sat.MuL l dp * Piping.area l))
 
+    /// <summary>
+    /// Calculates or returns dpdruminternalsdefault for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpDrumInternalsDefault = 5000.0
 
-    // ------------------------------------------------------------------
-    // Colonna del campo tubi
-    // ------------------------------------------------------------------
-    /// (Δp incl. gravità [Pa], titolo d'uscita, densità media della colonna)
+    /// <summary>
+    /// Calculates or returns dpfieldcolumn for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpFieldColumn (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
                       (wLin: float) (steamLin: float) (xIn: float) =
         let t = case.Tube
@@ -113,21 +152,32 @@ module Circulation =
         let rhoMean = if hAcc > 0.0 then rhoAcc / hAcc else sat.RhoL
         (dp + rhoMean * g * hAcc, x, rhoMean)
 
+    /// <summary>
+    /// Calculates or returns dpfieldfriction for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dpFieldFriction (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
                         (wLin: float) (steamLin: float) (xIn: float) =
         let (dp, _, rho) = dpFieldColumn case sat bands wLin steamLin xIn
         dp - rho * g * case.Tube.Otl
 
-    // ------------------------------------------------------------------
-    // Corona anulare aperta e carry-under
-    // ------------------------------------------------------------------
-    /// Velocità di risalita delle bolle (drift velocity di Zuber) [m/s]
+    /// <summary>
+    /// Calculates or returns driftvelocity for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let driftVelocity (sat: Steam.SatProps) =
         1.53 * Math.Pow(sat.Sigma * g * (sat.RhoL - sat.RhoV) / (sat.RhoL * sat.RhoL), 0.25)
 
-    /// Stato della corona per una portata specifica wLin [kg/(s·m)]
-    /// (positiva = salita dal plenum inferiore, negativa = discesa dal cielo).
-    /// Restituisce (densità, frazione di vuoto, titolo trascinato).
+    /// <summary>
+    /// Calculates or returns annulusstate for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let annulusState (sat: Steam.SatProps) (aByp: float) (alphaTop: float) (wLin: float) =
         if wLin >= 0.0 || aByp <= 1e-9 then (sat.RhoL, 0.0, 0.0)
         else
@@ -145,8 +195,12 @@ module Circulation =
         let v = abs wLin / (rho * max 1e-9 aByp)
         rho * g * h + float (sign wLin) * kTot * rho * v * v / 2.0
 
-    /// Ripartizione fra campo tubi e corona anulare a Δp comune.
-    /// Restituisce (wField, wByp, Δp, xIn del fascio, alpha corona, x trascinato).
+    /// <summary>
+    /// Calculates or returns splitslice for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let splitSlice (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
                    (aByp: float) (wExt: float) (steamLin: float) =
         let h = case.Tube.Otl
@@ -172,9 +226,12 @@ module Circulation =
             let (dpF, _, _) = dpFieldColumn case sat bands wField steamLin xi
             (wField, wByp, dpF, xi, aB, xc)
 
-    // ------------------------------------------------------------------
-    // Soluzione del circuito
-    // ------------------------------------------------------------------
+    /// <summary>
+    /// Represents distribution data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Distribution =
         { WExtLin: float[]
           WFieldLin: float[]
@@ -182,9 +239,12 @@ module Circulation =
           XInField: float[]
           Global: CirculationResult }
 
-    /// Distribuzione assiale a **rapporto di circolazione locale uniforme**:
-    /// il mantello è un unico volume con plenum continui, quindi la portata
-    /// locale segue la produzione locale di vapore.
+    /// <summary>
+    /// Calculates or returns solve for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let solve (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
               (steamLin: float[]) (dzArr: float[]) : Distribution =
         let (hDc, hF, hR) = heights case
@@ -213,10 +273,6 @@ module Circulation =
             let alphaR = TwoPhase.voidFraction l.VoidModel xBar sat (wTot / aR)
             let rhoR = TwoPhase.mixtureDensity alphaR sat
             let rhoH = TwoPhase.homogeneousDensity xBar sat
-            // Perdita delle interne del corpo cilindrico: calcolata sulla
-            // geometria reale se il modello e' attivo, altrimenti valore
-            // assunto. Gli imbocchi/sbocchi delle linee sono gia' in
-            // Piping.totalK, quindi qui NON si aggiunge nulla d'altro.
             let dpDrum = drumDp wTot xBar
             (gravDc - dpDc - dpR - dpDrum - rhoR * g * hR,
              dpDc, dpR, rhoR, alphaR, xBar)
@@ -296,7 +352,12 @@ module Circulation =
               StarvedSlices = 0
               Converged = av > 0.0 } }
 
-    /// Velocità assiali nei plenum inferiore e superiore.
+    /// <summary>
+    /// Calculates or returns axialvelocities for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let axialVelocities (case: DesignCase) (sat: Steam.SatProps)
                         (axial: AxialResult list) (wExtLin: float[]) (dzArr: float[])
                         (dcPositions: float list) (riserPositions: float list) =

@@ -6,7 +6,12 @@ open System.Globalization
 open Constants
 open Types
 
-/// Report ingegneristico testuale e file CSV dei profili.
+/// <summary>
+/// Provides report functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Report =
 
     let private ci = CultureInfo.InvariantCulture
@@ -19,7 +24,6 @@ module Report =
     let private kv (sb: StringBuilder) (k: string) (v: string) =
         sb.AppendLine(sprintf "  %-50s %s" k v) |> ignore
 
-    /// Paragrafo indentato con a capo automatico
     let private para (sb: StringBuilder) (indent: string) (txt: string) =
         let words = txt.Split(' ')
         let mutable cur = ""
@@ -30,8 +34,6 @@ module Report =
             else cur <- (if cur = "" then wd else cur + " " + wd)
         if cur <> "" then sb.AppendLine(indent + cur) |> ignore
 
-    /// Legenda delle colonne di una tabella: elenco (intestazione, spiegazione).
-    /// La spiegazione va a capo indentata sotto l'intestazione.
     let private legend (sb: StringBuilder) (items: (string * string) list) =
         sb.AppendLine() |> ignore
         sb.AppendLine("  LEGENDA DELLE COLONNE") |> ignore
@@ -50,16 +52,55 @@ module Report =
                 sb.AppendLine(sprintf "    %-16s %s" "" lines.[k]) |> ignore
         sb.AppendLine() |> ignore
 
+    /// <summary>
+    /// Calculates or returns f0 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let f0 (x: float) = x.ToString("F0", ci)
+    /// <summary>
+    /// Calculates or returns f1 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let f1 (x: float) = x.ToString("F1", ci)
+    /// <summary>
+    /// Calculates or returns f2 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let f2 (x: float) = x.ToString("F2", ci)
+    /// <summary>
+    /// Calculates or returns f3 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let f3 (x: float) = x.ToString("F3", ci)
+    /// <summary>
+    /// Calculates or returns f4 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let f4 (x: float) = x.ToString("F4", ci)
+    /// <summary>
+    /// Calculates or returns f5 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let f5 (x: float) = x.ToString("F5", ci)
 
-    /// Definizioni essenziali, in forma compatta. Vengono ripetute in TUTTI i
-    /// documenti separati perche' CR, DNB e DNBR compaiono nei numeri chiave e
-    /// chi legge un estratto non ha sotto mano il glossario del report esteso.
+    /// <summary>
+    /// Calculates or returns definizioni for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let definizioni (sb: StringBuilder) =
         sb.AppendLine() |> ignore
         sb.AppendLine("  DEFINIZIONI ESSENZIALI") |> ignore
@@ -105,6 +146,12 @@ module Report =
         sb.AppendLine() |> ignore
 
 
+    /// <summary>
+    /// Calculates or returns text for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let text (r: DesignResult) =
         let c = r.Case
         let sb = StringBuilder()
@@ -120,7 +167,6 @@ module Report =
                           c.NZ ny (c.NZ * ny)) |> ignore
         sb.AppendLine(dline) |> ignore
 
-        // ------------------------------------------------------------------
         hdr sb "0. Ipotesi principali e stato dei dati"
         para sb "  " "Questa sezione elenca tutto cio' su cui il calcolo si regge. Ogni voce e' classificata come DATO (verificato su documentazione di impianto), CONFERMATO (comunicato dal committente), ASSUNTO (scelta del calcolo, da confermare) o APERTO (manca il dato, ed e' indicato l'effetto). Tutti i numeri del report discendono da queste voci."
         sb.AppendLine() |> ignore
@@ -440,7 +486,6 @@ module Report =
         kv sb "DNBR locale minimo" (sprintf "%s  @ z = %s m, y = %s m, x = %s"
                                         (f2 dnb.DNBR) (f2 dnb.Z) (f3 dnb.Y) (f4 dnb.XOut))
 
-        // ---- spiegazione discorsiva della sezione 5
         let tGasPk = kToC qmax.TGas
         let tMiPk = kToC qmax.TMetalIn
         let tMoPk = kToC qmax.TMetalOut
@@ -505,7 +550,6 @@ module Report =
             sb.AppendLine("  Il progetto e' dettato dalla classe con la ferrula piu' corta, non dalla media:") |> ignore
             sb.AppendLine("  il tubo peggiore e' quello che cede per primo.") |> ignore
 
-        // ------------------------------------------------------------------
         hdr sb "5c. Pulito / sporco sui due lati (cella di flusso massimo)"
         sb.AppendLine("  condizione                              Rf gas    Rf acqua      U      q''      T met.int  T met.est  dT dep.  DNBR") |> ignore
         sb.AppendLine("                                        [m2K/W]    [m2K/W] [W/m2K] [kW/m2]      [°C]       [°C]     [K]") |> ignore
@@ -535,7 +579,6 @@ module Report =
         para sb "  " "I DUE LATI NON SONO EQUIVALENTI. Lo sporco lato GAS aggiunge resistenza a MONTE del metallo: riduce il flusso e RAFFREDDA il tubo, quindi e' quasi benefico dal punto di vista metallurgico. Lo sporco lato ACQUA aggiunge resistenza a VALLE: riduce il flusso ma SCALDA il tubo. E' per questo che il condizionamento chimico dell'acqua conta piu' della pulizia lato gas."
         para sb "  " "Attenzione: questo confronto e' LOCALE, a temperatura del gas congelata al valore della cella di picco. Il confronto completo sull'intero apparecchio - dove da pulito il gas si raffredda di piu' e cambia tutto il profilo - si ottiene rilanciando il calcolo con le resistenze azzerate."
 
-        // ------------------------------------------------------------------
         hdr sb "5d. Modelli di flusso termico critico a confronto"
         let dnbCell = r.Cells |> List.filter (fun x -> not x.InFerrule) |> List.minBy (fun x -> x.DNBR)
         kv sb "Cella governante"
@@ -561,7 +604,6 @@ module Report =
         para sb "  " "LA CONCLUSIONE ONESTA DI QUESTA SEZIONE. I modelli non divergono di poco: divergono di un ORDINE DI GRANDEZZA, e non perche' uno sia sbagliato, ma perche' NESSUNO di essi e' tarato su questa geometria a questa pressione. Palen e' usato con il fattore di fascio troncato al minimo ammesso, cioe' fuori dal suo campo; Zuber e Lienhard-Dhir ignorano del tutto l'effetto fascio; Lienhard-Eichhorn e' fuori campo sul rapporto di densita'. Il DNBR calcolato NON e' quindi un numero affidabile in valore assoluto: e' un indicatore, e come tale va usato solo per confrontare zone diverse dello stesso apparecchio o varianti dello stesso progetto."
         para sb "  " "COSA RESTA AFFIDABILE. Il FLUSSO TERMICO DI PICCO, che il calcolo determina senza bisogno di alcuna correlazione di crisi, e che si confronta con l'esperienza di apparecchi analoghi in servizio. E la POSIZIONE del punto critico, che e' robusta rispetto a tutte le assunzioni: subito a valle della ferrula, nella banda superiore. Se serve una risposta quantitativa sul margine di crisi, la strada e' una sola: dati sperimentali su fascio, oppure la look-up table di Groeneveld con i fattori correttivi per fascio, che richiede l'accesso alla tabella originale."
 
-        // ------------------------------------------------------------------
         hdr sb "5e. Incertezza dovuta alla scelta delle correlazioni"
         kv sb "Valutata nella cella" (sprintf "z = %s m, y = %+.2f m (flusso massimo)" (f2 (r.Cells |> List.filter (fun x -> not x.InFerrule) |> List.maxBy (fun x -> x.QFluxOut)).Z) (r.Cells |> List.filter (fun x -> not x.InFerrule) |> List.maxBy (fun x -> x.QFluxOut)).Y)
         sb.AppendLine() |> ignore
@@ -743,7 +785,6 @@ module Report =
             para sb "  " "IL DATO CHE VALE PIU' DI TUTTI. Questo calcolo e' una ricostruzione dalla geometria di disegno. Il costruttore del corpo cilindrico ha la CURVA SPERIMENTALE dp-portata delle sue interne: se la si ottiene, la si inserisce come dato e il calcolo di circolazione smette di avere assunzioni aperte. E' l'unica richiesta veramente dirimente rimasta."
             sb.AppendLine("  " + String('-', 92)) |> ignore
 
-        // ------------------------------------------------------------------
         hdr sb "6d. Vibrazioni indotte dal flusso (FIV)"
         kv sb "Campate libere (da disegno)"
             (sprintf "%d campate: %s mm" (List.length c.BaffleSpans)
@@ -828,12 +869,8 @@ module Report =
         sb.AppendLine("  LE ALTRE DUE INCERTEZZE, CHE PESANO QUANTO O PIU' DELLA COSTANTE DI CONNORS") |> ignore
         sb.AppendLine(line) |> ignore
         let vMean =
-            // velocita' se il crossflow fosse uniforme lungo l'asse invece che
-            // concentrato dove si genera piu' vapore
             let bandCells = r.Cells |> List.filter (fun x -> x.J = vWorst.Band)
             bandCells |> List.averageBy (fun x -> x.VelCross)
-        // il rapporto V/Vcrit va come 1/lambda2, perche' V_crit e' proporzionale
-        // alla frequenza propria e questa a lambda2
         let lamUsed =
             match c.TubesheetJoint with
             | Vibration.FullPenetrationWeld -> 15.42
@@ -874,7 +911,6 @@ module Report =
         para sb "  " "LE COSTANTI CONTANO QUANTO LA GEOMETRIA. K di Connors vale 3.0 come inviluppo inferiore dei dati sperimentali, 3.3 nella formulazione classica, e i dati arrivano a 10 per certi reticoli. Il decremento logaritmico in flusso bifase e' misurato fra 0.03 e 0.10. Qui si e' usato K = 3.0 e delta = 0.03, cioe' la combinazione piu' conservativa: con K = 4.5 e delta = 0.06 la velocita' critica raddoppia abbondantemente. Se il rapporto risulta marginale, la prima cosa da fare non e' cambiare il progetto ma procurarsi i valori giusti per questo reticolo."
         para sb "  " "GLI ALTRI TRE MECCANISMI. Il distacco dei vortici da' risonanza solo se la sua frequenza si avvicina a quella propria; in flusso BIFASE e' comunque molto attenuato, perche' le bolle distruggono la coerenza della scia. Il buffeting turbolento e' eccitazione casuale a banda larga: non fa collassare nulla ma consuma i supporti e apre cricche di fatica nel lungo periodo. La risonanza acustica riguarda solo il gas comprimibile a mantello e qui non si applica, perche' a mantello c'e' acqua in ebollizione."
 
-        // ------------------------------------------------------------------
         hdr sb "6f. Maldistribuzione della portata di gas fra i tubi"
         para sb "  " "COS'E'. Il calcolo assume che gli 848 tubi ricevano tutti la stessa portata di gas. Nella realta' la camera d'ingresso non distribuisce in modo perfetto: i tubi affacciati al getto del bocchello ne ricevono di piu', quelli in ombra di meno. Questa sezione misura che cosa succede al tubo PIU' CARICATO."
         para sb "  " "COME E' MODELLATA. I tubi sono canali in PARALLELO che non si scambiano calore fra loro: un singolo tubo sbilanciato non altera ne' la circolazione ne' la produzione di vapore dell'apparecchio. Si marcia quindi UN SOLO tubo con la portata maggiorata, tenendo congelato tutto il lato mantello: temperatura di saturazione, coefficiente di ebollizione, sporcamento, flusso critico locale. Cambia solo la resistenza lato gas, che e' quella governata dalla portata. E' il modo corretto di isolare il comportamento del singolo canale."
@@ -919,7 +955,6 @@ module Report =
         para sb "  " "COME SI LEGGE QUESTA TABELLA. Non e' una previsione: e' una scala. Non si sa quanto vale la maldistribuzione reale finche' non si conosce la geometria della camera d'ingresso, quindi la tabella dice quanto costa ogni livello di disuniformita'. Serve a rispondere a due domande: quanto margine occorre lasciare in progetto, e - se in esercizio si rompessero tubi tutti nella stessa zona della piastra - se la maldistribuzione basti a spiegarlo."
         para sb "  " "LIMITE DEL MODELLO. Si tiene congelato il profilo di pressione del gas e il coefficiente di irraggiamento presi dalla soluzione di base. Sono approssimazioni buone perche' entrambi variano poco con la portata del singolo tubo. Non si rappresenta invece la retroazione opposta, cioe' il fatto che un tubo che scambia di piu' diventa piu' resistente idraulicamente e quindi tende a riequilibrarsi: e' un effetto stabilizzante, quindi trascurarlo e' conservativo."
 
-        // ------------------------------------------------------------------
         hdr sb "6e. Transitori e protezione"
         let tr = r.Transient
         kv sb "Costante di tempo termica del metallo" (sprintf "%s s" (f1 tr.TauMetal))
@@ -1037,7 +1072,6 @@ module Report =
         para sb "  " "LIMITI DI QUESTO CALCOLO. E' uno SCREENING: assume piastre infinitamente rigide, trascura i termini di pressione (lato mantello e lato tubi) e l'eventuale giunto di dilatazione. Il calcolo di codice e' TEMA RCB-7.16 oppure ASME VIII-1 UHX-13, che vanno usati per la verifica formale. I valori di E, Sy e alpha sono indicativi: per il calcolo di codice servono quelli di ASME II-D."
         sb.AppendLine("  " + String('-', 92)) |> ignore
 
-        // ------------------------------------------------------------------
         hdr sb "8e. Stato di sollecitazione combinato (Lame' + carico assiale)"
         let st = r.Stress
         kv sb "Pressione lato mantello (esterna ai tubi)" (sprintf "%s bar" (f2 (st.PShell / 1e5)))
@@ -1087,7 +1121,6 @@ module Report =
                 st.Cells
                 |> List.groupBy (fun c -> c.Component)
                 |> List.collect (fun (_, cs) ->
-                    // il peggiore di ogni banda, piu' il peggiore assoluto
                     (cs |> List.groupBy (fun c -> c.J) |> List.map (fun (_, g) -> g |> List.maxBy (fun c -> c.Utilisation)))
                     @ [ cs |> List.maxBy (fun c -> c.Utilisation) ])
             byComp |> List.distinctBy (fun c -> (c.Component, c.I, c.J, c.C)) |> List.sortByDescending (fun c -> c.Utilisation)
@@ -1154,7 +1187,6 @@ module Report =
         para sb "  " "IL LINER DEL BY-PASS E' UN CASO A PARTE, ED E' RISOLTO. Lavora a temperatura molto piu' alta di tutto il resto e non porta pressione, perche' dentro e fuori ha lo stesso gas. Costruttivamente e' LIBERO DI DILATARE: non sviluppa quindi alcun carico assiale e non compare fra i membri del sistema a piastre fisse, dove figura il solo tubo di contenimento. La forza riportata sopra e' l'ipotesi contraria - liner vincolato a entrambe le estremita' - ed e' riportata solo per documentare l'ordine di grandezza di cio' che il giunto scorrevole evita: un valore che nessuna costruzione reggerebbe. E' la ragione costruttiva per cui quel giunto esiste."
         sb.AppendLine("  " + String('-', 92)) |> ignore
 
-        // ------------------------------------------------------------------
         hdr sb "8f. Ripartizione delle spinte assiali di pressione"
         let stT = r.Stress
         let tubeMem = stT.Members |> List.filter (fun m -> m.Label.StartsWith "Tubi")
@@ -1237,7 +1269,6 @@ module Report =
         para sb "  " "IL TIRANTAGGIO DEL GIUNTO TUBO-PIASTRA e' l'altra faccia. La forza netta per tubo indicata sopra e' quella che il giunto deve trasmettere: se e' di trazione, tende a SFILARE il tubo dalla piastra, ed e' il carico da confrontare con la tenuta della mandrinatura o della saldatura secondo ASME VIII-1 UW-20. Se e' di compressione, il tubo spinge contro la piastra e il giunto non e' sollecitato a sfilamento, ma il tubo puo' instabilizzarsi."
         para sb "  " "PERCHE' LA RIPARTIZIONE SEGUE LA RIGIDEZZA E NON L'AREA. Le due piastre sono rigide e impongono a tutti gli elementi lo stesso allungamento. Un elemento rigido, per allungarsi di quel tanto, richiede piu' forza: quindi si prende una quota maggiore della spinta. La quota e' proporzionale ad A*E/L, non alla sola area, ed e' per questo che il mantello - piu' rigido del fascio - si prende la fetta maggiore anche se la sua sezione metallica non e' molto diversa."
 
-        // ------------------------------------------------------------------
         hdr sb "8g. Verifica del liner del by-pass a pressione differenziale"
         let lc = stT.Liner
         para sb "  " "IL LINER NON E' UN COMPONENTE IN PRESSIONE. Separa due volumi di gas che stanno quasi alla stessa pressione: dentro c'e' il gas deviato, fuori l'intercapedine con la carta refrattaria, che comunica direttamente con il lato A VALLE del fascio. Il salto che il liner puo' vedere non e' quindi la differenza fra acqua e gas, che sarebbe di decine di bar, ma soltanto la PERDITA DI CARICO DEI TUBI, che e' di poche centinaia di millibar."
@@ -1308,7 +1339,6 @@ module Report =
         para sb "  " "IN PAROLE SEMPLICI. Questa sezione traduce il disegno delle tubazioni in numeri idraulici. Ogni linea del circuito viene descritta come nella distinta del disegno: tanti spezzoni diritti di lunghezza nota piu' tante curve di angolo e raggio noti. Da qui il programma ricava la lunghezza sviluppata reale (i tratti diritti piu' gli archi delle curve) e il coefficiente di resistenza totale, invece di usare una lunghezza equivalente stimata. Le curve non contano tutte uguale: una curva a 90° pesa circa il doppio di una a 30°, e a parita' di angolo una curva a raggio stretto pesa piu' di una a raggio largo. Poi, poiche' tutte le linee collegano gli stessi due punti (il mantello e il corpo cilindrico), la portata si distribuisce fra loro in modo che ciascuna dissipi la stessa caduta di pressione: le linee piu' corte e larghe ne prendono di piu'. E' il motivo per cui non basta sommare le sezioni per sapere quanto circola."
         sb.AppendLine() |> ignore
 
-        // ------------------------------------------------------------------
         hdr sb "8h. Dati per il calcolo FEA della piastra tubiera e del giunto tubo-piastra"
         sb.AppendLine("  ****************************************************************************") |> ignore
         sb.AppendLine("  *  IL CALCOLO FEA E' OBBLIGATORIO. Tutto quanto precede e' uno SCREENING  *") |> ignore
@@ -1566,8 +1596,12 @@ module Report =
         sb.ToString()
 
 
-    /// Report SINTETICO delle criticita': un foglio separato che elenca solo
-    /// i problemi trovati, dove si collocano e cosa fare.
+    /// <summary>
+    /// Calculates or returns synthesis for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let synthesis (r: DesignResult) =
         let c = r.Case
         let sb = StringBuilder()
@@ -1580,7 +1614,6 @@ module Report =
         sb.AppendLine(dline) |> ignore
         sb.AppendLine() |> ignore
 
-        // quadro sintetico
         let nC = r.Findings |> List.filter (fun f -> f.Severity = Critical) |> List.length
         let nW = r.Findings |> List.filter (fun f -> f.Severity = Warning) |> List.length
         let nN = r.Findings |> List.filter (fun f -> f.Severity = Note) |> List.length
@@ -1674,7 +1707,12 @@ module Report =
         sb.AppendLine("  Il dettaglio completo, con le spiegazioni di ogni grandezza, e' nel report esteso.") |> ignore
         sb.ToString()
 
-    /// CSV: una riga per cella (sezione assiale x banda)
+    /// <summary>
+    /// Calculates or returns csvcells for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let csvCells (r: DesignResult) =
         let sb = StringBuilder()
         sb.AppendLine("i;j;z_m;y_m;n_tubi;T_gas_C;p_gas_bar;v_gas_ms;Re_gas;h_conv_Wm2K;h_rad_Wm2K;eps_gas;x_in;x_out;alpha;G_cross_kgm2s;v_cross_ms;h_boil_Wm2K;U_o_Wm2K;q_lin_Wm;q_int_kWm2;q_est_kWm2;T_met_int_C;T_met_mid_C;T_met_est_C;T_met_media_spessore_C;T_parete_bollente_C;dT_superheat_K;dT_deposito_K;dT_met_sat_K;q_CHF_loc_kWm2;DNBR;ferrula") |> ignore
@@ -1690,9 +1728,6 @@ module Report =
                   f0 (x.QCritLocal / 1000.0); f2 x.DNBR; (if x.InFerrule then "1" else "0") ])) |> ignore
         sb.ToString()
 
-    /// Estrae una sezione del report esteso in un documento a se' stante,
-    /// cosi' che i file separati siano ALLINEATI PER COSTRUZIONE al report
-    /// principale: sono generati dallo stesso risultato di calcolo.
     let private extract (r: DesignResult) (titolo: string) (marker: string) (fine: string) =
         let full = text r
         let i = full.IndexOf(marker, StringComparison.OrdinalIgnoreCase)
@@ -1712,15 +1747,32 @@ module Report =
         sb.Append(body) |> ignore
         sb.ToString()
 
+    /// <summary>
+    /// Calculates or returns maldistributiontext for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let maldistributionText (r: DesignResult) =
         extract r "WHB / PGC - MALDISTRIBUZIONE DELLA PORTATA DI GAS FRA I TUBI"
             "6F. MALDISTRIBUZIONE" "6E. TRANSITORI"
 
+    /// <summary>
+    /// Calculates or returns vibrationtext for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let vibrationText (r: DesignResult) =
         extract r "WHB / PGC - VIBRAZIONI INDOTTE DAL FLUSSO (FIV)"
             "6D. VIBRAZIONI" "6F. MALDISTRIBUZIONE"
 
-    /// CSV: stato di sollecitazione per zona z, altezza y e punto radiale
+    /// <summary>
+    /// Calculates or returns csvstress for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let csvStress (r: DesignResult) =
         let sb = StringBuilder()
         sb.AppendLine("componente;i;j;classe;z_m;y_m;T_met_int_C;T_met_est_C;T_met_media_C;dT_spessore_K;p_int_bar;p_est_bar;sZ_membr_MPa;sZ_termico_MPa;sZ_pressione_MPa;punto;r_mm;sigma_R_MPa;sigma_theta_MPa;sigma_Z_MPa;sigma_VM_MPa;sigma_Tresca_MPa;Sy_MPa;utilizzo_pc") |> ignore
@@ -1737,7 +1789,12 @@ module Report =
                       f1 (c.Sy / 1e6); f2 (100.0 * p.SigmaVM / c.Sy) ])) |> ignore
         sb.ToString()
 
-    /// CSV: caratteristica della valvola a farfalla del by-pass
+    /// <summary>
+    /// Calculates or returns csvvalve for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let csvValve (r: DesignResult) =
         let sb = StringBuilder()
         sb.AppendLine("apertura_gradi;chiusura_gradi;zeta;frazione_bypass_pc;w_bypass_kgs;rho_kgm3;v_liner_ms;v_vena_ms;Mach;rhov2_vena_Pa;dp_valvola_mbar;dp_bypass_tot_mbar;dp_fascio_mbar;T_out_tubi_C;T_out_bypass_C;T_miscelata_C;potenza_MW;vapore_th;T_liner_max_C;nota") |> ignore
@@ -1759,7 +1816,12 @@ module Report =
                       f3 (p.Duty / 1e6); f1 (p.Steam * 3.6); f1 (kToC p.TLinerMax); note ])) |> ignore
         sb.ToString()
 
-    /// CSV: aggregati per sezione assiale
+    /// <summary>
+    /// Calculates or returns csvaxial for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let csvAxial (r: DesignResult) =
         let sb = StringBuilder()
         sb.AppendLine("z_m;T_gas_med_C;T_gas_min_C;T_gas_max_C;q_med_kWm2;q_max_kWm2;T_met_int_max_C;T_met_est_max_C;vapore_lin_kgsm;duty_lin_kWm;w_field_kgsm;w_bypass_kgsm;x_top;alpha_top;G_cross;v_liq_in_ms;v_mix_out_ms;v_vap_out_ms;v_ax_bottom_ms;v_ax_top_ms;DNBR_min;vapore_cum_kgh;duty_cum_MW") |> ignore

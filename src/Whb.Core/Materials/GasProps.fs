@@ -3,27 +3,35 @@ namespace Whb.Core
 open System
 open Constants
 
-/// Proprietà termofisiche di miscele di gas di processo (syngas da reforming,
-/// gas di sintesi ammoniaca, fumi di combustione).
-///
-/// - cp da polinomi cp/R = A + B·T + C·T² + D/T² (Smith-Van Ness-Abbott)
-/// - µ da correlazione di Sutherland (H2O da IAPWS gas diluito)
-/// - k da Eucken modificato: k = (µ/M)(1.32·cv + 1.77·R)
-/// - miscelazione: Wilke (µ) e Wassiljewa/Mason-Saxena (k)
-/// - emissività dei gas triatomici: metodo CKTI/Blokh (gas non luminoso)
+/// <summary>
+/// Provides gasprops functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module GasProps =
 
+    /// <summary>
+    /// Represents species data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Species =
         | H2 | N2 | O2 | CO | CO2 | CH4 | H2O | Ar | NH3
 
-    /// Massa molare [kg/mol]
+    /// <summary>
+    /// Calculates or returns molarmass for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let molarMass =
         function
         | H2 -> 0.00201588 | N2 -> 0.0280134 | O2 -> 0.0319988
         | CO -> 0.0280101  | CO2 -> 0.0440095 | CH4 -> 0.01604246
         | H2O -> 0.01801528 | Ar -> 0.039948 | NH3 -> 0.01703052
 
-    /// Coefficienti cp/R = A + B·T + C·T² + D/T²
     let private cpCoef =
         function
         | H2  -> (3.249, 0.422e-3, 0.0,       0.083e5)
@@ -36,7 +44,6 @@ module GasProps =
         | Ar  -> (2.500, 0.0,      0.0,       0.0)
         | NH3 -> (3.578, 3.020e-3, 0.0,      -0.186e5)
 
-    /// Sutherland: (µ0 [Pa·s] a T0, T0 [K], S [K]). H2O trattato a parte.
     let private sutherland =
         function
         | H2  -> (8.411e-6, 273.15, 97.0)
@@ -49,19 +56,34 @@ module GasProps =
         | NH3 -> (0.918e-5, 273.15, 370.0)
         | H2O -> (1.120e-5, 350.0,  1064.0)
 
-    /// cp molare [J/(mol·K)]
+    /// <summary>
+    /// Calculates or returns cpmolar for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let cpMolar (sp: Species) (tK: float) =
         let (a, b, c, d) = cpCoef sp
         R * (a + b * tK + c * tK * tK + d / (tK * tK))
 
-    /// Entalpia di formazione standard a 298.15 K [J/mol]
+    /// <summary>
+    /// Calculates or returns hform for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hForm =
         function
         | H2 -> 0.0 | N2 -> 0.0 | O2 -> 0.0 | Ar -> 0.0
         | CO -> -110530.0 | CO2 -> -393510.0 | H2O -> -241826.0
         | CH4 -> -74850.0 | NH3 -> -45900.0
 
-    /// Entalpia sensibile molare [J/mol] riferita a 298.15 K
+    /// <summary>
+    /// Calculates or returns hmolar for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hMolar (sp: Species) (tK: float) =
         let (a, b, c, d) = cpCoef sp
         let t0 = 298.15
@@ -70,10 +92,20 @@ module GasProps =
              + c / 3.0 * (tK ** 3.0 - t0 ** 3.0)
              - d * (1.0 / tK - 1.0 / t0))
 
-    /// Entalpia molare assoluta (formazione + sensibile) [J/mol]
+    /// <summary>
+    /// Calculates or returns hmolarabs for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hMolarAbs (sp: Species) (tK: float) = hForm sp + hMolar sp tK
 
-    /// Viscosità del componente puro [Pa·s]
+    /// <summary>
+    /// Calculates or returns mupure for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let muPure (sp: Species) (tK: float) =
         match sp with
         | H2O -> Steam.viscosity tK 0.0      // limite di gas diluito IAPWS
@@ -81,7 +113,12 @@ module GasProps =
             let (mu0, t0, s) = sutherland sp
             mu0 * Math.Pow(tK / t0, 1.5) * (t0 + s) / (tK + s)
 
-    /// Conducibilità termica del componente puro [W/(m·K)]
+    /// <summary>
+    /// Calculates or returns kpure for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let kPure (sp: Species) (tK: float) =
         match sp with
         | H2O -> Steam.conductivity tK 0.0
@@ -91,51 +128,43 @@ module GasProps =
             let cv = cpMolar sp tK - R
             mu / m * (1.32 * cv + 1.77 * R)
 
-    /// Composizione molare: lista (specie, frazione molare). Viene normalizzata.
+    /// <summary>
+    /// Represents composition data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Composition = (Species * float) list
 
+    /// <summary>
+    /// Calculates or returns normalize for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let normalize (c: Composition) : Composition =
         let s = c |> List.sumBy snd
         if s <= 0.0 then failwith "Composizione nulla"
-        // se e' gia' normalizzata si restituisce LO STESSO oggetto: conserva
-        // l'identita' di riferimento e fa scattare il memo della tabella del
-        // viriale invece di ricostruire la chiave a ogni chiamata
         elif abs (s - 1.0) < 1e-12 then c
         else c |> List.map (fun (k, v) -> (k, v / s))
 
-    /// Massa molare della miscela [kg/mol]
+    /// <summary>
+    /// Calculates or returns mixmolarmass for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let mixMolarMass (c: Composition) =
         c |> List.sumBy (fun (sp, y) -> y * molarMass sp)
 
-    // ==================================================================
-    //  GAS REALE: secondo coefficiente del viriale
-    // ==================================================================
-    /// A 35 bar e 600-1250 K la miscela non e' perfettamente ideale, e il
-    /// contributo e' quasi tutto dell'ACQUA, che qui vale il 32.6 % molare
-    /// (36.8 % in massa) ed e' l'unica specie con temperatura ridotta
-    /// dell'ordine dell'unita'.
-    ///
-    /// Si usa il troncamento al SECONDO VIRIALE, che a queste densita'
-    /// (rho_r << 1) e' piu' che sufficiente:
-    ///
-    ///     Z          = 1 + B_mix p / (R T)
-    ///     h - h_ideale = p ( B_mix - T dB_mix/dT )
-    ///     cp - cp_ideale = - p T d²B_mix/dT²
-    ///     B_mix      = somma_i somma_j y_i y_j B_ij       (regola esatta)
-    ///
-    /// **Attenzione al peso dell'acqua**: nella regola esatta il termine di
-    /// auto-interazione dell'acqua pesa y_H2O² = 0.106, non y_H2O = 0.326.
-    /// Trattare ogni componente come puro alla pressione totale
-    /// (Lewis-Randall) o alla pressione parziale (Amagat) triplicherebbe il
-    /// termine dominante e sovrastimerebbe la correzione di circa tre volte.
-    ///
-    /// B_ij dalla correlazione di Pitzer-Curl/Tsonopoulos, tranne
-    /// **B(H2O-H2O) che si ricava direttamente da IAPWS-IF97** come limite di
-    /// bassa densita', piu' accurato di qualunque correlazione generalizzata
-    /// per una molecola polare con legame a idrogeno.
+    /// <summary>
+    /// Provides virial functionality for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     module Virial =
 
-        /// (Tc [K], Pc [Pa], omega, Vc [m³/mol])
         let critical =
             function
             | H2  -> (33.19, 13.13e5, -0.216, 64.1e-6)
@@ -148,18 +177,12 @@ module GasProps =
             | Ar  -> (150.86, 48.98e5, 0.000, 74.57e-6)
             | NH3 -> (405.50, 113.59e5, 0.253, 72.47e-6)
 
-        /// Pitzer-Curl:  B Pc /(R Tc) = B0 + omega B1
-        ///   B0 = 0.083 - 0.422 / Tr^1.6
-        ///   B1 = 0.139 - 0.172 / Tr^4.2
         let pitzer (tc: float) (pc: float) (om: float) (tK: float) =
             let tr = max 0.30 (tK / tc)
             let b0 = 0.083 - 0.422 / Math.Pow(tr, 1.6)
             let b1 = 0.139 - 0.172 / Math.Pow(tr, 4.2)
             (b0 + om * b1) * R * tc / pc
 
-        /// B(H2O-H2O) [m³/mol] dal limite di bassa densita' di IF97 regione 2.
-        /// Sopra 1073.15 K (limite della regione 2) si prolunga con la
-        /// dipendenza tipo viriale B ~ T^-1.6, dove comunque |B| e' piccolo.
         let bWater (tK: float) =
             let p = 1000.0                       // Pa: gas praticamente ideale
             let t = min tK 1073.15
@@ -175,7 +198,6 @@ module GasProps =
                     let (tc, pc, om, _) = critical a
                     pitzer tc pc om tK
             else
-                // regole di combinazione classiche (Prausnitz)
                 let (tca, pca, oma, vca) = critical a
                 let (tcb, pcb, omb, vcb) = critical b
                 let tcij = sqrt (tca * tcb)
@@ -187,7 +209,6 @@ module GasProps =
                 let pcij = zcij * R * tcij / vcij
                 pitzer tcij pcij omij tK
 
-        /// B della miscela [m³/mol]
         let bMix (c: Composition) (tK: float) =
             let a = c |> List.toArray
             let mutable s = 0.0
@@ -196,7 +217,6 @@ module GasProps =
                     s <- s + yi * yj * bPair si sj tK
             s
 
-        /// (Z, h_residua [J/mol], cp_residuo [J/(mol·K)]) a (T, p)
         let residual (c: Composition) (tK: float) (pPa: float) =
             let dt = 2.0
             let bm = bMix c tK
@@ -209,16 +229,26 @@ module GasProps =
             let cpRes = -pPa * tK * d2b
             (z, hRes, cpRes)
 
-    /// Entalpia molare residua (gas reale - gas ideale) [J/mol]
+    /// <summary>
+    /// Calculates or returns departure for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let departure (real: bool) (c: Composition) (tK: float) (pPa: float) =
         if not real then 0.0
         else let (_, h, _) = Virial.residual c tK pPa in h
 
-    /// Coefficienti di Wilke φij
     let private phiWilke (mi: float) (mj: float) (mui: float) (muj: float) =
         let a = 1.0 + sqrt (mui / muj) * Math.Pow(mj / mi, 0.25)
         a * a / sqrt (8.0 * (1.0 + mi / mj))
 
+    /// <summary>
+    /// Represents mixprops data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type MixProps =
         { T: float          // K
           P: float          // Pa
@@ -230,23 +260,32 @@ module GasProps =
           Pr: float
           H: float }        // J/kg (sensibile, rif. 298.15 K)
 
-    /// Regola di miscelazione per µ e k.
-    /// Wilke/Mason-Saxena è la scelta fisicamente corretta (per miscele
-    /// H2 + gas pesanti la viscosità reale supera la media molare, effetto che
-    /// Wilke riproduce). `MolarAverage` è offerta solo per riprodurre i
-    /// datasheet dei fornitori che usano la media molare.
+    /// <summary>
+    /// Represents mixingrule data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type MixingRule =
         | Wilke
         | MolarAverage
 
+    /// <summary>
+    /// Calculates or returns mixingrulename for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let mixingRuleName = function
         | Wilke -> "Wilke (µ) / Wassiljewa-Mason-Saxena (k)"
         | MolarAverage -> "media molare (per confronto con datasheet)"
 
-    /// Proprietà della miscela con regola di miscelazione selezionabile e
-    /// correzione di gas reale opzionale (secondo viriale).
-    /// Se `real` è vero, Z e cp sono corretti e il valore di `z` passato
-    /// dal chiamante viene ignorato.
+    /// <summary>
+    /// Calculates or returns mixreal for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let mixReal (rule: MixingRule) (real: bool) (c: Composition) (tK: float) (pPa: float) (z: float) : MixProps =
         let cn = normalize c
         let m = mixMolarMass cn
@@ -256,11 +295,6 @@ module GasProps =
         let muMix, kMix =
             match rule with
             | MolarAverage ->
-                // mu: media molare semplice (riproduce il datasheet entro 0.3 %)
-                // k : media pesata su sqrt(M) tipo Herning-Zipperer - e' quella
-                //     che i datasheet chiamano "molare"; la media semplice
-                //     sovrastima del ~45 % perche' l'H2 (k altissimo, M minima)
-                //     pesa quanto le specie pesanti
                 let sw = mus |> List.sumBy (fun (_, y, _, _, m) -> y * sqrt m)
                 (mus |> List.sumBy (fun (_, y, mu, _, _) -> y * mu),
                  (mus |> List.sumBy (fun (_, y, _, k, m) -> y * sqrt m * k)) / sw)
@@ -280,11 +314,21 @@ module GasProps =
           Pr = cpMass * muMix / kMix
           H = (hm + hRes) / m }
 
-    /// Versione a gas ideale (compatibilità)
+    /// <summary>
+    /// Calculates or returns mixwith for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let mixWith (rule: MixingRule) (c: Composition) (tK: float) (pPa: float) (z: float) : MixProps =
         mixReal rule false c tK pPa z
 
-    /// Proprietà della miscela a (T [K], p [Pa]) con fattore di comprimibilità Z.
+    /// <summary>
+    /// Calculates or returns mix for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let mix (c: Composition) (tK: float) (pPa: float) (z: float) : MixProps =
         let cn = normalize c
         let m = mixMolarMass cn
@@ -310,39 +354,61 @@ module GasProps =
           Pr = cpMass * muMix / kMix
           H = hm / m }
 
-    /// Entalpia massica sensibile [J/kg] della miscela a T [K]
+    /// <summary>
+    /// Calculates or returns enthalpy for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let enthalpy (c: Composition) (tK: float) =
         let cn = normalize c
         (cn |> List.sumBy (fun (sp, y) -> y * hMolar sp tK)) / mixMolarMass cn
 
-    /// Temperatura [K] corrispondente a un'entalpia massica assegnata [J/kg]
+    /// <summary>
+    /// Calculates or returns temperaturefromenthalpy for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let temperatureFromEnthalpy (c: Composition) (h: float) =
         bisect (fun t -> enthalpy c t - h) 250.0 2500.0 1e-4 200
 
-    /// Entalpia massica ASSOLUTA [J/kg] (include le entalpie di formazione):
-    /// necessaria quando la composizione varia per reazione lungo il tubo.
+    /// <summary>
+    /// Calculates or returns enthalpyabs for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let enthalpyAbs (c: Composition) (tK: float) =
         let cn = normalize c
         (cn |> List.sumBy (fun (sp, y) -> y * hMolarAbs sp tK)) / mixMolarMass cn
 
-    /// Entalpia massica ASSOLUTA con correzione di gas reale [J/kg]
+    /// <summary>
+    /// Calculates or returns enthalpyabsreal for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let enthalpyAbsReal (real: bool) (c: Composition) (tK: float) (pPa: float) =
         let cn = normalize c
         ((cn |> List.sumBy (fun (sp, y) -> y * hMolarAbs sp tK)) + departure real cn tK pPa)
         / mixMolarMass cn
 
-    /// Frazione molare di una specie
+    /// <summary>
+    /// Calculates or returns molfrac for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let molFrac (c: Composition) (sp: Species) =
         c |> List.tryFind (fun (s, _) -> s = sp) |> Option.map snd |> Option.defaultValue 0.0
 
-    // ------------------------------------------------------------------
-    // Emissività del gas non luminoso (CO2 + H2O) - metodo CKTI / Blokh
-    // ------------------------------------------------------------------
-    /// Emissività del gas.
-    ///   rH2O, rCO2 : frazioni molari
-    ///   pPa        : pressione totale [Pa]
-    ///   sBeam      : lunghezza media del raggio [m] (0.9·di per un tubo)
-    ///   tK         : temperatura del gas [K]
+    /// <summary>
+    /// Calculates or returns gasemissivity for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let gasEmissivity (rH2O: float) (rCO2: float) (pPa: float) (sBeam: float) (tK: float) =
         let rn = rH2O + rCO2
         if rn <= 1e-6 || sBeam <= 0.0 then 0.0
@@ -355,8 +421,12 @@ module GasProps =
             let e = 1.0 - exp (-kg * ps)
             min 0.95 (max 0.0 e)
 
-    /// Coefficiente di scambio radiativo equivalente [W/(m²·K)] riferito
-    /// alla superficie interna del tubo.
+    /// <summary>
+    /// Calculates or returns hradiation for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hRadiation (epsGas: float) (epsWall: float) (tGasK: float) (tWallK: float) =
         if abs (tGasK - tWallK) < 1e-6 then 0.0
         else

@@ -3,14 +3,32 @@ namespace Whb.Core.Components
 open System
 open Whb.Core.Components.Geometry
 
+/// <summary>
+/// Provides whbcomponents functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module WhbComponents =
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents tube data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Tube =
         { Tag: string; Di: float; Do: float; Length: float; Count: int; Material: MaterialRef }
         member x.Metrics = Geometry.cylinderShell x.Material x.Di x.Do x.Length |> fun m -> { m with Weight = m.Weight * float x.Count; MetalVolume = m.MetalVolume * float x.Count; InternalVolume = m.InternalVolume * float x.Count; ExternalVolume = m.ExternalVolume * float x.Count; InternalArea = m.InternalArea * float x.Count; ExternalArea = m.ExternalArea * float x.Count }
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents tubebundle data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type TubeBundle =
         { Tag: string
           Tubes: Tube
@@ -27,6 +45,12 @@ module WhbComponents =
             Geometry.combine [ x.Tubes.Metrics; { baffle with Weight = baffle.Weight * float x.BaffleCount; MetalVolume = baffle.MetalVolume * float x.BaffleCount } ]
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents pipebypass data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type PipeBypass =
         { Tag: string
           LinerDi: float; LinerDo: float
@@ -41,6 +65,12 @@ module WhbComponents =
                   Geometry.cylinderShell x.ContainmentMaterial x.InsulationDo x.ContainmentDo x.Length ]
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents tubesheet data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Tubesheet =
         { Tag: string; Diameter: float; Thickness: float; TubeHoleDiameter: float; TubeHoleCount: int; Material: MaterialRef }
         member x.Metrics =
@@ -49,11 +79,23 @@ module WhbComponents =
             { gross with MetalVolume = max 0.0 (gross.MetalVolume - holes); Weight = max 0.0 (gross.MetalVolume - holes) * x.Material.Density }
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents shellbarrel data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type ShellBarrel =
         { Tag: string; Di: float; Do: float; Length: float; Material: MaterialRef }
         member x.Metrics = Geometry.cylinderShell x.Material x.Di x.Do x.Length
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents nozzle data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Nozzle =
         { Tag: string; Service: string; Di: float; Do: float; Projection: float; Count: int; Material: MaterialRef }
         member x.Metrics =
@@ -61,11 +103,23 @@ module WhbComponents =
             { m with Weight = m.Weight * float x.Count; MetalVolume = m.MetalVolume * float x.Count; InternalVolume = m.InternalVolume * float x.Count; ExternalVolume = m.ExternalVolume * float x.Count; InternalArea = m.InternalArea * float x.Count; ExternalArea = m.ExternalArea * float x.Count }
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents bypassvalve data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type BypassValve =
         { Tag: string; ValveType: string; Bore: float; FaceToFace: float; BodyDo: float; Material: MaterialRef }
         member x.Metrics = Geometry.cylinderShell x.Material x.Bore x.BodyDo x.FaceToFace
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents whb data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Whb =
         { Tag: string
           TubeBundle: TubeBundle

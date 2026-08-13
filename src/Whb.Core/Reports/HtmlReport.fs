@@ -6,7 +6,12 @@ open System.Globalization
 open Constants
 open Types
 
-/// Report HTML autoconsistente con grafici (SVG generati lato pagina).
+/// <summary>
+/// Provides htmlreport functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module HtmlReport =
 
     let private ci = CultureInfo.InvariantCulture
@@ -114,6 +119,12 @@ function lineChart(host,cfg){
   const xs=cfg.x, xmin=Math.min(...xs), xmax=Math.max(...xs);
   let ymin=cfg.ymin, ymax=cfg.ymax;
   if(ymin===undefined||ymax===undefined){
+    /// <summary>
+    /// Calculates or returns a for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let a=[];cfg.series.forEach(se=>a=a.concat(se.y.filter(v=>v!=null&&!isNaN(v))));
     if(cfg.band){a=a.concat(cfg.band.lo,cfg.band.hi)}
     ymin=Math.min(...a);ymax=Math.max(...a);
@@ -129,6 +140,12 @@ function lineChart(host,cfg){
   const xl=el('text',{x:(M.l+W-M.r)/2,y:H-4,class:'axlab','text-anchor':'middle'});xl.textContent=cfg.xlab;s.appendChild(xl);
   const yl=el('text',{x:4,y:12,class:'axlab'});yl.textContent=cfg.ylab;s.appendChild(yl);
   if(cfg.band){
+    /// <summary>
+    /// Calculates or returns d for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let d='M'+xs.map((v,i)=>`${X(v)},${Y(cfg.band.hi[i])}`).join('L');
     d+='L'+xs.map((v,i)=>`${X(v)},${Y(cfg.band.lo[i])}`).reverse().join('L')+'Z';
     s.appendChild(el('path',{d:d,fill:'var(--band)',stroke:'none'}));
@@ -147,8 +164,20 @@ function lineChart(host,cfg){
   hit.addEventListener('mousemove',ev=>{
     const b=s.getBoundingClientRect();
     const px=(ev.clientX-b.left)/b.width*W;
+    /// <summary>
+    /// Calculates or returns bi for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let bi=0,bd=1e9;xs.forEach((v,i)=>{const d=Math.abs(X(v)-px);if(d<bd){bd=d;bi=i}});
     cur.setAttribute('x1',X(xs[bi]));cur.setAttribute('x2',X(xs[bi]));cur.setAttribute('opacity',1);
+    /// <summary>
+    /// Calculates or returns h for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let h=`<b>${cfg.xlab.split('[')[0].trim()} = ${nice(xs[bi],2)}</b>`;
     cfg.series.forEach((se,k)=>{dots[k].setAttribute('cx',X(xs[bi]));dots[k].setAttribute('cy',Y(se.y[bi]));dots[k].setAttribute('opacity',1);
       h+=`<span><em style="font-style:normal;color:var(--text-secondary)">${se.name}</em><b style="display:inline;font-weight:600">${nice(se.y[bi],cfg.dec??1)}</b></span>`});
@@ -204,6 +233,12 @@ function heat(host,cfg){
 }
 """
 
+    /// <summary>
+    /// Calculates or returns build for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let build (r: DesignResult) =
         let c = r.Case
         let ax = r.Axial |> List.toArray
@@ -223,7 +258,6 @@ function heat(host,cfg){
                 name dec diverging (n mid) (n vmin) (n vmax) (arr zs) (arr ys)
                 (String.Join(",", rows))
 
-        /// matrice (banda x sezione) costruita sulle celle di tensione dei tubi
         let stressAt =
             let d = System.Collections.Generic.Dictionary<int * int, StressCell>()
             r.Stress.Cells

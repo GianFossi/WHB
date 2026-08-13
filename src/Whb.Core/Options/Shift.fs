@@ -4,24 +4,31 @@ open System
 open Constants
 open GasProps
 
-/// Equilibrio della reazione di water-gas shift lungo il tubo:
-///     CO + H2O  <->  CO2 + H2      dH°(298) = -41.16 kJ/mol
-///
-/// Nei WHB syngas la reazione è di norma **congelata** (nessun catalizzatore,
-/// tempi di residenza brevi, temperature in discesa): il datasheet del caso
-/// reale riporta infatti MW 15.99 sia in ingresso sia in uscita.
-/// Il modulo consente comunque di attivarla per valutare il caso limite,
-/// con una temperatura di congelamento e/o un approccio all'equilibrio.
+/// <summary>
+/// Provides shift functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Shift =
 
+    /// <summary>
+    /// Represents mode data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type Mode =
-        /// Composizione congelata (default, coerente con i datasheet)
         | Frozen
-        /// Equilibrio raggiunto finché T > TFreeze, poi congelamento
         | EquilibriumAbove of tFreezeK: float
-        /// Frazione di avanzamento verso l'equilibrio (0 = congelato, 1 = equilibrio)
         | FractionalApproach of frac: float * tFreezeK: float
 
+    /// <summary>
+    /// Calculates or returns modename for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let modeName =
         function
         | Frozen -> "congelata (nessuna reazione)"
@@ -29,14 +36,15 @@ module Shift =
         | FractionalApproach(f, t) ->
             sprintf "approccio %.0f%% all'equilibrio sopra %.0f °C" (100.0 * f) (kToC t)
 
-    /// Costante di equilibrio K_p (adimensionale) - correlazione di Moe (1962)
+    /// <summary>
+    /// Calculates or returns kp for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let kp (tK: float) = exp (4577.8 / tK - 4.33)
 
-    /// Avanzamento di reazione all'equilibrio (base 1 mol di miscela).
-    /// Restituisce xi in [ -min(nCO2,nH2) , min(nCO,nH2O) ].
     let private extent (nCO: float) (nH2O: float) (nCO2: float) (nH2: float) (k: float) =
-        // K = (nCO2+x)(nH2+x) / ((nCO-x)(nH2O-x))
-        // (K-1) x^2 - [K(nCO+nH2O) + nCO2 + nH2] x + (K nCO nH2O - nCO2 nH2) = 0
         let a = k - 1.0
         let b = -(k * (nCO + nH2O) + nCO2 + nH2)
         let c = k * nCO * nH2O - nCO2 * nH2
@@ -57,7 +65,6 @@ module Shift =
             | [] -> 0.0
             | l -> l |> List.minBy abs
 
-    /// Applica l'avanzamento xi (per mole di miscela) alla composizione.
     let private applyExtent (c: Composition) (xi: float) : Composition =
         let get sp = molFrac c sp
         let upd sp v (l: Composition) =
@@ -70,7 +77,12 @@ module Shift =
         |> upd CO2 (get CO2 + xi)
         |> upd H2 (get H2 + xi)
 
-    /// Composizione di equilibrio (o parziale) alla temperatura tK.
+    /// <summary>
+    /// Calculates or returns equilibrate for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let equilibrate (mode: Mode) (c0: Composition) (tK: float) : Composition =
         match mode with
         | Frozen -> c0
@@ -86,14 +98,12 @@ module Shift =
                 let xiEq = extent (molFrac c CO) (molFrac c H2O) (molFrac c CO2) (molFrac c H2) (kp tK)
                 normalize (applyExtent c (frac * xiEq))
 
-    /// Stato del gas lungo il tubo con reazione: dato il flusso di entalpia
-    /// ASSOLUTA specifica h [J/kg] e la composizione di riferimento all'ingresso,
-    /// determina (T, composizione) coerenti.
-    ///
-    /// Nota: il numero di moli totali si conserva nella shift, quindi la massa
-    /// molare della miscela non cambia e h [J/kg] è una variabile di stato valida.
-    /// Variante con correzione di GAS REALE: l'entalpia dipende anche dalla
-    /// pressione, quindi l'inversione va fatta a p assegnata.
+    /// <summary>
+    /// Calculates or returns statefromenthalpyat for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let stateFromEnthalpyAt (mode: Mode) (real: bool) (pPa: float) (cIn: Composition) (h: float) =
         let hOf (c: Composition) (t: float) =
             if real then enthalpyAbsReal true c t pPa else enthalpyAbs c t
@@ -108,5 +118,11 @@ module Shift =
             let t = bisect f 250.0 2500.0 1e-4 200
             (t, equilibrate mode cIn t)
 
+    /// <summary>
+    /// Calculates or returns statefromenthalpy for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let stateFromEnthalpy (mode: Mode) (cIn: Composition) (h: float) =
         stateFromEnthalpyAt mode false 0.0 cIn h

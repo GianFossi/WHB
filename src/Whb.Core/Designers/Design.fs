@@ -4,17 +4,24 @@ open System
 open Constants
 open Types
 
-/// Orchestratore: accoppia il solutore termico 2-D con la rete di
-/// circolazione naturale e produce la diagnostica di progetto.
+/// <summary>
+/// Provides design functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Design =
 
     let private w fmt = Printf.kprintf id fmt
 
     let private sev = function Critical -> "CRITICO" | Warning -> "ATTENZIONE" | Note -> "NOTA"
 
-    /// Punto della mappa parametrica: risposta dell'apparecchio a una data
-    /// frazione di by-pass. Una valutazione completa costa qualche secondo,
-    /// quindi se ne calcolano poche e si interpola linearmente.
+    /// <summary>
+    /// Represents private data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type private MapPt =
         { X: float
           TMix: float
@@ -38,7 +45,6 @@ module Design =
             let f = (x - a.[i].X) / (a.[i + 1].X - a.[i].X)
             sel a.[i] + f * (sel a.[i + 1] - sel a.[i])
 
-    /// inverso di una funzione monotona crescente costruita sulla mappa
     let private invertMap (pts: MapPt list) (sel: MapPt -> float) (target: float) =
         let f (x: float) = interpMap pts sel x - target
         let x0 = (List.head pts).X
@@ -47,8 +53,12 @@ module Design =
         elif f x1 <= 0.0 then x1
         else bisect f x0 x1 1e-7 60
 
-    /// Converte le stringhe della diagnostica classica in Finding strutturati e
-    /// aggiunge le verifiche meccaniche.
+    /// <summary>
+    /// Calculates or returns buildfindings for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let buildFindings (case: DesignCase) (sat: Steam.SatProps) (cells: CellResult list)
                       (axial: AxialResult list) (circ: CirculationResult)
                       (ft: FixedTubesheetResult) (risers: RiserCheck list)
@@ -75,7 +85,6 @@ module Design =
             fs.Add { Severity = s; Area = area; Title = title; Value = value
                      Limit = limit; Where = where; Action = action; Detail = detail }
 
-        // --- DNB
         if dnb.DNBR < 1.0 then
             add Critical "EBOLLIZIONE" "Margine su DNB insufficiente"
                 (sprintf "DNBR = %.2f" dnb.DNBR) "DNBR >= 2 (pratica di progetto)"
@@ -88,7 +97,6 @@ module Design =
                 "Verificare con criterio di flusso termico massimo; valutare ferrula piu' lunga."
                 "Il criterio di Palen usato per il CHF di fascio e' conservativo, ma il margine resta sotto la pratica corrente."
 
-        // --- flusso termico
         if qmax.QFluxOut > 300000.0 then
             add Warning "TERMICO" "Flusso termico di picco elevato"
                 (sprintf "%.0f kW/m2" (qmax.QFluxOut / 1000.0)) "250-350 kW/m2 (pratica per WHB a tubi da fumo)"
@@ -96,7 +104,6 @@ module Design =
                 "Allungare la ferrula: da 200 a 500 mm il picco cala di circa il 9%."
                 "Sopra 300 kW/m2 la sensibilita' a depositi, maldistribuzione e qualita' dell'acqua cresce rapidamente. E' il criterio pratico dominante, piu' del CHF teorico."
 
-        // --- surriscaldamento parete
         if dTsup.DTsatWall > dTc then
             add Critical "EBOLLIZIONE" "Surriscaldamento di parete oltre il dT critico"
                 (sprintf "%.1f K" dTsup.DTsatWall) (sprintf "dT critico = %.1f K" dTc)
@@ -104,7 +111,6 @@ module Design =
                 "Ridurre il flusso di picco (ferrula) e aumentare la circolazione."
                 "Oltre il ginocchio della curva di ebollizione le bolle si fondono in un film continuo: h crolla e il metallo si scalda di centinaia di gradi in minuti."
 
-        // --- deposito
         if dTdep.DTDeposit > 25.0 then
             add Warning "MATERIALI" "Deposito lato acqua determinante sulla T metallo"
                 (sprintf "%.0f K di salto sul deposito" dTdep.DTDeposit)
@@ -113,7 +119,6 @@ module Design =
                 "Controllo chimico dell'acqua (fosfati/AVT, silice, conducibilita') e pulizia chimica programmata."
                 "Il metallo si scalda per il deposito, non per l'ebollizione. Il meccanismo e' autoacceleratore: piu' caldo -> piu' deposito -> piu' caldo."
 
-        // --- temperatura metallo
         let tmC = kToC tmax.TMetalIn
         if tmC > case.Material.TmaxDesign then
             add Critical "MATERIALI" "Temperatura metallo oltre il limite del materiale"
@@ -124,7 +129,6 @@ module Design =
                 (sprintf "%.0f °C" tmC) (sprintf "%s: %.0f °C" case.Material.Name case.Material.TmaxDesign)
                 (loc tmax) "Verificare i margini a creep sulla vita di progetto." ""
 
-        // --- metal dusting
         match case.Material.MetalDusting with
         | Some(lo, hi) ->
             let inWin = cells |> List.filter (fun c -> let t = kToC c.TMetalIn in t >= lo && t <= hi)
@@ -142,7 +146,6 @@ module Design =
                     "La carburizzazione catastrofica attacca gli acciai in gas ad alta attivita' di carbonio."
         | None -> ()
 
-        // --- circolazione
         if circ.CirculationRatio < 10.0 then
             add Critical "CIRCOLAZIONE" "Rapporto di circolazione sotto il minimo"
                 (sprintf "CR = %.1f (x = %.3f)" circ.CirculationRatio (1.0 / circ.CirculationRatio))
@@ -185,7 +188,6 @@ module Design =
                 "Verificare il CR LOCALE nella sezione di picco: il valore medio e' dominato dall'estremita' fredda."
                 "La corona lasciata aperta dai diaframmi puo' fare da discesa interna nelle zone fredde e da salita preferenziale in quelle calde."
 
-        // --- riser
         for rc in risers do
             if rc.Regime = Slug then
                 add Critical "MECCANICA" "Riser in moto a tappi (slug)"
@@ -198,7 +200,6 @@ module Design =
                     (sprintf "%.0f kg/(m s2)" rc.RhoV2) (sprintf "<= %.0f" case.MaxRhoV2Riser)
                     (sprintf "riser %s" rc.Label) "Aumentare la sezione." "Erosione ai gomiti e vibrazione indotta."
 
-        // --- meccanica: dilatazione impedita
         if ft.BucklingUtilisation > 1.0 then
             add Critical "MECCANICA" "Instabilita' dei tubi per dilatazione impedita"
                 (sprintf "sigma = %.0f MPa (utilizzo %.0f%%)" (ft.SigmaTube / 1e6) (100.0 * ft.BucklingUtilisation))
@@ -220,7 +221,6 @@ module Design =
                 "Confermare con il calcolo di codice, che aggiunge i termini di pressione."
                 (sprintf "Dilatazione differenziale libera %.2f mm; forza assiale interna %.2f MN, pari a %.1f kN per tubo sulla giunzione tubo-piastra." (ft.DeltaFree * 1000.0) (ft.Force / 1e6) (ft.ForcePerTube / 1000.0))
 
-        // --- gas
         let velIn = (cells |> List.filter (fun c -> c.I = 0) |> List.maxBy (fun c -> c.VelGas)).VelGas
         if velIn > 60.0 then
             add Warning "GAS" "Velocita' del gas elevata all'imbocco"
@@ -230,7 +230,6 @@ module Design =
             add Warning "GAS" "Perdita di carico lato gas vicina all'ammissibile"
                 (sprintf "%.0f mbar" (dpGas / 100.0)) "0.30 bar (datasheet)" "intero percorso gas" "" ""
 
-        // --- by-pass interno
         match bp with
         | Some (b: Bypass.Result) ->
             let tl = kToC b.TLinerMax
@@ -265,7 +264,6 @@ module Design =
                 "By-pass e fascio sono in parallelo fra gli stessi due punti: senza strozzamento la resistenza del tubo centrale e' troppo bassa."
         | None -> ()
 
-        // --- vibrazioni indotte dal flusso
         (let vw = vibration |> List.maxBy (fun v -> v.FeiRatio)
          let lay = Vibration.layoutName case.TubeLayout
          if vw.FeiRatio >= 1.0 then
@@ -289,7 +287,6 @@ module Design =
                 (sprintf "banda %d, campata %.2f m" vw.Band vw.Span) ""
                 (sprintf "Reticolo %s, K = %.1f." lay vw.KConnors))
 
-        // --- bocchelli esistenti ma non collegati
         if not (List.isEmpty notConnected) then
             let tags = notConnected |> List.map (fun l -> sprintf "%s (%s)" l.Tag l.Nps) |> String.concat ", "
             add Warning "CIRCOLAZIONE" "Bocchelli presenti ma NON collegati"
@@ -298,7 +295,6 @@ module Design =
                 "Verificare se sono riserve intenzionali. Se lo scopo era il lavaggio delle estremita', il collegamento va realizzato: sono le zone dove il campo tubi e' meno lavato."
                 "Il calcolo idraulico e' stato eseguito SENZA queste linee: sezione di passaggio e battente motore sono quelli effettivamente disponibili, non quelli di disegno. R5 e DC9 servivano l'estremita' fredda; R0A/R0B l'estremita' calda, cioe' proprio la zona di picco di flusso termico e di DNBR minimo."
 
-        // --- stato di sollecitazione combinato (Lame' + assiale)
         let worstStress = stress.Cells |> List.maxBy (fun c -> c.Utilisation)
         let sLoc (c: StressCell) =
             if c.J < 0 then sprintf "%s, z = %.2f m" c.Component c.Z
@@ -349,7 +345,6 @@ module Design =
                 ""
                 (sprintf "Costruttivamente il liner e' libero di dilatare, quindi NON sviluppa carico assiale e non entra nel bilancio a piastre fisse: nel sistema strutturale figura il solo tubo di contenimento. A titolo di documentazione, se fosse vincolato a entrambe le estremita' svilupperebbe %.2f MN, cioe' %.0f MPa: un ordine di grandezza oltre qualunque ammissibile. E' la ragione costruttiva del giunto scorrevole." (stress.LinerRestrainedForce / 1e6) (stress.LinerRestrainedForce / (Math.PI / 4.0 * (case.Bypass.LinerOd ** 2.0 - case.Bypass.LinerId ** 2.0)) / 1e6))
 
-        // --- valvola a farfalla del by-pass
         match valve with
         | Some v ->
             let inWindow = v.Normal.OpenDeg >= v.MinOpen.OpenDeg && v.Normal.OpenDeg <= v.MaxOpen.OpenDeg
@@ -396,10 +391,13 @@ module Design =
 
         List.ofSeq fs
 
-    /// Esecuzione completa con accoppiamento termico <-> idraulico.
+    /// <summary>
+    /// Calculates or returns run for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let run (caseIn: DesignCase) : DesignResult =
-        // I bocchelli esistenti ma NON collegati (flangia cieca / linea non
-        // realizzata) restano in distinta ma non partecipano all'idraulica.
         let allRisers = caseIn.Loop.Risers
         let allDowncomers = caseIn.Loop.Downcomers
         let case =
@@ -421,7 +419,6 @@ module Design =
         let dutyGuess = wGasTot * 2.2e3 * (case.Gas.TIn - sat.Tsat - 30.0)
         let steamGuess = dutyGuess / sat.Hfg
 
-        /// risolve il sistema accoppiato fascio + circolazione per un caso dato
         let coupled (cx: DesignCase) =
             let mutable wField = Array.create nz (15.0 * steamGuess / t.Length)
             let mutable xIn = Array.create nz 0.0
@@ -449,7 +446,6 @@ module Design =
                     ta <- ta + wgt * o.TGasOutBandClass.[j, c]
             ta / wq
 
-        /// dato x, restituisce (T miscelata, out, dist, risultato by-pass)
         let evaluate (x: float) =
             let (o, d) = coupled (caseWith x)
             let tTubes = tubeOutOf o
@@ -479,13 +475,6 @@ module Design =
                       Converged = true }
                 (tMix, o, d, Some res)
 
-        // ------------------------------------------------------------------
-        //  MAPPA PARAMETRICA  x -> risposta dell'apparecchio
-        //  Serve a tre cose contemporaneamente:
-        //   1. centrare la temperatura di uscita miscelata richiesta
-        //   2. costruire la caratteristica della valvola a farfalla
-        //   3. dare la ripartizione dei flussi per ogni apertura
-        // ------------------------------------------------------------------
         let bpSpec = case.Bypass
         let aLiner = Math.PI * bpSpec.LinerId * bpSpec.LinerId / 4.0
         let mapPoint (x: float) =
@@ -497,8 +486,6 @@ module Design =
                     let pr = GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0 n.TGas case.Gas.PIn 1.0
                     (b.TOutBypass, b.TLinerMax, pr.Rho, n.TGas)
                 | None ->
-                    // limite a portata nulla: il gas nel by-pass si raffredda
-                    // completamente fino alla temperatura dell'acqua
                     let pr = GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0 sat.Tsat case.Gas.PIn 1.0
                     (sat.Tsat, sat.Tsat, pr.Rho, sat.Tsat)
             { X = x
@@ -517,15 +504,10 @@ module Design =
             else [ 0.0; 0.003; 0.006; 0.010; 0.015; 0.021; 0.030; 0.045; 0.065; 0.090; 0.125; 0.170 ]
         let pmap = xGrid |> List.map mapPoint
 
-        // frazione di by-pass: assegnata, imposta dall'angolo della farfalla,
-        // oppure risolta per centrare la temperatura di uscita miscelata
         let qDyn (x: float) =
-            // pressione dinamica nel liner alla sezione della valvola
             let rho = max 1e-3 (interpMap pmap (fun p -> p.RhoValve) x)
             let vel = wGasTot * x / (rho * aLiner)
             0.5 * rho * vel * vel
-        /// zeta che la valvola deve dissipare perche' i due rami abbiano lo
-        /// stesso salto di pressione
         let zetaRequired (x: float) =
             let q = qDyn x
             if q < 1e-9 then 1.0e7
@@ -533,8 +515,6 @@ module Design =
                 let dpT = interpMap pmap (fun p -> p.DpTubes) x
                 let dpF = interpMap pmap (fun p -> p.DpBpFric) x
                 max 0.0 ((dpT - dpF) / q - bpSpec.ExtraK)
-        /// frazione che si stabilisce con la farfalla a un dato angolo di
-        /// APERTURA: si risolve dp_bypass(x) = dp_fascio(x)
         let fractionForAngle (thetaDeg: float) =
             let z = Valve.zetaOpening thetaDeg
             let res (x: float) =
@@ -555,11 +535,8 @@ module Design =
                     match case.Bypass.Fraction with
                     | Some f -> max 0.0 (min 0.5 f)
                     | None ->
-                        // i tubi da soli non raffreddano abbastanza?
                         if (List.head pmap).TMix >= case.Bypass.TargetMixOut then 0.0
                         else
-                            // primo tentativo dalla mappa, poi affinamento sul
-                            // modello completo
                             let x0 = invertMap pmap (fun p -> p.TMix) case.Bypass.TargetMixOut
                             let lo = max 0.0 (x0 - 0.004)
                             let hi = min 0.35 (x0 + 0.004)
@@ -604,12 +581,9 @@ module Design =
         let dt1 = case.Gas.TIn - sat.Tsat
         let dt2 = tOutMean - sat.Tsat
         let lm = lmtd dt1 dt2
-        // ---------- dilatazioni termiche ----------
         let tRoom = case.AssemblyTemperature
         let segsFor (ci: int) (j: int) =
             [ for i in 0 .. nz - 1 -> (out.Dz.[i], out.Cells.[i, j, ci].TMetalWallAvg) ]
-        // dilatazione di OGNI combinazione banda x classe, poi si estraggono
-        // gli estremi in termini di ALLUNGAMENTO (non di temperatura di picco)
         let allExp =
             [ for ci in 0 .. ncls - 1 do
                 for j in 0 .. ny - 1 ->
@@ -623,8 +597,6 @@ module Design =
         let coldest =
             let (cc2, jj, e) = allExp |> List.minBy (fun (_, _, e) -> e.DeltaL)
             { e with Label = sprintf "Tubi - banda %d, ferrula %.0f mm (dL MINIMO)" jj (snd (List.item cc2 out.Classes) * 1000.0) }
-        // media pesata sul numero di tubi: e' la temperatura da usare per il
-        // bilancio globale di dilatazione impedita fascio/mantello
         let meanTube =
             let segs =
                 [ for i in 0 .. nz - 1 ->
@@ -661,9 +633,6 @@ module Design =
             Mechanics.fixedTubesheet case.Material case.ShellMaterial tRoom t.Length t.NTubes
                 t.Do t.Di t.ShellId case.ShellThickness case.UnsupportedSpan
                 meanTube.TEquivalent (perClass |> List.maxBy (fun e -> e.DeltaL)).TEquivalent eShell.TEquivalent
-        // ==================================================================
-        //  VALVOLA A FARFALLA DEL BY-PASS: caratteristica e finestra operativa
-        // ==================================================================
         let xTop = (List.last pmap).X
         let valveRes =
             if not case.Bypass.Enabled then None
@@ -705,7 +674,6 @@ module Design =
                       Steam = interpMap pmap (fun p -> p.Steam) x
                       TLinerMax = interpMap pmap (fun p -> p.TLinerMax) x
                       Note = note }
-                // --- angoli imposti dai singoli criteri di progetto ---
                 let angFromX (x: float) = max 0.0 (min 90.0 (angleForFraction x))
                 let xPurge =
                     let f (x: float) = snd (velAt x) - bpSpec.MinPurgeVel
@@ -713,7 +681,6 @@ module Design =
                     elif f xTop <= 0.0 then xTop
                     else bisect f 1e-6 xTop 1e-9 60
                 let xEros =
-                    // rho v² in vena contratta = 2 dp_valvola: cala aprendo
                     let f (x: float) =
                         let (rho, vel) = velAt x
                         let q = 0.5 * rho * vel * vel
@@ -762,10 +729,6 @@ module Design =
                       Diameter = bpSpec.LinerId
                       AtOutlet = bpSpec.ValveAtOutlet }
 
-        // ==================================================================
-        //  STATO DI SOLLECITAZIONE: Lame' + carico assiale da dilatazione
-        //  impedita, per ogni zona z e ogni altezza y
-        // ==================================================================
         let pShell = case.Water.DrumPressure
         let pGasMean =
             let s = cells |> List.sumBy (fun c -> c.PGas * c.NTubes)
@@ -780,7 +743,6 @@ module Design =
             - float t.NTubes * Math.PI / 4.0 * t.Do * t.Do
             - (if case.Bypass.Enabled then Math.PI / 4.0 * bpSpec.PipeOd * bpSpec.PipeOd else 0.0)
         let pEnd = pShell * aFluidShell + pGasMean * aFluidTube
-        // espansione libera del tubo di contenimento e del liner del by-pass
         let bpPipeExp =
             bpRes
             |> Option.map (fun b ->
@@ -821,7 +783,6 @@ module Design =
         let sigmaShellZ = (List.item nGroups members).SigmaZ
         let sigmaBpZ =
             if List.length members > nGroups + 1 then (List.item (nGroups + 1) members).SigmaZ else 0.0
-        // --- celle di tensione: tubi ---
         let stressTubes =
             [ for ci in 0 .. ncls - 1 do
                 for j in 0 .. ny - 1 do
@@ -849,7 +810,6 @@ module Design =
                           WorstAt = worst.Position
                           Sy = sy
                           Utilisation = worst.SigmaVM / sy } ]
-        // --- celle di tensione: tubo di contenimento del by-pass ---
         let stressBypass =
             match bpRes with
             | None -> []
@@ -879,13 +839,6 @@ module Design =
                       Sy = sy
                       Utilisation = worst.SigmaVM / sy })
         let pExtNetTube = pShell - pGasMean
-        // Il sistema e' LINEARE: la soluzione senza carico di pressione e'
-        // esattamente la quota "termica" gia' separata. Si verificano quindi
-        // due condizioni di carico:
-        //   LC1 esercizio        = termico + carico di estremita' di pressione
-        //   LC2 termico puro     = apparecchio caldo ma non in pressione
-        //                          (avviamento, depressurizzazione a caldo):
-        //                          e' il caso severo per l'instabilita'
         let mTubeWorstOp = [ 0 .. nGroups - 1 ] |> List.minBy (fun k -> (List.item k members).SigmaZ) |> fun k -> List.item k members
         let mTubeWorstTh = [ 0 .. nGroups - 1 ] |> List.minBy (fun k -> (List.item k members).SigmaZThermal) |> fun k -> List.item k members
         let bucklings =
@@ -941,10 +894,6 @@ module Design =
                  let idl = bpSpec.LinerId
                  let thk = 0.5 * (od - idl)
                  let dm = 0.5 * (od + idl)
-                 // Il liner NON porta la pressione di processo: l'intercapedine
-                 // fra liner e tubo di contenimento comunica con il lato a
-                 // VALLE del fascio. Il salto e' quindi la sola perdita di
-                 // carico dei tubi, maggiorata per gli scostamenti d'esercizio.
                  let factor = 2.0
                  let dpDes = factor * out.DpGas
                  let pE = 2.0 * ee / (1.0 - Mechanics.nu * Mechanics.nu) * (thk / dm) ** 3.0
@@ -969,13 +918,6 @@ module Design =
                   "Pressione esterna: i diaframmi di supporto lavorano come anelli di irrigidimento. Il gioco foro/tubo e' di 0.40 mm sul diametro (0.20 mm radiali), cioe' lo 0.5 % del raggio: il vincolo radiale e' effettivo e l'ipotesi e' confermata."
                   "Il carico di estremita' di pressione presuppone l'apparecchio CHIUSO alle due estremita' e privo di giunto di dilatazione sul mantello." ] }
 
-        // ==================================================================
-        //  A) CONFRONTO FRA MODELLI DI FLUSSO CRITICO (CHF)
-        //  B) STUDIO DI INCERTEZZA SULLE CORRELAZIONI
-        //  C) CONFRONTO PULITO / SPORCO SUI DUE LATI
-        //  Tutti valutati sulle celle governanti, a partire dai risultati gia'
-        //  calcolati: non richiedono un nuovo giro del solutore.
-        // ==================================================================
         let hotCells = cells |> List.filter (fun c -> not c.InFerrule)
         let cellDnb = hotCells |> List.minBy (fun c -> c.DNBR)
         let cellQmax = hotCells |> List.maxBy (fun c -> c.QFluxOut)
@@ -1003,7 +945,6 @@ module Design =
                   (WaterSide.chfLienhardEichhorn t.Do cellDnb.VelCross sat
                    * WaterSide.chfQualityDerating cellDnb.XOut 1.0)
                   (sprintf "FUORI CAMPO DI VALIDITA': il valore NON va usato. La correlazione e' tarata a bassa pressione, dove rho_l/rho_v vale centinaia; qui vale %.1f con We_D = %.0f. Il gruppo rho_v h_fg u su cui e' costruita esplode ad alta pressione e produce un flusso critico privo di significato fisico. E' riportata solo per documentare che e' stata verificata e scartata." ratio we) ]
-        // --- incertezza sulle correlazioni, valutata nella cella di picco ---
         let sensCell = cellQmax
         let propsAt (c: CellResult) =
             GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0 c.TGas c.PGas case.Gas.Z
@@ -1072,7 +1013,6 @@ module Design =
                       QFlux = q; TMetalIn = tmi
                       Delta = 100.0 * (q / q0 - 1.0) })
             gasItems @ boilItems @ mixItems
-        // --- pulito / sporco sui due lati (locale, nella cella di picco) ---
         let foulingCases =
             [ ("PULITO su entrambi i lati", 0.0, 0.0)
               ("sporco solo lato GAS", case.Gas.FoulingIn, 0.0)
@@ -1086,11 +1026,6 @@ module Design =
                   DTDeposit = dDep
                   DNBR = sensCell.QCritLocal / max 1.0 q })
 
-        // ==================================================================
-        //  VIBRAZIONI INDOTTE DAL FLUSSO (FIV) e TRANSITORI
-        // ==================================================================
-        // Campate reali: si costruiscono gli intervalli assiali [z0, z1] di
-        // ciascuna campata libera, tenendo conto dello spessore dei diaframmi.
         let spanRanges =
             if List.isEmpty case.BaffleSpans then
                 [ (0.0, t.Length, case.UnsupportedSpan) ]
@@ -1101,17 +1036,9 @@ module Design =
                     let z1 = z + sp
                     z <- z1 + case.BaffleThickness
                     (z0, z1, sp) ]
-        // Per ogni CAMPATA e ogni BANDA: la velocita' di crossflow che conta e'
-        // quella locale dentro quella campata, non il massimo su tutto l'asse.
-        // La combinazione peggiore e' campata lunga + velocita' alta, e qui il
-        // disegno la mette proprio all'estremita' calda.
         let nSpans = List.length spanRanges
         let vibrationAll =
             [ for (si, (z0, z1, sp)) in List.indexed spanRanges do
-                // Ai DIAFRAMMI il tubo e' un semplice nodo (spostamento
-                // laterale impedito, rotazione libera). Solo alle piastre
-                // tubiere il vincolo puo' essere un incastro, e solo se la
-                // saldatura e' a piena penetrazione.
                 let clamped =
                     let atTubesheet = (si = 0) || (si = nSpans - 1)
                     if atTubesheet && case.TubesheetJoint = Vibration.FullPenetrationWeld then 1 else 0
@@ -1128,19 +1055,9 @@ module Design =
                             Vibration.check j w.Y sp lam case.TubeLayout case.VibrationDamping
                                 t.Do t.Di t.Pitch (case.Material.E (kToC w.TMetalWallAvg)) 7850.0
                                 w.VelCross rhoH rhoGas ]
-        // per il report per banda si tiene la campata peggiore di ogni banda
         let vibration =
             [ for j in 0 .. ny - 1 ->
                 vibrationAll |> List.filter (fun v -> v.Band = j) |> List.maxBy (fun v -> v.FeiRatio) ]
-        // ==================================================================
-        //  MALDISTRIBUZIONE DELLA PORTATA DI GAS FRA I TUBI
-        //  Un SOLO tubo riceve piu' portata degli altri. Il lato mantello NON
-        //  cambia: gli 848 tubi sono canali in parallelo che non si scambiano
-        //  calore fra loro, e un singolo tubo sbilanciato non altera ne' la
-        //  circolazione ne' la produzione di vapore dell'apparecchio. Quindi
-        //  si marcia UN tubo con la portata maggiorata tenendo congelate le
-        //  resistenze lato acqua e il flusso critico locale.
-        // ==================================================================
         let maldist =
             let jb = cellDnb.J
             let wTube0 = wGasTot * (1.0 - xUsed) / float t.NTubes
@@ -1166,10 +1083,6 @@ module Design =
                     let fProp = GasSide.gasPropertyCorrection bc.TMetalIn pr.T
                     let ent = GasSide.entranceCorrection bc.Z bore case.Gas.EntranceC
                     let hg = nu * fProp * ent * pr.K / bore + bc.HRadGas
-                    // resistenza totale di riferimento, dalla soluzione di base:
-                    //   R_tot,base = (T_gas,base - Tsat) / q'_base
-                    // si sostituisce la sola quota lato gas, tutto il resto
-                    // (sporcamento, metallo, ferrula, ebollizione) resta identico
                     let hgBase = bc.HConvGas + bc.HRadGas
                     let rTotBase = (bc.TGas - sat.Tsat) / max 1.0 bc.QLin
                     let rGasBase = 1.0 / (max 1.0 hgBase * Math.PI * bore)
@@ -1179,10 +1092,6 @@ module Design =
                     let qlin = (tG - sat.Tsat) / max 1e-9 rTot
                     let qOut = qlin / (Math.PI * t.Do)
                     let tmi = tG - qlin * (rGasNew + rFoulIn)
-                    // Le celle SOTTO FERRULA sono escluse dai massimi: li' la
-                    // formula darebbe la temperatura del bore della ferrula,
-                    // non quella del metallo del tubo, che sta dietro
-                    // l'isolante. Il picco cade comunque subito a valle.
                     if not bc.InFerrule then
                         if qOut > qMax then
                             qMax <- qOut
@@ -1198,7 +1107,6 @@ module Design =
                   QFluxMax = qMax; ZQMax = zMax; TMetalInMax = tmiMax
                   TGasOut = tOut; DNBRMin = dnbMin; DutyTube = duty } ]
 
-        // --- transitori e protezione ---
         let transient =
             let aMetal = Math.PI / 4.0 * (t.Do * t.Do - t.Di * t.Di)
             let mMetal = 7850.0 * aMetal
@@ -1215,8 +1123,6 @@ module Design =
             let mWater = vShell * (1.0 - alphaMean) * sat.RhoL
             let duty = out.Duty + (match bpRes with Some b -> b.HeatLoss | None -> 0.0)
             let tDry = mWater * sat.Hfg / max 1.0 duty
-            // Inventario del corpo cilindrico al livello normale: segmento
-            // circolare per la lunghezza fra le linee di tangenza.
             let mDrum =
                 if case.Loop.Drum.Enabled then
                     let d0 = case.Loop.Drum
@@ -1226,11 +1132,7 @@ module Design =
                     let aSeg = rr * rr * (th - sin th * cos th)
                     aSeg * d0.Length * sat.RhoL
                 else 0.0
-            // Se i downcomer restano aperti l'acqua del corpo cilindrico scende
-            // per gravita' e si aggiunge all'inventario disponibile.
             let tDryTot = (mWater + mDrum) * sat.Hfg / max 1.0 duty
-            // dopo il dry-out resta il solo vapore a raffreddare: il metallo
-            // tende alla temperatura del gas ridotta dalla resistenza residua
             let hSteam = 800.0
             let cHot = cells |> List.maxBy (fun c -> c.TGas)
             let hg = cHot.HConvGas + cHot.HRadGas

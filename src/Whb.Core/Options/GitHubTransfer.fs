@@ -5,9 +5,21 @@ open System.Diagnostics
 open System.IO
 open Whb.Core.Options
 
+/// <summary>
+/// Provides githubtransfer functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module GitHubTransfer =
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents transferplan data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type TransferPlan =
         { RepositoryUrl: string
           Branch: string
@@ -15,6 +27,12 @@ module GitHubTransfer =
           CreatePullRequest: bool
           Commands: string list }
 
+    /// <summary>
+    /// Calculates or returns plan for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let plan (options: Options.ProjectOptions) =
         let g = options.Github
         let branch = if String.IsNullOrWhiteSpace g.Branch then "main" else g.Branch
@@ -45,9 +63,12 @@ module GitHubTransfer =
         let err = p.StandardError.ReadToEnd()
         if p.ExitCode = 0 then Ok output else Error err
 
-    /// Esecuzione minimale: inizializza git se serve, collega il remote se manca,
-    /// committa tutto il workspace e fa push. Da usare solo quando l'utente ha
-    /// deciso che l'intera cartella appartiene al progetto.
+    /// <summary>
+    /// Calculates or returns execute for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let execute workingDir (options: Options.ProjectOptions) =
         let g = options.Github
         if String.IsNullOrWhiteSpace g.RepositoryUrl then

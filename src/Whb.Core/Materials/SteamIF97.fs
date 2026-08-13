@@ -3,24 +3,26 @@ namespace Whb.Core
 open System
 open Constants
 
-/// Proprietà termodinamiche e di trasporto dell'acqua/vapore.
-/// Formulazione IAPWS-IF97 (regioni 1, 2, 4) + IAPWS 2008 (viscosità),
-/// IAPWS 2011 (conducibilità termica), IAPWS 1994 (tensione superficiale).
-///
-/// Unità interne IF97: p in MPa, T in K, v in m³/kg, h e s in kJ/kg(·K).
-/// Le funzioni pubbliche `sat*` usano unità SI (Pa, K, J/kg, kg/m³, W/m/K, Pa·s).
+/// <summary>
+/// Provides steam functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Steam =
 
-    // ------------------------------------------------------------------
-    // Regione 4 : linea di saturazione
-    // ------------------------------------------------------------------
     let private n4 =
         [| 0.11670521452767e4; -0.72421316703206e6; -0.17073846940092e2;
            0.12020824702470e5; -0.32325550322333e7;  0.14915108613530e2;
            -0.48232657361591e4;  0.40511340542057e6; -0.23855557567849;
            0.65017534844798e3 |]
 
-    /// Pressione di saturazione [MPa] da T [K]
+    /// <summary>
+    /// Calculates or returns psat_mpa for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let psat_MPa (tK: float) =
         let th = tK + n4.[8] / (tK - n4.[9])
         let a = th * th + n4.[0] * th + n4.[1]
@@ -29,7 +31,12 @@ module Steam =
         let x = 2.0 * c / (-b + sqrt (b * b - 4.0 * a * c))
         x ** 4.0
 
-    /// Temperatura di saturazione [K] da p [MPa]
+    /// <summary>
+    /// Calculates or returns tsat_k for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let tsat_K (pMPa: float) =
         let beta = pMPa ** 0.25
         let e = beta * beta + n4.[2] * beta + n4.[5]
@@ -38,10 +45,6 @@ module Steam =
         let d = 2.0 * gg / (-f - sqrt (f * f - 4.0 * e * gg))
         0.5 * (n4.[9] + d - sqrt ((n4.[9] + d) * (n4.[9] + d) - 4.0 * (n4.[8] + n4.[9] * d)))
 
-    // ------------------------------------------------------------------
-    // Regione 1 : liquido compresso / liquido saturo  (T <= 623.15 K)
-    // ------------------------------------------------------------------
-    // (I, J, n)
     let private r1 =
         [| (0, -2, 0.14632971213167);   (0, -1, -0.84548187169114)
            (0,  0, -0.37563603672040e1);(0,  1,  0.33855169168385e1)
@@ -84,16 +87,12 @@ module Steam =
             gpi <- gpi - n * fi * Math.Pow(a, fi - 1.0) * bj
             gtau <- gtau + n * ai * fj * Math.Pow(b, fj - 1.0)
             gtt <- gtt + n * ai * fj * (fj - 1.0) * Math.Pow(b, fj - 2.0)
-        // v [m³/kg], h [kJ/kg], cp [kJ/kg/K], s [kJ/kg/K]
         let v = pi * gpi * Rw * tK / (pMPa * 1000.0)
         let h = tau * gtau * Rw * tK
         let cp = -tau * tau * gtt * Rw
         let s = (tau * gtau - gam) * Rw
         (v, h, cp, s)
 
-    // ------------------------------------------------------------------
-    // Regione 2 : vapore surriscaldato / vapore saturo
-    // ------------------------------------------------------------------
     let private r2j0 = [| 0; 1; -5; -4; -3; -2; -1; 2; 3 |]
 
     let private r2n0 =
@@ -128,7 +127,6 @@ module Steam =
     let private reg2 (pMPa: float) (tK: float) =
         let pi = pMPa
         let tau = 540.0 / tK
-        // parte ideale
         let mutable g0 = log pi
         let mutable g0t = 0.0
         let mutable g0tt = 0.0
@@ -139,7 +137,6 @@ module Steam =
             g0t <- g0t + n * j * Math.Pow(tau, j - 1.0)
             g0tt <- g0tt + n * j * (j - 1.0) * Math.Pow(tau, j - 2.0)
         let g0pi = 1.0 / pi
-        // parte residua
         let b = tau - 0.5
         let mutable gr = 0.0
         let mutable grpi = 0.0
@@ -160,14 +157,9 @@ module Steam =
         let s = (tau * (g0t + grt) - (g0 + gr)) * Rw
         (v, h, cp, s)
 
-    // ------------------------------------------------------------------
-    // Viscosità dinamica IAPWS 2008 (formulazione industriale, senza
-    // termine critico mu2 -> irrilevante fuori dall'intorno critico)
-    // ------------------------------------------------------------------
     let private hVisc0 = [| 1.67752; 2.20462; 0.6366564; -0.241605 |]
 
     let private hVisc1 =
-        // (i, j, Hij)
         [| (0,0, 5.20094e-1); (1,0, 8.50895e-2); (2,0,-1.08374);    (3,0,-2.89555e-1)
            (0,1, 2.22531e-1); (1,1, 9.99115e-1); (2,1, 1.88797);    (3,1, 1.26613)
            (5,1, 1.20573e-1)
@@ -178,7 +170,12 @@ module Steam =
            (4,5, 8.72102e-3)
            (3,6,-4.35673e-3); (5,6,-5.93264e-4) |]
 
-    /// Viscosità dinamica [Pa·s] da T [K] e densità [kg/m³]
+    /// <summary>
+    /// Calculates or returns viscosity for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let viscosity (tK: float) (rho: float) =
         let tb = tK / Tc_water
         let rb = rho / Rhoc_water
@@ -192,9 +189,6 @@ module Steam =
         let mu1 = exp (rb * s)
         mu0 * mu1 * 1e-6
 
-    // ------------------------------------------------------------------
-    // Conducibilità termica IAPWS 2011 (formulazione industriale)
-    // ------------------------------------------------------------------
     let private lam0 = [| 2.443221e-3; 1.323095e-2; 6.770357e-3; -3.454586e-3; 4.096266e-4 |]
 
     let private lam1 =
@@ -205,7 +199,12 @@ module Steam =
               [ -1.21051378;  1.60812989;  -0.621178141;  0.0716373224; 0.0;           0.0           ]
               [ -2.7203370;   4.57586331;  -3.18369245;   1.1168348;   -0.19268305;    0.012913842   ] ]
 
-    /// Conducibilità termica [W/(m·K)] da T [K] e densità [kg/m³]
+    /// <summary>
+    /// Calculates or returns conductivity for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let conductivity (tK: float) (rho: float) =
         let tb = tK / Tc_water
         let rb = rho / Rhoc_water
@@ -222,15 +221,23 @@ module Steam =
         let l1 = exp (rb * s)
         l0 * l1 * 1e-3
 
-    /// Tensione superficiale [N/m] da T [K]  (IAPWS 1994)
+    /// <summary>
+    /// Calculates or returns surfacetension for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let surfaceTension (tK: float) =
         let tau = 1.0 - tK / Tc_water
         if tau <= 0.0 then 0.0
         else 235.8e-3 * Math.Pow(tau, 1.256) * (1.0 - 0.625 * tau)
 
-    // ------------------------------------------------------------------
-    // Proprietà di saturazione (unità SI)
-    // ------------------------------------------------------------------
+    /// <summary>
+    /// Represents satprops data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type SatProps =
         { P: float          // Pa
           Tsat: float       // K
@@ -249,7 +256,12 @@ module Steam =
           PrL: float
           PrV: float }
 
-    /// Proprietà di saturazione a pressione assegnata [Pa].
+    /// <summary>
+    /// Calculates or returns sat for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let sat (pPa: float) : SatProps =
         let pMPa = pPa / 1.0e6
         let tK = tsat_K pMPa
@@ -278,17 +290,37 @@ module Steam =
           PrL = cpl * 1000.0 * mul / kl
           PrV = cpv * 1000.0 * muv / kv }
 
-    /// Accesso diretto alle regioni (per verifica sui punti di riferimento IAPWS).
-    /// Restituisce (v [m³/kg], h [kJ/kg], cp [kJ/kg/K], s [kJ/kg/K]).
+    /// <summary>
+    /// Calculates or returns region1 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let region1 (pMPa: float) (tK: float) = reg1 pMPa tK
+    /// <summary>
+    /// Calculates or returns region2 for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let region2 (pMPa: float) (tK: float) = reg2 pMPa tK
 
-    /// Entalpia liquido sottoraffreddato [J/kg] a (p [Pa], T [K])
+    /// <summary>
+    /// Calculates or returns hliquid for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hLiquid (pPa: float) (tK: float) =
         let (_, h, _, _) = reg1 (pPa / 1.0e6) tK
         h * 1000.0
 
-    /// Densità liquido sottoraffreddato [kg/m³] a (p [Pa], T [K])
+    /// <summary>
+    /// Calculates or returns rholiquid for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let rhoLiquid (pPa: float) (tK: float) =
         let (v, _, _, _) = reg1 (pPa / 1.0e6) tK
         1.0 / v

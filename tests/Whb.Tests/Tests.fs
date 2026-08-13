@@ -1,3 +1,9 @@
+/// <summary>
+/// Provides tests functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Tests
 
 open Whb.Core
@@ -16,6 +22,12 @@ let ``unit conversions round trip`` () =
 
 [<Fact>]
 let ``bisect handles normal and reversed brackets`` () =
+    /// <summary>
+    /// Calculates or returns f for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let f x = x * x - 4.0
 
     Assert.Equal(2.0, bisect f 0.0 5.0 1e-10 200, 8)
@@ -23,6 +35,12 @@ let ``bisect handles normal and reversed brackets`` () =
 
 [<Fact>]
 let ``graded axial grid conserves length`` () =
+    /// <summary>
+    /// Calculates or returns centers for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let centers, widths = gradedAxialGrid 12.0 10 6.0
 
     Assert.Equal(10, centers.Length)
@@ -32,6 +50,12 @@ let ``graded axial grid conserves length`` () =
 
 [<Fact>]
 let ``piping line converts geometry and totals`` () =
+    /// <summary>
+    /// Calculates or returns l for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let l =
         Piping.line "L1" "10\"" 250.0 2 [ 1.0; 2.0 ] [ Piping.elbow 90.0 1.5 2 ] 0.25 3.0 180.0 "test"
 

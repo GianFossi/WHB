@@ -3,11 +3,20 @@ namespace Whb.Core
 open System
 open Constants
 
-/// Correlazioni di scambio termico LATO ACQUA/VAPORE (mantello):
-/// ebollizione nucleata a bagno, ebollizione convettiva, flusso termico critico,
-/// convezione naturale e forzata su fasci di tubi orizzontali.
+/// <summary>
+/// Provides waterside functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module WaterSide =
 
+    /// <summary>
+    /// Represents poolboilingcorrelation data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type PoolBoilingCorrelation =
         | Mostinski
         | Cooper
@@ -15,6 +24,12 @@ module WaterSide =
         | Gorenflo
         | CornwellHouston
 
+    /// <summary>
+    /// Calculates or returns poolboilingname for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let poolBoilingName =
         function
         | Mostinski -> "Mostinski (1963) - stati corrispondenti"
@@ -23,18 +38,25 @@ module WaterSide =
         | Gorenflo -> "Gorenflo (VDI Heat Atlas)"
         | CornwellHouston -> "Cornwell-Houston (1994) - tubo singolo/fascio"
 
-    // ------------------------------------------------------------------
-    // Ebollizione nucleata a bagno (pool boiling)
-    // ------------------------------------------------------------------
 
-    /// Mostinski: h [W/m²K], q [W/m²], p in Pa
+    /// <summary>
+    /// Calculates or returns hmostinski for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hMostinski (q: float) (p: float) (pc: float) =
         let pr = p / pc
         let pcKPa = pc / 1000.0
         let fp = 1.8 * Math.Pow(pr, 0.17) + 4.0 * Math.Pow(pr, 1.2) + 10.0 * Math.Pow(pr, 10.0)
         0.00417 * Math.Pow(pcKPa, 0.69) * Math.Pow(max q 1.0, 0.7) * fp
 
-    /// Cooper: h [W/m²K]; rp rugosità [µm]; mMol massa molare [g/mol]
+    /// <summary>
+    /// Calculates or returns hcooper for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hCooper (q: float) (p: float) (pc: float) (rp: float) (mMol: float) =
         let pr = max 1e-4 (p / pc)
         55.0
@@ -43,7 +65,12 @@ module WaterSide =
         * Math.Pow(mMol, -0.5)
         * Math.Pow(max q 1.0, 0.67)
 
-    /// Rohsenow: restituisce h [W/m²K] a partire dal surriscaldamento parete ΔTe
+    /// <summary>
+    /// Calculates or returns hrohsenow for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hRohsenow (dTe: float) (s: Steam.SatProps) (csf: float) (sExp: float) =
         if dTe <= 0.0 then 0.0
         else
@@ -52,7 +79,12 @@ module WaterSide =
             let q = a * Math.Pow(b, 3.0)
             q / dTe
 
-    /// Gorenflo (riferimento acqua): h [W/m²K]
+    /// <summary>
+    /// Calculates or returns hgorenflo for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hGorenflo (q: float) (p: float) (pc: float) (rp: float) =
         let pr = max 1e-4 (min 0.95 (p / pc))
         let h0 = 5600.0
@@ -62,7 +94,12 @@ module WaterSide =
         let n = 0.9 - 0.3 * Math.Pow(pr, 0.15)
         h0 * fp * Math.Pow(max q 1.0 / q0, n) * Math.Pow(rp / rp0, 0.133)
 
-    /// Cornwell-Houston: h [W/m²K] su tubo orizzontale di diametro d [m]
+    /// <summary>
+    /// Calculates or returns hcornwellhouston for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hCornwellHouston (q: float) (d: float) (p: float) (pc: float) (s: Steam.SatProps) =
         let pr = p / pc
         let pcBar = pc / 1.0e5
@@ -71,7 +108,12 @@ module WaterSide =
         let nu = 9.7 * Math.Pow(pcBar, 0.5) * fp * Math.Pow(reb, 0.67) * Math.Pow(s.PrL, 0.4)
         nu * s.KL / d
 
-    /// Dispatcher pool boiling. Per Rohsenow si itera internamente su ΔTe.
+    /// <summary>
+    /// Calculates or returns hpool for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hPool
         (corr: PoolBoilingCorrelation)
         (q: float)
@@ -86,7 +128,6 @@ module WaterSide =
         | Gorenflo -> hGorenflo q s.P Pc_water rp
         | CornwellHouston -> hCornwellHouston q d s.P Pc_water s
         | Rohsenow ->
-            // risolve q = h(ΔTe)·ΔTe per ΔTe, poi h = q/ΔTe
             let f dTe =
                 let a = s.MuL * s.Hfg * sqrt (g * (s.RhoL - s.RhoV) / s.Sigma)
                 let b = s.CpL * dTe / (csf * s.Hfg * Math.Pow(s.PrL, 1.0))
@@ -94,9 +135,12 @@ module WaterSide =
             let dTe = bisect f 0.01 200.0 1e-6 200
             if dTe <= 0.0 then 0.0 else q / dTe
 
-    // ------------------------------------------------------------------
-    // Convezione naturale su cilindro orizzontale (Churchill-Chu)
-    // ------------------------------------------------------------------
+    /// <summary>
+    /// Calculates or returns hnaturalconvection for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hNaturalConvection (d: float) (dT: float) (s: Steam.SatProps) =
         if dT <= 0.0 then 0.0
         else
@@ -109,15 +153,20 @@ module WaterSide =
             let nu = num * num
             nu * s.KL / d
 
-    // ------------------------------------------------------------------
-    // Fattore di fascio (Palen) ed ebollizione convettiva
-    // ------------------------------------------------------------------
-    /// Fattore di fascio Fb (Palen): 1.0 (tubo singolo) .. ~3 (fascio fitto).
-    /// Valore conservativo raccomandato: 1.5
+    /// <summary>
+    /// Calculates or returns bundlefactor for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let bundleFactor (fb: float) = max 1.0 fb
 
-    /// Fattore di Chisholm/Chen F per convezione bifase da parametro di
-    /// Martinelli turbolento-turbolento.
+    /// <summary>
+    /// Calculates or returns chenf for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let chenF (x: float) (s: Steam.SatProps) =
         let x = min 0.99 (max 1e-4 x)
         let xtt =
@@ -127,12 +176,22 @@ module WaterSide =
         let inv = 1.0 / xtt
         if inv <= 0.1 then 1.0 else 2.35 * Math.Pow(inv + 0.213, 0.736)
 
-    /// Fattore di soppressione S di Chen
+    /// <summary>
+    /// Calculates or returns chens for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let chenS (reL: float) (f: float) =
         let retp = reL * Math.Pow(f, 1.25)
         1.0 / (1.0 + 2.53e-6 * Math.Pow(retp, 1.17))
 
-    /// Forster-Zuber per la parte nucleata di Chen
+    /// <summary>
+    /// Calculates or returns hforsterzuber for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hForsterZuber (dTsat: float) (dPsat: float) (s: Steam.SatProps) =
         if dTsat <= 0.0 then 0.0
         else
@@ -143,7 +202,12 @@ module WaterSide =
             * Math.Pow(dTsat, 0.24)
             * Math.Pow(max dPsat 0.0, 0.75)
 
-    /// Zukauskas per convezione forzata monofase su fascio di tubi (crossflow).
+    /// <summary>
+    /// Calculates or returns hzukauskas for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let hZukauskas (reMax: float) (pr: float) (prW: float) (k: float) (d: float) (staggered: bool) (stOverSl: float) =
         let c, m =
             if staggered then
@@ -154,9 +218,12 @@ module WaterSide =
         let nu = c * Math.Pow(reMax, m) * Math.Pow(pr, 0.36) * Math.Pow(pr / prW, 0.25)
         nu * k / d
 
-    /// Coefficiente lato mantello complessivo, modello Palen:
-    ///   h = h_nb · Fb · Fc + h_conv
-    /// dove h_conv è la maggiore fra convezione naturale e convezione bifase.
+    /// <summary>
+    /// Calculates or returns shellsidehtc for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let shellSideHtc
         (corr: PoolBoilingCorrelation)
         (q: float)
@@ -170,15 +237,22 @@ module WaterSide =
         let hnb = hPool corr q dOut s rp csf
         hnb * bundleFactor fb + hConv
 
-    // ------------------------------------------------------------------
-    // Flusso termico critico
-    // ------------------------------------------------------------------
-    /// Zuber (piastra piana infinita) [W/m²]
+    /// <summary>
+    /// Calculates or returns chfzuber for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let chfZuber (s: Steam.SatProps) =
         0.131 * s.Hfg * Math.Pow(s.RhoV, 0.5)
         * Math.Pow(s.Sigma * g * (s.RhoL - s.RhoV), 0.25)
 
-    /// Zuber corretto per cilindro orizzontale (Lienhard-Dhir), d [m]
+    /// <summary>
+    /// Calculates or returns chfhorizontaltube for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let chfHorizontalTube (d: float) (s: Steam.SatProps) =
         let lc = sqrt (s.Sigma / (g * (s.RhoL - s.RhoV)))
         let rp = d / 2.0 / lc
@@ -188,41 +262,44 @@ module WaterSide =
             else 1.4 * Math.Pow(rp, -0.25)
         chfZuber s * corr
 
-    /// Mostinski (stati corrispondenti) [W/m²]
+    /// <summary>
+    /// Calculates or returns chfmostinski for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let chfMostinski (p: float) (pc: float) =
         let pr = p / pc
         let pcKPa = pc / 1000.0
         0.368 * pcKPa * Math.Pow(pr, 0.35) * Math.Pow(1.0 - pr, 0.9) * 1000.0
 
-    /// Fattore di fascio di Palen: φb = 3.1·ψ, ψ = Db·L/A, limitato a [0.1, 1.0].
-    /// Il limite inferiore 0.1 e' la pratica raccomandata (HEDH): sotto tale
-    /// valore la correlazione, tarata su ribollitori kettle, perde significato.
-    /// Per fasci attraversati da crossflow forzato (WHB a circolazione naturale)
-    /// il criterio resta comunque conservativo.
+    /// <summary>
+    /// Calculates or returns palenphib for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let palenPhiB (dBundle: float) (lTube: float) (areaOut: float) =
         if areaOut <= 0.0 then 1.0
         else
             let psi = dBundle * lTube / areaOut
             max 0.1 (min 1.0 (3.1 * psi))
 
-    /// CHF di fascio (Palen): q_crit,bundle = φb · q_crit,tubo
+    /// <summary>
+    /// Calculates or returns chfbundle for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let chfBundle (dBundle: float) (lTube: float) (areaOut: float) (qCritTube: float) =
         palenPhiB dBundle lTube areaOut * qCritTube
 
-    // ==================================================================
-    //  CHF con CROSSFLOW FORZATO
-    // ==================================================================
-    /// **Lienhard-Eichhorn (1976)**: flusso critico su un cilindro investito
-    /// da una corrente. E' la geometria di questo apparecchio - tubi lambiti
-    /// dalla miscela che risale il fascio - e a differenza dei criteri di tipo
-    /// kettle tiene conto esplicitamente della velocita'.
-    ///
-    ///   We_D = rho_v U² D / sigma
-    ///   regime a bassa velocita':
-    ///     q/(rho_v hfg U) = (1/pi) [ 1 + (4/We_D)^(1/3) ]
-    ///   regime ad alta velocita':
-    ///     q/(rho_v hfg U) = 1/(169 pi) + (1/19.2) We_D^(-1/3)
-    /// Si prende il MAGGIORE dei due (criterio di transizione degli autori).
+    /// <summary>
+    /// Calculates or returns chflienhardeichhorn for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let chfLienhardEichhorn (d: float) (u: float) (s: Steam.SatProps) =
         let uu = max 0.01 u
         let we = s.RhoV * uu * uu * d / s.Sigma
@@ -231,24 +308,33 @@ module WaterSide =
         let high = baseq * (1.0 / (169.0 * Math.PI) + Math.Pow(we, -1.0 / 3.0) / 19.2)
         max low high
 
-    /// Derating del CHF con il titolo locale. Forma usata nella pratica dei
-    /// fasci evaporanti (Katto; HEDH): il flusso critico decade in modo
-    /// pressoche' lineare con il titolo fino a un titolo di crisi.
-    ///   phi_x = max( 0.1 , 1 - x / x_crit )
+    /// <summary>
+    /// Calculates or returns chfqualityderating for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let chfQualityDerating (x: float) (xCrit: float) =
         max 0.1 (1.0 - (max 0.0 x) / (max 1e-3 xCrit))
 
-    /// Modelli di CHF di fascio disponibili
+    /// <summary>
+    /// Represents chfmodel data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type ChfModel =
-        /// Palen: phi_b = 3.1 psi applicato al CHF di tubo singolo (kettle)
         | PalenBundle
-        /// Lienhard-Eichhorn su cilindro in crossflow, derating sul titolo
         | LienhardEichhornCrossflow
-        /// Zuber puro (piastra infinita) con derating sul titolo
         | ZuberQuality
-        /// Limite pratico di progetto sul flusso massimo [W/m²]
         | PracticalLimit of float
 
+    /// <summary>
+    /// Calculates or returns chfmodelname for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let chfModelName =
         function
         | PalenBundle -> "Palen (fattore di fascio, base kettle)"
@@ -256,11 +342,12 @@ module WaterSide =
         | ZuberQuality -> "Zuber + derating sul titolo"
         | PracticalLimit q -> sprintf "limite pratico di progetto %.0f kW/m2" (q / 1000.0)
 
-    /// CHF locale secondo il modello scelto.
-    ///   d  : diametro esterno del tubo [m]
-    ///   u  : velocita' della miscela nel fascio [m/s]
-    ///   x  : titolo locale
-    ///   phiB : fattore di fascio di Palen gia' calcolato
+    /// <summary>
+    /// Calculates or returns chflocal for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let chfLocal (model: ChfModel) (d: float) (u: float) (x: float) (xCrit: float)
                  (phiB: float) (qCritTube: float) (s: Steam.SatProps) =
         match model with
@@ -270,14 +357,21 @@ module WaterSide =
         | ZuberQuality -> chfZuber s * chfQualityDerating x xCrit
         | PracticalLimit q -> q
 
-    /// Surriscaldamento parete corrispondente all'inizio dell'ebollizione
-    /// nucleata (ONB), criterio di Davis-Anderson con raggio cavità rc [m].
+    /// <summary>
+    /// Calculates or returns dtonb for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dTonb (q: float) (rc: float) (s: Steam.SatProps) =
-        // ΔT_ONB = 2 σ Tsat / (ρv hfg rc)  +  q rc / k_l
         2.0 * s.Sigma * s.Tsat / (s.RhoV * s.Hfg * rc) + q * rc / s.KL
 
-    /// Surriscaldamento parete critico (transizione a film boiling) stimato da
-    /// ΔT_crit = q_crit / h_nb(q_crit)
+    /// <summary>
+    /// Calculates or returns dtcrit for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let dTcrit (corr: PoolBoilingCorrelation) (qCrit: float) (d: float) (s: Steam.SatProps) (rp: float) (csf: float) =
         let h = hPool corr qCrit d s rp csf
         if h <= 0.0 then nan else qCrit / h

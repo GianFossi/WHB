@@ -4,9 +4,21 @@ open System
 open System.IO
 open System.Text.Json
 
+/// <summary>
+/// Provides options functionality for the WHB calculation model.
+/// </summary>
+/// <remarks>
+/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+/// </remarks>
 module Options =
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents githuboptions data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type GithubOptions =
         { Enabled: bool
           RepositoryUrl: string
@@ -16,6 +28,12 @@ module Options =
           CreatePullRequest: bool }
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents folderoptions data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type FolderOptions =
         { CasesFolder: string
           ResultsFolder: string
@@ -24,6 +42,12 @@ module Options =
           PackagesFolder: string }
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents calculationoptions data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type CalculationOptions =
         { UseRealGas: bool
           AxialSections: int
@@ -32,6 +56,12 @@ module Options =
           StrictValidation: bool }
 
     [<CLIMutable>]
+    /// <summary>
+    /// Represents projectoptions data used by the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     type ProjectOptions =
         { Folders: FolderOptions
           Calculation: CalculationOptions
@@ -41,6 +71,12 @@ module Options =
     let private serializerOptions =
         JsonSerializerOptions(WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
 
+    /// <summary>
+    /// Calculates or returns defaultoptions for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let defaultOptions =
         { Folders =
             { CasesFolder = "cases"
@@ -63,6 +99,12 @@ module Options =
               CreatePullRequest = false }
           RecentFiles = [] }
 
+    /// <summary>
+    /// Calculates or returns rememberfile for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let rememberFile path options =
         let full = Path.GetFullPath path
         let recent =
@@ -70,10 +112,22 @@ module Options =
             |> List.truncate 20
         { options with RecentFiles = recent }
 
+    /// <summary>
+    /// Calculates or returns save for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let save path options =
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath path)) |> ignore
         File.WriteAllText(path, JsonSerializer.Serialize(options, serializerOptions))
 
+    /// <summary>
+    /// Calculates or returns load for the WHB calculation model.
+    /// </summary>
+    /// <remarks>
+    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+    /// </remarks>
     let load path =
         if File.Exists path then
             JsonSerializer.Deserialize<ProjectOptions>(File.ReadAllText path, serializerOptions)
