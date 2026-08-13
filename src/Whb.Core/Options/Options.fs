@@ -55,6 +55,17 @@ module Options =
 
     [<CLIMutable>]
     /// <summary>
+    /// Represents report generation options for WHB command-line runs.
+    /// </summary>
+    /// <remarks>
+    /// Summary and criticality outputs are always written; these options control additional full engineering reports.
+    /// </remarks>
+    type ReportingOptions =
+        { GenerateFullReport: bool
+          GenerateHtmlReport: bool }
+
+    [<CLIMutable>]
+    /// <summary>
     /// Represents calculationoptions data used by the WHB calculation model.
     /// </summary>
     /// <remarks>
@@ -77,6 +88,7 @@ module Options =
     type ProjectOptions =
         { Folders: FolderOptions
           Logging: LoggingOptions
+          Reporting: ReportingOptions
           Calculation: CalculationOptions
           Github: GithubOptions
           RecentFiles: string list }
@@ -107,6 +119,9 @@ module Options =
           Logging =
             { Enabled = true
               LogFile = "logs/whb-run.log" }
+          Reporting =
+            { GenerateFullReport = true
+              GenerateHtmlReport = true }
           Calculation =
             { UseRealGas = true
               AxialSections = 90

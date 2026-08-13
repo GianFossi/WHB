@@ -1501,14 +1501,18 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
             (fun () -> Design.runWithProgress (PhaseLogger.phase logger currentTask) case)
     logger "Design calculation completed; writing reports"
     sw.Stop()
-    /// <summary>
-    /// Calculates or returns rep for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
-    let rep = Report.text r
-    File.WriteAllText(Path.Combine(outDir, "report.txt"), rep)
+    if options.Reporting.GenerateFullReport then
+        /// <summary>
+        /// Calculates or returns rep for the WHB calculation model.
+        /// </summary>
+        /// <remarks>
+        /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
+        /// </remarks>
+        let rep = Report.text r
+        File.WriteAllText(Path.Combine(outDir, "report.txt"), rep)
+        logger "Full text report written"
+    else
+        logger "Full text report skipped by option"
     /// <summary>
     /// Calculates or returns syn for the WHB calculation model.
     /// </summary>
@@ -1541,7 +1545,11 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
     File.WriteAllText(Path.Combine(outDir, "valvola_bypass.csv"), Report.csvValve r)
     File.WriteAllText(Path.Combine(outDir, "maldistribuzione.txt"), Report.maldistributionText r)
     File.WriteAllText(Path.Combine(outDir, "vibrazioni.txt"), Report.vibrationText r)
-    File.WriteAllText(Path.Combine(outDir, "report.html"), HtmlReport.build r)
+    if options.Reporting.GenerateHtmlReport then
+        File.WriteAllText(Path.Combine(outDir, "report.html"), HtmlReport.build r)
+        logger "Full HTML report written"
+    else
+        logger "Full HTML report skipped by option"
     logger "Report files written"
     printfn "%s" syn
     printfn "%s" pdsText

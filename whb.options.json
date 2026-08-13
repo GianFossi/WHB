@@ -11,6 +11,10 @@
     "enabled": true,
     "logFile": "logs/whb-run.log"
   },
+  "reporting": {
+    "generateFullReport": true,
+    "generateHtmlReport": true
+  },
   "calculation": {
     "useRealGas": true,
     "axialSections": 90,

@@ -86,6 +86,11 @@ By default logs are written to `logs/whb-run.log`, temporary/service files use
 `tmp/`, and preflight checks verify active runs, read/write access and disk
 space before the calculation starts.
 
+The same options file controls whether full engineering reports are generated.
+Summary, criticality, PDS comparison and inventory outputs are always written;
+`reporting.generateFullReport` and `reporting.generateHtmlReport` add the full
+text and HTML reports.
+
 Run internal correlation checks:
 
 ```bash
@@ -197,8 +202,8 @@ Default output is written to `results/` unless `--out` is provided.
 
 | File | Content |
 |---|---|
-| `report.txt` | Engineering report |
-| `report.html` | Self-contained HTML report with maps, charts and tables |
+| `report.txt` | Full engineering report, when `reporting.generateFullReport` is enabled |
+| `report.html` | Self-contained full HTML report, when `reporting.generateHtmlReport` is enabled |
 | `criticita.txt` | Summary of findings and warnings |
 | `pds_comparison.txt` | Mandatory comparison between app output and available client PDS data |
 | `pds_comparison.csv` | Spreadsheet-ready PDS comparison table |

@@ -7,11 +7,13 @@ results/
 results_check/
 results_pds_check/
 results_probe/
+results_report_option_probe/
 risultati/
 risultati_check/
 risultati_pds_check/
 tmp/
 tmp_*.txt
+tmp_*.json
 logs/
 .ai/
 .vscode/

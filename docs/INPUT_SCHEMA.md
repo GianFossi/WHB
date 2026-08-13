@@ -88,6 +88,8 @@ diagnostics for CLI runs:
 | `folders.tempFolder` | Folder for temporary/service files and preflight probes. |
 | `logging.enabled` | Enables or disables timestamped phase logging. |
 | `logging.logFile` | Log file path used when phase logging is enabled. |
+| `reporting.generateFullReport` | Writes `report.txt`, the complete engineering report. |
+| `reporting.generateHtmlReport` | Writes `report.html`, the complete self-contained HTML report. |
 
 Before a normal run, the CLI performs preflight checks for active `whb.exe`
 processes, case-file readability, output/temp/log write access, and available
@@ -97,7 +99,8 @@ disk space.
 
 Every normal run writes:
 
-- `report.txt` and `report.html` for engineering review;
+- `report.txt` and `report.html` for full engineering review when enabled in
+  `whb.options.json`;
 - `criticita.txt` for findings and warnings;
 - `pds_comparison.txt` and `pds_comparison.csv` for mandatory client PDS checks;
 - `inventory_summary.txt` and `inventory_summary.csv` for water volumes and
