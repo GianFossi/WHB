@@ -104,6 +104,41 @@ let ``published gas side heat transfer and pressure drop examples remain stable`
     approx 247.579318998907 1e-9 (GasSide.nusseltFD GasSide.Gnielinski re pr 1.0)
 
 [<Fact>]
+let ``gas side heat transfer supports forced convection with optional radiation`` () =
+    /// <summary>
+    /// Calculates or returns representative gas properties for the gas-side HTC test.
+    /// </summary>
+    /// <remarks>
+    /// The test uses the reference gas composition at high temperature to make the radiation contribution visible.
+    /// </remarks>
+    let props = GasProps.mixReal GasProps.Wilke true Defaults.referenceComposition (cToK 900.0) (barToPa 30.0) 1.0
+
+    /// <summary>
+    /// Calculates or returns the forced-convection-only gas-side heat-transfer result.
+    /// </summary>
+    /// <remarks>
+    /// Radiation is disabled so total heat transfer equals the convective component.
+    /// </remarks>
+    let convectionOnly =
+        GasSide.localHtc GasSide.Gnielinski props props.Mu 0.032 0.10 0.50 1.4 (cToK 500.0) 0.326 0.0546 0.85 false
+
+    /// <summary>
+    /// Calculates or returns the gas-side heat-transfer result with radiation enabled.
+    /// </summary>
+    /// <remarks>
+    /// Radiation is enabled with water vapor and carbon dioxide fractions from the reference gas composition.
+    /// </remarks>
+    let withRadiation =
+        GasSide.localHtc GasSide.Gnielinski props props.Mu 0.032 0.10 0.50 1.4 (cToK 500.0) 0.326 0.0546 0.85 true
+
+    Assert.True(convectionOnly.Re > 0.0)
+    Assert.True(convectionOnly.HConv > 0.0)
+    Assert.Equal(0.0, convectionOnly.HRad, 12)
+    Assert.Equal(convectionOnly.HConv, convectionOnly.HTot, 9)
+    Assert.True(withRadiation.HRad > 0.0)
+    Assert.True(withRadiation.HTot > convectionOnly.HTot)
+
+[<Fact>]
 let ``boiling correlations and two phase multipliers remain stable`` () =
     /// <summary>
     /// Calculates or returns saturated steam properties for the two-phase benchmark.
@@ -120,6 +155,45 @@ let ``boiling correlations and two phase multipliers remain stable`` () =
     approx 321.469457240352 1e-9 (TwoPhase.homogeneousDensity 0.10 sat)
     approx 8.034491265929 1e-12 (TwoPhase.phi2LO TwoPhase.LockhartMartinelli 0.10 800.0 0.05 sat)
     approx 9833.788951545117 1e-6 (TwoPhase.dpFrictionTwoPhase TwoPhase.LockhartMartinelli 0.10 800.0 0.05 10.0 sat)
+
+[<Fact>]
+let ``water side heat transfer supports boiling and convection screening correlations`` () =
+    /// <summary>
+    /// Calculates or returns saturated steam properties for the water-side HTC test.
+    /// </summary>
+    /// <remarks>
+    /// The test uses 100 bar saturation properties for simple preliminary engineering checks.
+    /// </remarks>
+    let sat = Steam.sat (barToPa 100.0)
+
+    /// <summary>
+    /// Calculates or returns a natural-convection coefficient around the tube.
+    /// </summary>
+    /// <remarks>
+    /// The coefficient must remain positive for a positive wall superheat.
+    /// </remarks>
+    let hConv = WaterSide.hNaturalConvection 0.0381 10.0 sat
+
+    /// <summary>
+    /// Calculates or returns a pool-boiling coefficient around the tube.
+    /// </summary>
+    /// <remarks>
+    /// The coefficient uses the selected empirical boiling correlation.
+    /// </remarks>
+    let hBoil = WaterSide.hPool WaterSide.Mostinski 250000.0 0.0381 sat 0.4 0.013
+
+    /// <summary>
+    /// Calculates or returns the combined shell-side preliminary HTC.
+    /// </summary>
+    /// <remarks>
+    /// The combined coefficient adds convection to the bundled boiling contribution.
+    /// </remarks>
+    let hShell = WaterSide.shellSideHtc WaterSide.Mostinski 250000.0 0.0381 sat 0.4 0.013 1.5 hConv
+
+    Assert.True(hConv > 0.0)
+    Assert.True(hBoil > hConv)
+    Assert.True(hShell > hBoil)
+    approx (hBoil * 1.5 + hConv) 1e-9 hShell
 
 [<Fact>]
 let ``reference case report comparison table stays within tolerance`` () =
