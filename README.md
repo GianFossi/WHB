@@ -18,6 +18,7 @@ an elevated steam drum.
 - [Validation and regression benchmarks](docs/VALIDATION.md)
 - [Future implementation TODO](docs/TODO.md)
 - [Detailed correlation and issue notes](DOC_correlazioni_e_problematiche.md)
+- [AI assistant memory and modification rules](AGENTS.md)
 
 > Warning: this software is an engineering calculation aid, not a certified
 > pressure-vessel, boiler-code or safety-integrity tool. Always review results
