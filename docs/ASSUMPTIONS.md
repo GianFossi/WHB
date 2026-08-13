@@ -5,6 +5,7 @@ This document summarizes the main engineering assumptions used by WHB.
 ## Equipment Scope
 
 - The model targets fire-tube Waste Heat Boilers (WHB) and Process Gas Coolers (PGC).
+- CLI preflight checks (process lock, file and folder access, disk-space probe) are operational checks only and do not replace process-safety or design validation.
 - Hot process gas is assumed to flow inside the tubes.
 - Boiling water and steam are represented on the shell side with natural circulation to an elevated steam drum.
 - The bundle is represented by axial sections and vertical tube bands, not by a full three-dimensional CFD model.

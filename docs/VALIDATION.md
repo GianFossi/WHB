@@ -2,7 +2,7 @@
 
 These tables describe the regression tests used by the repository. They are not a replacement for independent engineering validation, but they make numerical drift visible during development.
 
-The current automated suite contains 20 tests.
+The current automated suite contains 21 tests.
 
 ## Heat Transfer And Pressure Drop
 

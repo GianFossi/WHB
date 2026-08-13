@@ -8,6 +8,7 @@ This document lists important limitations and simplifications to keep visible du
 - Correlations may be used outside their original test range if inputs are unusual.
 - The model depends strongly on correct geometry, material, fouling, and process inputs.
 - Results should be reviewed together with warnings and diagnostic findings.
+- CLI messages and generated labels may include both English and Italian terms; teams should align naming conventions before issuing external documents.
 
 ## Thermal Simplifications
 
