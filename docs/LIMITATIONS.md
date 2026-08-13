@@ -30,6 +30,7 @@ This document lists important limitations and simplifications to keep visible du
 - Detailed reaction kinetics are not modeled.
 - Water-gas shift behavior is simplified to selected operating modes.
 - Real-gas behavior is limited and should be validated for high-pressure syngas conditions.
+- The `realistico` gas option currently means virial real-gas correction, not a full equation-of-state package.
 
 ## Mechanical And Vibration Simplifications
 
@@ -45,4 +46,5 @@ This document lists important limitations and simplifications to keep visible du
 - Steam pressure is practically limited to about 165 bar for this model.
 - Vendor-specific proprietary methods are not included.
 - Input schema validation is limited.
+- Inventory metal weights are estimates and are not a substitute for vendor material take-off or certified shipping weights.
 - Documentation and validation coverage should continue to grow before public production use.

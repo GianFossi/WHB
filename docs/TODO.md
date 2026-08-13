@@ -36,9 +36,12 @@ This list records candidate improvements for later WHB versions.
 - Add richer CSV exports for audit trails.
 - Add versioned input schema documentation.
 - Add examples for NuGet library use and CLI use.
+- Add configurable client PDS comparison data instead of relying only on the built-in reference values.
+- Add explicit pipe OD / wall-thickness input for material take-off accuracy.
 
 ## Quality
 
 - Add XML documentation quality review for public APIs.
 - Add static analysis and documentation link checks in CI.
 - Add package signing and release automation before public NuGet distribution.
+- Add Markdown link checks in CI.

@@ -38,6 +38,14 @@ Two-phase pressure-drop methods are empirical and should be validated for the se
 
 The process-gas model can treat water-gas shift as frozen, equilibrium above a freeze temperature, or fractional approach to equilibrium. This affects molecular composition, enthalpy, gas properties, and therefore calculated thermal performance.
 
+## Gas Model Selection
+
+The base gas model uses ideal-gas mixture relationships with selectable
+transport-property mixing rules. The `realistico` / `viriale` option applies the
+implemented virial real-gas correction for density, residual enthalpy and heat
+capacity. This is useful for syngas screening, but it is not a complete
+high-pressure equation of state.
+
 ## Vibration Screening
 
 The vibration analysis estimates tube natural frequency, vortex shedding risk, acoustic behavior, damping, and flow-induced instability indicators. It is intended for screening and comparison, not as a final specialist vibration report.
@@ -45,3 +53,11 @@ The vibration analysis estimates tube natural frequency, vortex shedding risk, a
 ## Mechanical Screening
 
 Mechanical calculations estimate effects such as thermal expansion, stress utilization, local load indicators, and simple component checks. Final design still requires the applicable pressure-vessel, boiler, piping, and project standards.
+
+## Inventory Summary
+
+Water inventory is calculated from modeled geometry: shell-side volume, connected
+riser/downcomer internal volume, and steam-drum liquid volume at normal level.
+Metal weight is estimated from tube, shell, baffle, ferrule, piping, drum and
+bypass geometry. These values support review and early estimating; vendor
+material take-off remains authoritative.

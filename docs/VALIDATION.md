@@ -2,6 +2,8 @@
 
 These tables describe the regression tests used by the repository. They are not a replacement for independent engineering validation, but they make numerical drift visible during development.
 
+The current automated suite contains 14 tests.
+
 ## Heat Transfer And Pressure Drop
 
 | Area | Case | Expected value | Test tolerance |
@@ -16,6 +18,14 @@ These tables describe the regression tests used by the repository. They are not 
 | Two-phase | Homogeneous void fraction, x = 0.10, G = 800 kg/m2/s | 0.579724363025 | 1e-12 |
 | Two-phase | Lockhart-Martinelli multiplier, x = 0.10 | 8.034491265929 | 1e-12 |
 | Two-phase | Two-phase friction pressure drop, L = 10 m | 9833.788951545117 Pa | 1e-6 |
+
+Additional behavioral tests check that:
+
+- gas-side forced-convection heat transfer remains positive;
+- enabling gas radiation increases total gas-side heat transfer;
+- water-side natural convection and boiling correlations return usable positive
+  preliminary coefficients;
+- shell-side HTC combines boiling, bundle factor and convection consistently.
 
 ## Reference Case Report
 
@@ -33,6 +43,9 @@ Normal CLI runs additionally write `pds_comparison.txt` and `pds_comparison.csv`
 Those files compare the calculated output against the available client PDS values
 for exchanged duty, steam production, gas outlet temperature, and gas-side
 pressure drop.
+
+Normal CLI runs also write `inventory_summary.txt` and `inventory_summary.csv`
+for water-volume and estimated metal-weight review.
 
 ## Vibration Screening
 

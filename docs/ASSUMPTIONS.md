@@ -47,3 +47,12 @@ This document summarizes the main engineering assumptions used by WHB.
 - Mechanical checks are screening calculations, not code-stamped pressure-part design.
 - Vibration checks are screening checks based on empirical and theoretical relationships.
 - Tube support, damping, acoustic behavior, and boundary conditions must be validated against project rules and vendor data.
+
+## Inventory Basis
+
+- Water-volume summaries are geometric inventories.
+- WHB shell-side water volume subtracts tube displacement and bypass-pipe displacement from the shell internal volume.
+- Riser and downcomer water volumes use modeled internal diameter and developed length.
+- Steam drum water volume is calculated at normal level and excludes internals displacement.
+- Metal weights are estimates based on representative material densities.
+- Riser and downcomer metal weights infer pipe outside diameter from NPS when no explicit OD is available; vendor material take-off data remains authoritative.

@@ -4,6 +4,7 @@
 |---|---|
 | WHB | Waste Heat Boiler |
 | PGC | Process Gas Cooler |
+| PDS | Process Data Sheet or Project Datasheet, depending on client terminology |
 | CFD | Computational Fluid Dynamics |
 | CHF | Critical Heat Flux |
 | DNBR | Departure from Nucleate Boiling Ratio |
@@ -29,6 +30,7 @@
 | OD | Outside Diameter |
 | ID | Inside Diameter |
 | MW | Megawatt |
+| MTO | Material Take-Off |
 | kg/h | Kilogram per hour |
 | kg/s | Kilogram per second |
 | Pa | Pascal |

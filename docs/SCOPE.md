@@ -9,7 +9,8 @@ WHB is an F#/.NET calculation tool for preliminary and diagnostic engineering st
 3. Solve bundle heat transfer and pressure drop.
 4. Solve natural circulation and two-phase behavior.
 5. Evaluate bypass, drum, nozzle, vibration, and mechanical diagnostics.
-6. Generate text, CSV, and HTML reports.
+6. Generate text, CSV, and HTML reports, including mandatory client PDS
+   comparison and water/metal inventory summaries.
 
 ## Main Results
 
@@ -28,6 +29,9 @@ The software can estimate:
 - nozzle velocity and rho-v-squared checks;
 - tube vibration screening indicators;
 - mechanical screening indicators;
+- mandatory comparison against available client PDS values;
+- partial and total water volume in the WHB, risers, downcomers and steam drum;
+- estimated component metal weights;
 - report tables for engineering review.
 
 ## Intended Use
@@ -39,6 +43,8 @@ WHB is intended for:
 - sensitivity checks;
 - internal calculation review;
 - preliminary diagnostics;
+- client PDS comparison checks;
+- water-volume and metal-weight inventory review;
 - software experimentation and engineering-method comparison.
 
 ## Not Intended For

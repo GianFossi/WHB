@@ -1,5 +1,13 @@
 # WHB / PGC a tubi da fumo — correlazioni, problematiche di esercizio e circolazione naturale
 
+> **Documentation status**
+>
+> This is a legacy technical background note. It preserves historical reasoning
+> and Italian engineering comments from earlier calculation revisions. For the
+> current maintained project documentation, start from `README.md` and the files
+> under `docs/`. The generated application reports remain the authoritative
+> source for current calculated values.
+
 Nota tecnica di supporto al software `whb` (F#/.NET).
 Configurazione di riferimento: **gas di processo nei tubi, acqua/vapore in ebollizione a mantello,
 circolazione naturale con corpo cilindrico (steam drum) sopraelevato**.

@@ -14,6 +14,7 @@ an elevated steam drum.
 - [Theory recap](docs/THEORY.md)
 - [Limitations and simplifications](docs/LIMITATIONS.md)
 - [Acronyms and terms](docs/ACRONYMS.md)
+- [Input schema and options](docs/INPUT_SCHEMA.md)
 - [Validation and regression benchmarks](docs/VALIDATION.md)
 - [Future implementation TODO](docs/TODO.md)
 - [Detailed correlation and issue notes](DOC_correlazioni_e_problematiche.md)
@@ -42,6 +43,13 @@ dotnet --info
 - `Whb.Core`: calculation library and domain model.
 - `Whb.Cli`: command-line application, JSON input loader and report generator.
 - `Whb.Tests`: xUnit test project for core numerical and utility behavior.
+
+## Current Release
+
+- Version: `1.0.0`
+- Default branch: `main`
+- Repository: <https://github.com/GianFossi/WHB>
+- Main package/readme target: GitHub and NuGet package consumers.
 
 ## Quick Start
 
@@ -165,6 +173,11 @@ The code can estimate:
 - bypass fraction, mixed outlet temperature and valve opening;
 - riser/downcomer velocities and `rho v^2`;
 - tube vibration margins and load diagnostics;
+- partial and total water inventory in the WHB shell, risers, downcomers and
+  steam drum;
+- estimated metal weight for tubes, shell, baffles, ferrules, risers,
+  downcomers, steam drum shell and bypass pipe/liner;
+- mandatory comparison against available client PDS values;
 - output tables suitable for review in spreadsheets.
 
 ## Output Files
@@ -197,7 +210,9 @@ The built-in `--selftest` command checks:
 - real-gas virial correction traces used by the gas model.
 
 The repository test suite currently covers core numerical utilities, unit
-conversions, grid generation, piping geometry helpers and material lookup.
+conversions, grid generation, piping geometry helpers, material lookup,
+heat-transfer behavior, two-phase multipliers, validation tables and reporting
+contracts.
 
 Run:
 
