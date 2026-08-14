@@ -22,10 +22,17 @@ module Circulation =
            |> String.concat " + "
     let private velLiquid (rho: float) (mu: float) (l: Piping.Line) (dp: float) =
         let mutable v = 1.0
-        for _ in 1 .. 6 do
+        let mutable i = 0
+        let mutable running = true
+        // Contraction on velocity and friction: stop once it stops moving in double
+        // precision, keeping the original iteration cap as the worst case.
+        while running && i < 6 do
             let re = max 100.0 (rho * v * l.Id / mu)
             let f = GasSide.darcyFriction re (4.5e-5 / l.Id)
-            v <- sqrt (2.0 * dp / (rho * max 0.1 (Piping.totalK f l)))
+            let vNext = sqrt (2.0 * dp / (rho * max 0.1 (Piping.totalK f l)))
+            running <- abs (vNext - v) > 1e-14 * abs vNext
+            v <- vNext
+            i <- i + 1
         v
     let dpParallelLiquid (bs: Piping.Line list) (rho: float) (mu: float) (wTot: float) =
         let flowAt (dp: float) =
@@ -68,18 +75,35 @@ module Circulation =
             let dp = fst (dpParallelLiquid bs sat.RhoL sat.MuL wTot)
             bs |> List.map (fun l -> (l, sat.RhoL * velLiquid sat.RhoL sat.MuL l dp * Piping.area l))
     let dpDrumInternalsDefault = 5000.0
-    let dpFieldColumn (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
-                      (wLin: float) (steamLin: float) (xIn: float) =
+    /// <summary>
+    /// Fraction of the bundle duty raised in each vertical band.
+    /// </summary>
+    /// <remarks>
+    /// The thermal solver knows the real profile - the bottom bands face the hot gas and raise
+    /// far more steam than the top ones - so the hydraulics must use it rather than assume an
+    /// even split, otherwise the quality that drives the circulation is not the quality the
+    /// heat transfer produced. Falls back to an even split when no profile is supplied.
+    /// </remarks>
+    let bandDutyFractions (bandDuty: float[]) (nBands: int) =
+        let even = if nBands > 0 then 1.0 / float nBands else 1.0
+        if isNull (box bandDuty) || bandDuty.Length <> nBands then Array.create (max 1 nBands) even
+        else
+            let total = Array.sum bandDuty
+            if total <= 0.0 then Array.create (max 1 nBands) even
+            else bandDuty |> Array.map (fun q -> q / total)
+    let dpFieldColumnWith (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
+                          (bandFrac: float[]) (wLin: float) (steamLin: float) (xIn: float) =
         let t = case.Tube
         let a = t.Pitch / t.Do
         let b2 = t.Pitch * 0.8660254 / t.Do
-        let nb = List.length bands
-        let dQfrac = if nb > 0 then 1.0 / float nb else 1.0
         let mutable x = xIn
         let mutable dp = 0.0
         let mutable rhoAcc = 0.0
         let mutable hAcc = 0.0
+        let mutable bi = 0
         for bd in bands do
+            let dQfrac = if bi < bandFrac.Length then bandFrac.[bi] else 0.0
+            bi <- bi + 1
             let g_ = wLin / bd.FieldFreeArea
             let xOut = min 0.95 (x + steamLin * dQfrac / (max 1e-6 wLin))
             let xm = 0.5 * (x + xOut)
@@ -90,9 +114,13 @@ module Circulation =
             x <- xOut
         let rhoMean = if hAcc > 0.0 then rhoAcc / hAcc else sat.RhoL
         (dp + rhoMean * g * hAcc, x, rhoMean)
+    /// Even-split form, kept for callers that do not have a duty profile to hand.
+    let dpFieldColumn (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
+                      (wLin: float) (steamLin: float) (xIn: float) =
+        dpFieldColumnWith case sat bands (bandDutyFractions null (List.length bands)) wLin steamLin xIn
     let dpFieldFriction (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
-                        (wLin: float) (steamLin: float) (xIn: float) =
-        let (dp, _, rho) = dpFieldColumn case sat bands wLin steamLin xIn
+                        (bandFrac: float[]) (wLin: float) (steamLin: float) (xIn: float) =
+        let (dp, _, rho) = dpFieldColumnWith case sat bands bandFrac wLin steamLin xIn
         dp - rho * g * case.Tube.Otl
     let driftVelocity (sat: Steam.SatProps) =
         1.53 * Math.Pow(sat.Sigma * g * (sat.RhoL - sat.RhoV) / (sat.RhoL * sat.RhoL), 0.25)
@@ -112,10 +140,10 @@ module Circulation =
         let v = abs wLin / (rho * max 1e-9 aByp)
         rho * g * h + float (sign wLin) * kTot * rho * v * v / 2.0
     let splitSlice (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
-                   (aFieldMean: float) (aByp: float) (wExt: float) (steamLin: float) =
+                   (bandFrac: float[]) (aFieldMean: float) (aByp: float) (wExt: float) (steamLin: float) =
         let h = case.Tube.Otl
         if aByp <= 1e-9 then
-            let (dp, _, _) = dpFieldColumn case sat bands wExt steamLin 0.0
+            let (dp, _, _) = dpFieldColumnWith case sat bands bandFrac wExt steamLin 0.0
             (wExt, 0.0, dp, 0.0, 0.0, 0.0)
         else
             let stateOf (wField: float) =
@@ -128,20 +156,30 @@ module Circulation =
                 (wByp, alphaTop, aB, xc, xi)
             let resid (wField: float) =
                 let (wByp, alphaTop, _, _, xi) = stateOf wField
-                let (dpF, _, _) = dpFieldColumn case sat bands wField steamLin xi
+                let (dpF, _, _) = dpFieldColumnWith case sat bands bandFrac wField steamLin xi
                 dpF - dpAnnulus sat aByp alphaTop h wByp
             let wField = bisect resid (max 1e-3 (0.2 * wExt)) (60.0 * wExt + 20.0) 1e-5 140
             let (wByp, _, aB, xc, xi) = stateOf wField
-            let (dpF, _, _) = dpFieldColumn case sat bands wField steamLin xi
+            let (dpF, _, _) = dpFieldColumnWith case sat bands bandFrac wField steamLin xi
             (wField, wByp, dpF, xi, aB, xc)
     type Distribution =
         { WExtLin: float[]
           WFieldLin: float[]
           WBypLin: float[]
           XInField: float[]
+          /// Sign changes of the loop balance over its bracket. More than one means the
+          /// operating point is not unique.
+          RootCount: int
+          /// False when the bracket held no sign change at all, so the reported flow is a
+          /// clamped endpoint rather than a solution.
+          BracketOk: bool
+          /// Slope of the loop balance at the operating point. Negative is stable (Ledinegg).
+          BalanceSlope: float
           Global: CirculationResult }
     let solve (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
-              (steamLin: float[]) (dzArr: float[]) : Distribution =
+              (bandDuty: float[]) (steamLin: float[]) (dzArr: float[]) : Distribution =
+        // Duty split per band as produced by the thermal solver, not assumed flat.
+        let bandFrac = bandDutyFractions bandDuty (List.length bands)
         let (hDc, hF, hR) = heights case
         let l = case.Loop
         let t = case.Tube
@@ -181,13 +219,27 @@ module Circulation =
             let mutable dem = 0.0
             for i in 0 .. nz - 1 do
                 let wl = max 1e-4 (cr * steamLin.[i])
-                let (_, _, dp, _, _, _) = splitSlice case sat bands aFieldMean aByp wl steamLin.[i]
+                let (_, _, dp, _, _, _) = splitSlice case sat bands bandFrac aFieldMean aByp wl steamLin.[i]
                 dem <- dem + dp * wl * dzArr.[i] / wTot
             dem
 
-        let wTot =
-            bisect (fun w -> (let (av, _, _, _, _, _) = available w in av) - fieldDemand w)
-                   (1.5 * steamTot) (200.0 * steamTot) 1e-3 90
+        let balance (w: float) =
+            (let (av, _, _, _, _, _) = available w in av) - fieldDemand w
+        let wLo = 1.5 * steamTot
+        let wHi = 200.0 * steamTot
+        // The loop balance is the driving head minus the bundle demand. The demand of a
+        // boiling channel is S-shaped in flow, so the balance can cross zero more than once
+        // (Ledinegg): scan the bracket first and report the multiplicity instead of silently
+        // returning whichever root the solver happens to walk into.
+        let rootCount = countSignChanges balance wLo wHi 40
+        let (wTot, wStatus) = bisectWithStatus balance wLo wHi 1e-3 90
+        // Ledinegg criterion. Writing the balance as supply minus demand, a stable operating
+        // point needs the demand to rise faster than the supply with flow, i.e. the balance
+        // must cross zero downwards. A crossing with the opposite slope is a flow-excursion
+        // point: a small disturbance drives the loop away from it instead of back to it.
+        let balanceSlope =
+            let h = max 1e-6 (0.01 * wTot)
+            (balance (wTot + h) - balance (wTot - h)) / (2.0 * h)
         let (av, dpDc, dpR, rhoR, alphaR, xBar) = available wTot
         let cr = wTot / steamTot
 
@@ -203,8 +255,12 @@ module Circulation =
         let mutable wBypTot = 0.0
         let mutable steamSum = 0.0
         let mutable xInSum = 0.0
+        // A slice is starved when the liquid crossing it is less than the steam raised in it:
+        // the local circulation ratio drops below one and the slice cannot stay wetted.
+        let mutable starved = 0
         for i in 0 .. nz - 1 do
-            let (wf, wb, _, xi, ab, xc) = splitSlice case sat bands aFieldMean aByp wExt.[i] steamLin.[i]
+            let (wf, wb, _, xi, ab, xc) = splitSlice case sat bands bandFrac aFieldMean aByp wExt.[i] steamLin.[i]
+            if steamLin.[i] > 1e-9 && wf / steamLin.[i] < 1.0 then starved <- starved + 1
             wField.[i] <- wf
             wByp.[i] <- wb
             xIn.[i] <- xi
@@ -216,7 +272,7 @@ module Circulation =
             let wgt = wExt.[i] * dzArr.[i] / wTot
             aBypAcc <- aBypAcc + wgt * ab
             xcAcc <- xcAcc + wgt * xc
-            fricAcc <- fricAcc + wgt * dpFieldFriction case sat bands wf steamLin.[i] xi
+            fricAcc <- fricAcc + wgt * dpFieldFriction case sat bands bandFrac wf steamLin.[i] xi
 
         let effCr = wFieldTot / steamTot
         let invNz = 1.0 / float nz
@@ -228,7 +284,7 @@ module Circulation =
             TwoPhase.voidFraction l.VoidModel xField sat (wFieldMean / aFieldMean)
         let rhoField =
             let (_, _, rho) =
-                dpFieldColumn case sat bands wFieldMean steamMean xInMean
+                dpFieldColumnWith case sat bands bandFrac wFieldMean steamMean xInMean
             rho
         let dpDrumFinal = drumDp wTot xBar
 
@@ -236,6 +292,9 @@ module Circulation =
           WFieldLin = wField
           WBypLin = wByp
           XInField = xIn
+          RootCount = rootCount
+          BracketOk = (wStatus <> NoSignChange)
+          BalanceSlope = balanceSlope
           Global =
             { CirculationRatio = cr
               CircFlow = wTot
@@ -260,7 +319,7 @@ module Circulation =
               BypassAlpha = aBypAcc
               XCarryUnder = xcAcc
               OpenAnnulus = aByp
-              StarvedSlices = 0
+              StarvedSlices = starved
               Converged = av > 0.0 } }
     let axialVelocities (case: DesignCase) (sat: Steam.SatProps)
                         (axial: AxialResult list) (wExtLin: float[]) (dzArr: float[])

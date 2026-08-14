@@ -3,6 +3,7 @@ namespace Whb.Core.Options
 open System
 open System.IO
 open System.Text.Json
+open System.Text.Json.Nodes
 module Options =
 
     [<CLIMutable>]
@@ -110,9 +111,37 @@ module Options =
     let save path options =
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath path)) |> ignore
         File.WriteAllText(path, JsonSerializer.Serialize(options, serializerOptions))
+    /// <summary>
+    /// Overlays the values present in <paramref name="over"/> onto <paramref name="baseObj"/>,
+    /// descending into nested objects.
+    /// </summary>
+    /// <remarks>
+    /// Keys absent from the file keep the value already in the base document.
+    /// </remarks>
+    let rec private overlay (baseObj: JsonObject) (over: JsonObject) =
+        for entry in over do
+            match baseObj.[entry.Key], entry.Value with
+            | (:? JsonObject as b), (:? JsonObject as o) -> overlay b o
+            | _ -> baseObj.[entry.Key] <- (if isNull entry.Value then null else entry.Value.DeepClone())
+
+    /// <summary>
+    /// Loads project options, filling in anything the file does not mention from
+    /// <see cref="defaultOptions"/>.
+    /// </summary>
+    /// <remarks>
+    /// Options files are hand-edited and files written by earlier versions do not carry
+    /// every section. Merging onto the defaults keeps documented defaults such as phase
+    /// logging active instead of letting an absent key deserialize to false, null or zero.
+    /// </remarks>
     let load path =
-        if File.Exists path then
-            JsonSerializer.Deserialize<ProjectOptions>(File.ReadAllText path, serializerOptions)
-        else defaultOptions
+        if not (File.Exists path) then defaultOptions
+        else
+            match JsonNode.Parse(File.ReadAllText path) with
+            | :? JsonObject as fileObj ->
+                let merged =
+                    JsonNode.Parse(JsonSerializer.Serialize(defaultOptions, serializerOptions)) :?> JsonObject
+                overlay merged fileObj
+                JsonSerializer.Deserialize<ProjectOptions>(merged.ToJsonString(), serializerOptions)
+            | _ -> defaultOptions
 
 

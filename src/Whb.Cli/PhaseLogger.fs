@@ -34,10 +34,15 @@ module PhaseLogger =
             let logPath = Path.GetFullPath options.Logging.LogFile
             let dir = Path.GetDirectoryName logPath
             if not (String.IsNullOrWhiteSpace dir) then Directory.CreateDirectory dir |> ignore
+            // Calculation phases are reported from several threads at once (the bypass map is
+            // solved concurrently). The lock lives here so that thread safety is a property of
+            // the logger itself and no caller has to know about it.
+            let gate = obj ()
             fun message ->
                 try
                     let stamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)
-                    File.AppendAllText(logPath, sprintf "%s | %s%s" stamp message Environment.NewLine)
+                    lock gate (fun () ->
+                        File.AppendAllText(logPath, sprintf "%s | %s%s" stamp message Environment.NewLine))
                 with ex ->
                     eprintfn "Logging disabled for this message: %s" ex.Message
 

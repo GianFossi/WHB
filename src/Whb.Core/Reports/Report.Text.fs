@@ -711,7 +711,7 @@ module ReportText =
             let vb =
                 Vibration.check vWorst.Band vWorst.Y sp 22.37 c.TubeLayout c.VibrationDamping
                     c.Tube.Do c.Tube.Di c.Tube.Pitch (c.Material.E (kToC w.TMetalWallAvg)) 7850.0
-                    w.VelCross vWorst.Rho 10.0
+                    w.VelCross vWorst.Rho 10.0 vWorst.Alpha
             sb.AppendLine(
                 sprintf "  %10s %15s %16s %9s   %s"
                     (f2 sp) (f1 vb.FreqNat) (f2 vb.VCrit) (f3 vb.FeiRatio)

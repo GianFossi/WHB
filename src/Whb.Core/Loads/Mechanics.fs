@@ -232,6 +232,21 @@ module Mechanics =
             let reg = flowRegime sat b.Id jl jv
             let rv2 = rhoH * vMix * vMix
             let ok = (reg <> Slug) && rv2 <= rhoV2Max
+            // Momentum force at a bend. In an intermittent regime the fluid arriving at each
+            // elbow alternates between a liquid slug and a vapour plug, so the reaction swings
+            // between rho_l and rho_v at the same superficial velocity. That swing, at the
+            // rate the slugs arrive, is what sizes the supports and fatigues the nozzle welds
+            // - the regime warning alone does not tell the piping engineer how hard to hold it.
+            let bends = Piping.elbowCount b
+            let (slugForce, slugFreq) =
+                match reg with
+                | Slug | Churn ->
+                    let vSlug = jl + jv
+                    let shape = if reg = Slug then 1.0 else 0.35   // churn is far less coherent
+                    let f = shape * a * vSlug * vSlug * (sat.RhoL - sat.RhoV)
+                    // Unit-cell length of about 20 diameters is the usual slug-flow estimate.
+                    (f, vSlug / (20.0 * b.Id))
+                | _ -> (0.0, 0.0)
             { Label = sprintf "%s %s" b.Tag b.Nps
               Id = b.Id
               Count = b.Count
@@ -242,13 +257,18 @@ module Mechanics =
               Regime = reg
               DMinBubbly = dMinForSlug sat
               RhoV2 = rv2
+              SlugForce = slugForce
+              SlugFrequency = slugFreq
+              Bends = bends
               Ok = ok
               Note =
                 match reg with
                 | Slug ->
-                    "moto a tappi: pulsazioni di portata e di pressione, forzanti a bassa frequenza sui supporti. Aumentare la velocita' (diametro minore) per portarsi in churn/anulare, oppure ridurre il titolo (piu' circolazione)."
-                | Annular | Churn ->
-                    "regime churn/anulare: flusso continuo, nessuna pulsazione da tappi. Verificare comunque erosione ai gomiti."
+                    sprintf "moto a tappi: pulsazioni di portata e di pressione, forzanti a bassa frequenza sui supporti. La forzante vale circa %.0f N per gomito a %.2f Hz, su %d gomiti: e' il carico da dare al calcolo dei supporti e da confrontare con la frequenza propria della campata. Aumentare la velocita' (diametro minore) per portarsi in churn/anulare, oppure ridurre il titolo (piu' circolazione)." slugForce slugFreq bends
+                | Churn ->
+                    sprintf "regime churn: flusso continuo ma ancora intermittente. Forzante residua di circa %.0f N per gomito a %.2f Hz su %d gomiti. Verificare erosione ai gomiti." slugForce slugFreq bends
+                | Annular ->
+                    "regime anulare: flusso continuo, nessuna pulsazione da tappi. Verificare comunque erosione ai gomiti."
                 | Bubbly | DispersedBubble ->
                     "regime a bolle: il piu' quieto, tipico di titoli bassi. Nessun rischio di slug." })
     let minSubmergence (d: float) (v: float) =

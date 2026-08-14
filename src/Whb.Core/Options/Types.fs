@@ -44,6 +44,10 @@ module Types =
           BundleFactor: float
           Correlation: WaterSide.PoolBoilingCorrelation
           Csf: float
+          /// Critical-heat-flux model used for the cell-by-cell DNBR field. Palen's bundle
+          /// factor is the conservative default; the alternatives exist so the same case can
+          /// be re-run against a different limit and the DNBR map compared.
+          ChfModel: WaterSide.ChfModel
           TFeed: float }
     type LoopGeometry =
         { /// Steam-drum axis elevation minus WHB axis elevation [m]
@@ -449,6 +453,13 @@ module Types =
           Regime: FlowRegime
           DMinBubbly: float
           RhoV2: float
+          /// Peak momentum-force swing at one bend of this line [N], between a liquid slug and
+          /// a vapour plug passing through it. Zero outside intermittent regimes.
+          SlugForce: float
+          /// Rate at which those slugs arrive [Hz]: the frequency the pipe supports see.
+          SlugFrequency: float
+          /// Bends on the line that the swing acts on.
+          Bends: int
           Ok: bool
           Note: string }
     type FerruleClassResult =
@@ -461,6 +472,43 @@ module Types =
           DNBRMin: float
           TGasOut: float
           Duty: float }
+    /// <summary>
+    /// Numerical health of a design run: what converged, what was clamped, and what was
+    /// solved outside the domain the method intends.
+    /// </summary>
+    /// <remarks>
+    /// These are diagnostics, not results. They exist so that a run that did not fully
+    /// converge cannot be mistaken for one that did.
+    /// </remarks>
+    type ConvergenceReport =
+        { /// Iterations spent in the coupled thermal/circulation loop.
+          CoupledIterations: int
+          /// True when the coupled loop met its tolerance instead of hitting the iteration cap.
+          CoupledConverged: bool
+          /// Largest relative change left on the field flow and inlet quality at exit.
+          CoupledResidual: float
+          /// Cells whose outlet quality hit the 0.95 barrier.
+          QualityClampedCells: int
+          /// Axial position of the first clamped cell, or NaN when none was clamped.
+          QualityClampFirstZ: float
+          /// Cells whose wall-temperature fixed point was still moving at the iteration cap.
+          NonConvergedCells: int
+          /// Sign changes found scanning the circulation balance over its bracket. More than
+          /// one means the operating point is not unique (Ledinegg-type multiplicity).
+          CirculationRoots: int
+          /// True when the circulation bracket contained a sign change at all.
+          CirculationBracketOk: bool
+          /// Slope of the loop balance at the operating point. Negative is a stable crossing;
+          /// positive is a flow-excursion point in the Ledinegg sense.
+          CirculationSlope: float
+          /// Feedwater subcooling available at the downcomer inlet [K], and the subcooling the
+          /// local pressure drop there demands to avoid flashing.
+          DowncomerSubcooling: float
+          DowncomerSubcoolingRequired: float
+          /// True when the bypass map brackets the target mixed temperature, so the reported
+          /// valve limits are real limits and not the edge of the computed map.
+          BypassMapBracketsTarget: bool }
+
     type DesignResult =
         { Case: DesignCase
           Sat: Steam.SatProps
@@ -495,6 +543,14 @@ module Types =
           AreaIn: float
           UMean: float
           LmtdMean: float
+          /// Net steam leaving the drum, i.e. the duty divided by the rise from feedwater
+          /// enthalpy to saturated vapour. `SteamProduction` is the evaporation rate inside
+          /// the bundle, which assumes the water entering the tubes is already saturated.
+          SteamProductionNet: float
+          /// Feedwater subcooling at drum pressure [K]. This is the margin that keeps the
+          /// downcomer inlet from flashing.
+          FeedSubcooling: float
+          Convergence: ConvergenceReport
           Warnings: string list }
 
 

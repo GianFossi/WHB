@@ -72,6 +72,7 @@ module Bypass =
         let mutable p = pIn
         let nodes = ResizeArray<Node>()
         let mutable qTot = 0.0
+        let mutable allConverged = true
         let gasCache = Collections.Generic.Dictionary<string, GasProps.MixProps>()
         let wallCache = Collections.Generic.Dictionary<string, float * float * float>()
         let gasProps tK pPa =
@@ -102,6 +103,10 @@ module Bypass =
             let mutable tpo = sat.Tsat + 2.0
             let mutable q = 0.0
             let mutable hg = 0.0
+            // Observe the inner fixed point without changing it: the iteration count stays
+            // at 12, we only record whether the last step had actually settled.
+            let mutable qPrev = 0.0
+            let mutable lastRel = 1.0
             for _ in 1 .. 12 do
                 let nu = GasSide.nusseltFD GasSide.Gnielinski re props.Pr 1.0
                 let fProp = GasSide.gasPropertyCorrection tli props.T
@@ -117,11 +122,14 @@ module Bypass =
                     + 250.0
                 let rB = 1.0 / (hb * Math.PI * s.PipeOd)
                 let rTot = rGas + rFoul + rL + rI + rP + rB
+                qPrev <- q
                 q <- (props.T - sat.Tsat) / rTot
+                lastRel <- abs (q - qPrev) / (abs q + 1e-12)
                 tpo <- sat.Tsat + q * rB
                 tpi <- tpo + q * rP
                 tlo <- tpi + q * rI
                 tli <- tlo + q * rL
+            if lastRel > 1e-6 then allConverged <- false
             let dzi = dz.[i]
             qTot <- qTot + q * dzi
             nodes.Add
@@ -132,7 +140,7 @@ module Bypass =
             let f = GasSide.darcyFriction re (4.5e-5 / s.LinerId)
             p <- p - GasSide.dpFrictionPerM f s.LinerId props.Rho vel * dzi
         let tOut = fst (Shift.stateFromEnthalpyAt shiftMode real p comp0 h)
-        (List.ofSeq nodes, tOut, qTot, pIn - p)
+        (List.ofSeq nodes, tOut, qTot, pIn - p, allConverged)
 
 
 

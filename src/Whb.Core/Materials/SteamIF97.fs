@@ -103,20 +103,31 @@ module Steam =
            (22,53,  0.37826947613457e-5); (23,39,-0.12768608934681e-14)
            (24,26,  0.73087610595061e-28);(24,40, 0.55414715350778e-16)
            (24,58, -0.94369707241210e-6) |]
+    // Exponent ranges of the region-2 residual series: pi^0..pi^24 and b^-2..b^58.
+    // Building each distinct power once with Math.Pow gives exactly the same values as
+    // calling it per term, for roughly a third of the calls.
+    let private r2PiMax = 24
+    let private r2BjOffset = 2
+    let private r2BjMax = 58
     let private reg2 (pMPa: float) (tK: float) =
         let pi = pMPa
         let tau = 540.0 / tK
+        let tauPow = Array.init 11 (fun k -> Math.Pow(tau, float k - 7.0))   // tau^-7 .. tau^3
         let mutable g0 = log pi
         let mutable g0t = 0.0
         let mutable g0tt = 0.0
         for k in 0 .. 8 do
-            let j = float r2j0.[k]
+            let jj = r2j0.[k]
+            let j = float jj
             let n = r2n0.[k]
-            g0 <- g0 + n * Math.Pow(tau, j)
-            g0t <- g0t + n * j * Math.Pow(tau, j - 1.0)
-            g0tt <- g0tt + n * j * (j - 1.0) * Math.Pow(tau, j - 2.0)
+            g0 <- g0 + n * tauPow.[jj + 7]
+            g0t <- g0t + n * j * tauPow.[jj + 6]
+            g0tt <- g0tt + n * j * (j - 1.0) * tauPow.[jj + 5]
         let g0pi = 1.0 / pi
         let b = tau - 0.5
+        let piPow = Array.init (r2PiMax + 1) (fun k -> Math.Pow(pi, float k))
+        let bPow =
+            Array.init (r2BjMax + r2BjOffset + 1) (fun k -> Math.Pow(b, float k - float r2BjOffset))
         let mutable gr = 0.0
         let mutable grpi = 0.0
         let mutable grt = 0.0
@@ -124,12 +135,12 @@ module Steam =
         for (i, j, n) in r2r do
             let fi = float i
             let fj = float j
-            let pii = Math.Pow(pi, fi)
-            let bj = Math.Pow(b, fj)
+            let pii = piPow.[i]
+            let bj = bPow.[j + r2BjOffset]
             gr <- gr + n * pii * bj
-            grpi <- grpi + n * fi * Math.Pow(pi, fi - 1.0) * bj
-            grt <- grt + n * pii * fj * Math.Pow(b, fj - 1.0)
-            grtt <- grtt + n * pii * fj * (fj - 1.0) * Math.Pow(b, fj - 2.0)
+            grpi <- grpi + n * fi * piPow.[i - 1] * bj
+            grt <- grt + n * pii * fj * bPow.[j + r2BjOffset - 1]
+            grtt <- grtt + n * pii * fj * (fj - 1.0) * bPow.[j + r2BjOffset - 2]
         let v = pi * (g0pi + grpi) * Rw * tK / (pMPa * 1000.0)
         let h = tau * (g0t + grt) * Rw * tK
         let cp = -tau * tau * (g0tt + grtt) * Rw
@@ -153,11 +164,13 @@ module Steam =
         for i in 0 .. 3 do
             den <- den + hVisc0.[i] / Math.Pow(tb, float i)
         let mu0 = 100.0 * sqrt tb / den                       // µPa·s
-        let mutable s = 0.0
-        for (i, j, h) in hVisc1 do
-            s <- s + Math.Pow(1.0 / tb - 1.0, float i) * h * Math.Pow(rb - 1.0, float j)
-        let mu1 = exp (rb * s)
-        mu0 * mu1 * 1e-6
+        if rb = 0.0 then mu0 * 1e-6      // dilute-gas limit: the residual factor is exp(0) = 1
+        else
+            let mutable s = 0.0
+            for (i, j, h) in hVisc1 do
+                s <- s + Math.Pow(1.0 / tb - 1.0, float i) * h * Math.Pow(rb - 1.0, float j)
+            let mu1 = exp (rb * s)
+            mu0 * mu1 * 1e-6
     let private lam0 = [| 2.443221e-3; 1.323095e-2; 6.770357e-3; -3.454586e-3; 4.096266e-4 |]
     let private lam1 =
         array2D
@@ -173,14 +186,16 @@ module Steam =
         for k in 0 .. 4 do
             den <- den + lam0.[k] / Math.Pow(tb, float k)
         let l0 = sqrt tb / den
-        let mutable s = 0.0
-        for i in 0 .. 4 do
-            let mutable inner = 0.0
-            for j in 0 .. 5 do
-                inner <- inner + lam1.[i, j] * Math.Pow(rb - 1.0, float j)
-            s <- s + Math.Pow(1.0 / tb - 1.0, float i) * inner
-        let l1 = exp (rb * s)
-        l0 * l1 * 1e-3
+        if rb = 0.0 then l0 * 1e-3       // dilute-gas limit: the residual factor is exp(0) = 1
+        else
+            let mutable s = 0.0
+            for i in 0 .. 4 do
+                let mutable inner = 0.0
+                for j in 0 .. 5 do
+                    inner <- inner + lam1.[i, j] * Math.Pow(rb - 1.0, float j)
+                s <- s + Math.Pow(1.0 / tb - 1.0, float i) * inner
+            let l1 = exp (rb * s)
+            l0 * l1 * 1e-3
     let surfaceTension (tK: float) =
         let tau = 1.0 - tK / Tc_water
         if tau <= 0.0 then 0.0

@@ -27,6 +27,18 @@ let private boilCorrelation (name: string) =
     | "gorenflo" -> WaterSide.Gorenflo
     | "cornwell" | "cornwell-houston" -> WaterSide.CornwellHouston
     | _ -> WaterSide.Mostinski
+/// CHF model used for the cell-by-cell DNBR field. A bare number is read as a practical
+/// design limit in kW/m2, which is how the criterion is usually written on a datasheet.
+let private chfModel (name: string) (fallback: WaterSide.ChfModel) =
+    match name.Trim().ToLowerInvariant() with
+    | "" -> fallback
+    | "palen" | "palen-bundle" | "fascio" -> WaterSide.PalenBundle
+    | "lienhard" | "lienhard-eichhorn" | "crossflow" -> WaterSide.LienhardEichhornCrossflow
+    | "zuber" | "zuber-titolo" -> WaterSide.ZuberQuality
+    | other ->
+        match Double.TryParse(other, NumberStyles.Float, CultureInfo.InvariantCulture) with
+        | true, kw when kw > 0.0 -> WaterSide.PracticalLimit(kw * 1000.0)
+        | _ -> fallback
 let private voidModel (name: string) =
     match name.ToLowerInvariant() with
     | "omogeneo" | "homogeneous" -> TwoPhase.Homogeneous
@@ -117,6 +129,7 @@ let loadCase (path: string) : DesignCase =
           BundleFactor = Json.f r "vapore.fattore_fascio" wt.BundleFactor
           Correlation = boilCorrelation (Json.s r "vapore.correlazione" "mostinski")
           Csf = Json.f r "vapore.csf" wt.Csf
+          ChfModel = chfModel (Json.s r "vapore.modello_chf" "") wt.ChfModel
           TFeed = cToK (Json.f r "vapore.t_alimento_C" (kToC wt.TFeed)) }
     let l = d.Loop
     let loop =
@@ -476,8 +489,12 @@ let selfTest () =
     printfn ""
     if fails = 0 then printfn "TUTTI I CONTROLLI SUPERATI" else printfn "%d CONTROLLI FALLITI" fails
     fails
-let loadCurves (case0: DesignCase) (outDir: string) =
+let loadCurves (options: Options.ProjectOptions) (case0: DesignCase) (outDir: string) =
     Directory.CreateDirectory outDir |> ignore
+    let logger = PhaseLogger.create options
+    let currentTask = ref "Starting partial-load campaign"
+    let swRun = Diagnostics.Stopwatch.StartNew()
+    logger "Partial-load campaign started"
     let sb = Text.StringBuilder()
     let ci = CultureInfo.InvariantCulture
     let f1 (x: float) = x.ToString("F1", ci)
@@ -501,11 +518,14 @@ let loadCurves (case0: DesignCase) (outDir: string) =
     let pts = ResizeArray<LoadPoint>()
     for l in loads do
         let c = { coarse with Gas = { coarse.Gas with MassFlow = case0.Gas.MassFlow * l } }
+        logger (sprintf "Partial-load point %.0f %% started" (100.0 * l))
+        let swPoint = Diagnostics.Stopwatch.StartNew()
         let r =
             Progress.runWithStatus
                 (sprintf "Partial-load calculation %.0f %%: thermal, hydraulic, bypass, vibration, and mechanical checks" (100.0 * l))
                 12.0
-                (fun () -> Design.run c)
+                (fun () -> Design.runWithProgress (PhaseLogger.phase logger currentTask) c)
+        logger (sprintf "Partial-load point %.0f %% completed in %.1f s" (100.0 * l) swPoint.Elapsed.TotalSeconds)
         let hot = r.Cells |> List.filter (fun x -> not x.InFerrule)
         let p =
             { LoadFraction = l
@@ -572,6 +592,8 @@ let loadCurves (case0: DesignCase) (outDir: string) =
               f3 (100.0 * p.BypassFraction); f2 p.CircRatio; f1 (p.QFluxMax / 1000.0)
               f1 (kToC p.TMetalMax); f3 p.DNBRMin; f4 p.AlphaMax; f1 (p.DpGas / 100.0) ])) |> ignore
     File.WriteAllText(Path.Combine(outDir, "carichi.csv"), csv.ToString())
+    logger (sprintf "Partial-load campaign completed in %.1f s; output folder: %s"
+                swRun.Elapsed.TotalSeconds (Path.GetFullPath outDir))
     0
 let runCase (options: Options.ProjectOptions) (casePath: string option) (case: DesignCase) (outDir: string) =
     Directory.CreateDirectory outDir |> ignore
@@ -587,7 +609,8 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
             { BypassMapMode = options.Calculation.BypassMapMode
               BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
               GasPropertyCache = options.Calculation.GasPropertyCache
-              CorrelationValidityWarnings = options.Calculation.CorrelationValidityWarnings }
+              CorrelationValidityWarnings = options.Calculation.CorrelationValidityWarnings
+              Parallelism = max 1 options.Calculation.Parallelism }
         Progress.runWithStatusDynamic
             (fun () -> currentTask.Value)
             25.0
@@ -629,17 +652,99 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
 
 let sizingOnly (options: Options.ProjectOptions) (case: DesignCase) (outDir: string) =
     Directory.CreateDirectory outDir |> ignore
+    let logger = PhaseLogger.create options
+    let currentTask = ref "Starting sizing run"
     let sw = Diagnostics.Stopwatch.StartNew()
+    logger "Sizing run started"
     let runSettings : Design.RunSettings =
         { BypassMapMode = options.Calculation.BypassMapMode
           BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
           GasPropertyCache = options.Calculation.GasPropertyCache
-          CorrelationValidityWarnings = options.Calculation.CorrelationValidityWarnings }
-    let r = Design.runWithSettingsAndProgress runSettings ignore case
+          CorrelationValidityWarnings = options.Calculation.CorrelationValidityWarnings
+          Parallelism = max 1 options.Calculation.Parallelism }
+    let r = Design.runWithSettingsAndProgress runSettings (PhaseLogger.phase logger currentTask) case
     let txt = Report.sizingText r
     File.WriteAllText(Path.Combine(outDir, "dimensionamento.txt"), txt)
     printfn "%s" txt
     printfn "Sizing completed in %.1f s. File written to: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
+    logger (sprintf "Sizing run completed in %.1f s; output folder: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir))
+    0
+
+let optimizeCase (options: Options.ProjectOptions) (case: DesignCase) (outDir: string) =
+    Directory.CreateDirectory outDir |> ignore
+    let logger = PhaseLogger.create options
+    let currentTask = ref "Starting constrained search"
+    let sw = Diagnostics.Stopwatch.StartNew()
+    logger "Constrained design search started"
+    let runSettings : Design.RunSettings =
+        { BypassMapMode = options.Calculation.BypassMapMode
+          BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
+          GasPropertyCache = options.Calculation.GasPropertyCache
+          CorrelationValidityWarnings = false
+          Parallelism = max 1 options.Calculation.Parallelism }
+    let problem = Designers.Designer.defaultProblem case
+    let mutable n = 0
+    let runOne (c: DesignCase) =
+        n <- n + 1
+        let label =
+            sprintf "Design evaluation %d (ferrula %.0f mm, tubi %.2f m)"
+                n (1000.0 * (c.Ferrule.Lengths |> List.sumBy (fun (f, l) -> f * l))) c.Tube.Length
+        currentTask.Value <- label
+        logger label
+        Design.runWithSettingsAndProgress runSettings ignore c
+    let result =
+        Progress.runWithStatusDynamic
+            (fun () -> currentTask.Value)
+            60.0
+            (fun () -> Designers.Designer.optimize runOne case problem)
+    let sb = Text.StringBuilder()
+    let ci = CultureInfo.InvariantCulture
+    let f2 (x: float) = x.ToString("F2", ci)
+    let f3 (x: float) = x.ToString("F3", ci)
+    sb.AppendLine(String('=', 96)) |> ignore
+    sb.AppendLine(sprintf "RICERCA VINCOLATA - %s" problem.Name) |> ignore
+    sb.AppendLine(String('=', 96)) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine(sprintf "  Obiettivo   : %s" problem.Objective) |> ignore
+    sb.AppendLine(sprintf "  Valutazioni : %d (%s)" result.Evaluations
+                    (if result.Converged then "tolleranza sul passo raggiunta" else "tetto di valutazioni")) |> ignore
+    sb.AppendLine(sprintf "  Potenza     : %s MW" (f3 (-result.Best.Objective / 1.0e6))) |> ignore
+    sb.AppendLine(sprintf "  Ammissibile : %s" (if result.Best.Feasible then "SI" else "NO")) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  VARIABILI") |> ignore
+    problem.Variables
+    |> List.iteri (fun i v ->
+        let value = if i < result.Best.Values.Length then result.Best.Values.[i] else nan
+        let atBound = result.VariablesAtBound |> List.contains v.Name
+        sb.AppendLine(
+            sprintf "    %-24s %10s %-5s  (intervallo %s .. %s)%s"
+                v.Name (f2 value) v.Unit (f2 v.Lower) (f2 v.Upper)
+                (if atBound then "   <== AL BORDO DELLA RICERCA" else "")) |> ignore)
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  VINCOLI") |> ignore
+    problem.Constraints
+    |> List.iteri (fun i c ->
+        let value = if i < result.Best.ConstraintValues.Length then result.Best.ConstraintValues.[i] else nan
+        let limit =
+            match c.Min, c.Max with
+            | Some m, _ -> sprintf ">= %s" (f2 m)
+            | _, Some m -> sprintf "<= %s" (f2 m)
+            | _ -> "-"
+        let active = result.ActiveConstraints |> List.contains c.Name
+        sb.AppendLine(
+            sprintf "    %-24s %10s %-5s  %-10s%s"
+                c.Name (f3 value) c.Unit limit
+                (if active then "   <== ATTIVO: e' questo che ferma la soluzione" else "")) |> ignore)
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  NATURA DELL'OTTIMO") |> ignore
+    for note in result.Notes do
+        sb.AppendLine(sprintf "    %s" note) |> ignore
+    sb.AppendLine(String('=', 96)) |> ignore
+    let txt = sb.ToString()
+    File.WriteAllText(Path.Combine(outDir, "ottimizzazione.txt"), txt)
+    printfn "%s" txt
+    printfn "Search completed in %.1f s. File written to: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
+    logger (sprintf "Constrained design search completed in %.1f s" sw.Elapsed.TotalSeconds)
     0
 
 let writeDefaultOptions path =
@@ -673,6 +778,8 @@ let githubPush optionsPath =
 [<EntryPoint>]
 let main argv =
     let args = List.ofArray argv
+    /// Short form printed on a usage error, where the user needs the shape of the
+    /// command line and not the manual.
     let printUsage () =
         printfn "Usage:"
         printfn "  whb [case.json] [--out <folder>] [--options <whb.options.json>]"
@@ -681,10 +788,174 @@ let main argv =
         printfn "  whb --selftest"
         printfn "  whb --loads [case.json] [--out <folder>]"
         printfn "  whb --sizing [case.json] [--out <folder>]"
+        printfn "  whb --optimize [case.json] [--out <folder>]"
         printfn "  whb --github-plan [options.json]"
         printfn "  whb --github-push [options.json]"
         printfn ""
         printfn "If no case file is provided, the reference case is used."
+        printfn "Run 'whb --help' for the full list of commands and options."
+
+    /// Full manual: every command, every flag, every options-file key and every exit
+    /// code the program can return.
+    let printHelp () =
+        let rule = String('-', 78)
+        printfn "WHB / PGC - thermal, hydraulic and diagnostic calculations for fire-tube"
+        printfn "waste heat boilers and process gas coolers."
+        printfn ""
+        printfn "Usage:  whb [command] [case.json] [options]"
+        printfn ""
+        printfn "With no command and no case file, the built-in reference case is run."
+        printfn "A case file may be given to any calculation command; when omitted, the"
+        printfn "reference case is used."
+        printfn ""
+        printfn "%s" rule
+        printfn "COMMANDS"
+        printfn "%s" rule
+        printfn "  (none) [case.json]      Full design run: thermal, hydraulic, bypass,"
+        printfn "                          vibration and mechanical checks, then all report"
+        printfn "                          and CSV files. This is the normal command."
+        printfn ""
+        printfn "  --sizing [case.json]    Design run reported as a sizing sheet only."
+        printfn "                          Writes dimensionamento.txt and nothing else."
+        printfn ""
+        printfn "  --loads [case.json]     Partial-load campaign at 50, 60, 70, 80, 90, 100"
+        printfn "                          and 110 %% of gas flow, on a reduced 40 x 8 grid."
+        printfn "                          Writes carichi.txt and carichi.csv."
+        printfn ""
+        printfn "  --optimize [case.json]  Constrained search for the largest duty that still"
+        printfn "                          satisfies DNBR, metal temperature, gas pressure"
+        printfn "                          drop and flow-induced vibration, moving ferrule"
+        printfn "                          length and tube length. Writes ottimizzazione.txt,"
+        printfn "                          which reports not only where the optimum is but"
+        printfn "                          WHAT HOLDS IT THERE: an active constraint, the edge"
+        printfn "                          of the search range, a genuine interior stationary"
+        printfn "                          point, or no feasible point at all."
+        printfn "                          Every evaluation is a full coupled solve, so this"
+        printfn "                          takes minutes, not seconds."
+        printfn ""
+        printfn "  --selftest              Check the installed correlations and property"
+        printfn "                          functions against published reference values."
+        printfn "                          Writes nothing; exits non-zero on a mismatch."
+        printfn ""
+        printfn "  --template [file.json]  Write a commented case template."
+        printfn "                          Default file name: case.json"
+        printfn ""
+        printfn "  --options-template [f]  Write a project options file with the documented"
+        printfn "                          defaults. Default file name: whb.options.json"
+        printfn ""
+        printfn "  --github-plan [opt]     Print the git commands the transfer would run,"
+        printfn "                          without running any of them."
+        printfn ""
+        printfn "  --github-push [opt]     Execute that transfer."
+        printfn ""
+        printfn "  --help, -h              This text."
+        printfn ""
+        printfn "%s" rule
+        printfn "OPTIONS"
+        printfn "%s" rule
+        printfn "  --out <folder>          Output folder. Overrides folders.resultsFolder"
+        printfn "                          from the options file. Created if missing."
+        printfn ""
+        printfn "  --options <file>        Project options file to read."
+        printfn "                          Default: whb.options.json in the current folder."
+        printfn "                          Keys absent from the file keep their documented"
+        printfn "                          default, so a partial file is safe."
+        printfn ""
+        printfn "Both options may be combined with any calculation command."
+        printfn ""
+        printfn "%s" rule
+        printfn "PROJECT OPTIONS FILE (whb.options.json)"
+        printfn "%s" rule
+        printfn "  folders.resultsFolder           Default output folder."
+        printfn "  folders.tempFolder              Temporary and preflight files."
+        printfn "  folders.casesFolder             Convention for case files."
+        printfn "  folders.databasesFolder         Convention for property databases."
+        printfn "  folders.reportsFolder           Convention for report material."
+        printfn "  folders.packagesFolder          Convention for package artifacts."
+        printfn ""
+        printfn "  logging.enabled                 Timestamped phase logging. Default true,"
+        printfn "                                  and active on every calculation command."
+        printfn "  logging.logFile                 Log file path. Default logs/whb-run.log"
+        printfn ""
+        printfn "  reporting.generateFullReport    Write report.txt. Default true."
+        printfn "  reporting.generateHtmlReport    Write report.html. Default true."
+        printfn ""
+        printfn "  calculation.axialSections       Axial grid sections. Default 90."
+        printfn "  calculation.verticalBands       Vertical bands. Default 12."
+        printfn "  calculation.parallelism         Bypass-map points solved concurrently."
+        printfn "                                  Changes run time only, never results."
+        printfn "                                  Use 1 to force a sequential run."
+        printfn "                                  Default: processor count."
+        printfn "  calculation.bypassMapMode       adaptive | fast | full | fixed."
+        printfn "                                  Because the map is solved concurrently,"
+        printfn "                                  'full' costs little more than 'adaptive'."
+        printfn "  calculation.bypassTargetToleranceK"
+        printfn "                                  Tolerance on the target mixed outlet"
+        printfn "                                  temperature. Default 0.5 K."
+        printfn "  calculation.gasPropertyCache    Reuse repeated gas-property evaluations."
+        printfn "  calculation.correlationValidityWarnings"
+        printfn "                                  Raise findings when a correlation is used"
+        printfn "                                  outside its usual validity range."
+        printfn "  calculation.useRealGas          Legacy switch; prefer gas.modello_gas in"
+        printfn "                                  the case file."
+        printfn "  calculation.strictValidation    Stricter input consistency checks."
+        printfn "  calculation.dutyToleranceFraction"
+        printfn "                                  Duty tolerance for acceptance checks."
+        printfn ""
+        printfn "  github.*                        Repository, branch and commit settings"
+        printfn "                                  used by --github-plan / --github-push."
+        printfn ""
+        printfn "%s" rule
+        printfn "CASE FILE"
+        printfn "%s" rule
+        printfn "  The JSON case file uses engineering datasheet language, grouped in"
+        printfn "  sections: gas, vapore, tubi, ferrula, circuito, drum, bypass, materiali."
+        printfn "  Start from 'whb --template case.json'; the full field list is in"
+        printfn "  docs/INPUT_SCHEMA.md."
+        printfn ""
+        printfn "  Pressures ending in _bara are absolute; pressure drops are differential."
+        printfn ""
+        printfn "%s" rule
+        printfn "OUTPUT FILES"
+        printfn "%s" rule
+        printfn "  report.txt / report.html   Full engineering report."
+        printfn "  criticita.txt              Findings and warnings, most severe first."
+        printfn "  pds_comparison.txt/.csv    Comparison against the client datasheet."
+        printfn "  inventory_summary.txt/.csv Water volumes and estimated metal weights."
+        printfn "  celle.csv                  Cell-by-cell thermal field."
+        printfn "  profilo_assiale.csv        Axial profiles."
+        printfn "  tensioni.csv               Stress field."
+        printfn "  valvola_bypass.csv         Bypass valve sweep."
+        printfn "  vibrazioni.txt             Vibration screening per band."
+        printfn "  maldistribuzione.txt       Maldistribution sensitivity."
+        printfn "  dimensionamento.txt        Sizing sheet (--sizing, and normal runs)."
+        printfn "  carichi.txt / carichi.csv  Partial-load curves (--loads)."
+        printfn "  ottimizzazione.txt         Constrained search result (--optimize)."
+        printfn ""
+        printfn "%s" rule
+        printfn "EXIT CODES"
+        printfn "%s" rule
+        printfn "  0   Success."
+        printfn "  1   Unhandled error; the message is printed on stderr."
+        printfn "  2   Usage error: unknown option, or case file not found."
+        printfn "  3   GitHub transfer failed."
+        printfn "  4   Invalid JSON in the case or options file."
+        printfn "  5   File or folder access error."
+        printfn ""
+        printfn "%s" rule
+        printfn "EXAMPLES"
+        printfn "%s" rule
+        printfn "  whb                                    Run the reference case."
+        printfn "  whb my-case.json --out results/run1     Run a case into a folder."
+        printfn "  whb --template my-case.json            Start a new case file."
+        printfn "  whb my-case.json --options prj.json    Use a specific options file."
+        printfn "  whb --loads my-case.json               Partial-load curves."
+        printfn "  whb --optimize my-case.json            Constrained search."
+        printfn "  whb --selftest                         Verify the installation."
+        printfn ""
+        printfn "This software is a design aid. It is not a certified pressure-vessel or"
+        printfn "boiler-code tool and does not replace code calculations or vendor"
+        printfn "verification."
     let getOpt name def =
         let rec go = function
             | a :: b :: _ when a = name -> b
@@ -700,7 +971,7 @@ let main argv =
             printfn "No case file provided: running the reference case.\n"
             runCase projectOptions None Defaults.referenceCase outDir
         | "--help" :: _ | "-h" :: _ ->
-            printUsage ()
+            printHelp ()
             0
         | "--template" :: rest ->
             let f = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "case.json"
@@ -719,6 +990,15 @@ let main argv =
         | "--github-push" :: rest ->
             let f = match rest with | x :: _ when File.Exists x -> x | _ -> "whb.options.json"
             githubPush f
+        | "--optimize" :: rest ->
+            let c =
+                match rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath) with
+                | f :: _ when File.Exists f -> loadCase f
+                | f :: _ when not (f.StartsWith("--")) ->
+                    eprintfn "Case file not found: %s" f
+                    raise (FileNotFoundException("Case file not found", f))
+                | _ -> Defaults.referenceCase
+            optimizeCase projectOptions c outDir
         | "--sizing" :: rest ->
             let c =
                 match rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath) with
@@ -736,7 +1016,7 @@ let main argv =
                     eprintfn "Case file not found: %s" f
                     raise (FileNotFoundException("Case file not found", f))
                 | _ -> Defaults.referenceCase
-            loadCurves c outDir
+            loadCurves projectOptions c outDir
         | opt :: _ when opt.StartsWith("--") ->
             eprintfn "Unknown option: %s" opt
             printUsage ()

@@ -90,3 +90,33 @@ The vibration testing campaign also checks:
 | Lamé radial stress | -10000000 Pa | 1e-6 |
 | Lamé hoop stress | 55454545.45454548 Pa | 1e-5 |
 | Von Mises check value | 108.972473588517 | 1e-12 |
+
+## Numerical Methods
+
+| Check | What it guards |
+|---|---|
+| `brent` against `bisect` | Same bracket and tolerance must not give a less accurate root, and the no-sign-change fallback must behave identically. |
+| `bisectWithStatus` | Returns exactly the value `bisect` returns, plus the reason it stopped, so a clamped endpoint is distinguishable from a converged root. |
+| `countSignChanges` | Detects a single root and three roots, including a root landing exactly on a sample point. |
+| `newtonIncreasing` | Quadratic convergence from a poor start, and correct fallback to bisection when the derivative is unusable. |
+| Enthalpy inversion | Recovers the temperature an enthalpy was built from, to 1e-6 K. |
+| `enthalpyAbsRealWithCp` | Enthalpy identical to the scalar evaluation; derivative matches a central difference of it. |
+| Dilute-gas limit | The rho = 0 short-circuit of the IAPWS transport properties sits on the full curve. |
+| Shell-side context split | The cell-level factorisation reproduces `shellHtc` term by term. |
+
+## Constrained Search
+
+| Check | Expected classification |
+|---|---|
+| Objective capped by a constraint | `AtConstraint`, with the constraint named |
+| Objective limited only by the search range | `AtSearchBound`, with the variable named |
+| Parabola with its minimum inside the feasible region | `Interior` |
+| Constraint that nothing in range can satisfy | `NoFeasiblePoint`, never `Interior` |
+| Feasible point versus a better infeasible one | The feasible point wins |
+
+## Options And Work List
+
+| Check | What it guards |
+|---|---|
+| Partial options file | A section or key absent from `whb.options.json` keeps its documented default; only an explicit `false` disables a feature. |
+| `TODO.md` consistency | The open items named in the work list still match the state of the code. |

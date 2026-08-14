@@ -22,17 +22,22 @@ The software can estimate:
 - steam generation;
 - local heat flux;
 - metal temperature;
-- DNBR and boiling-crisis margin;
+- DNBR and boiling-crisis margin, with a selectable CHF method;
 - natural-circulation ratio;
 - gas-side and water-side pressure losses;
 - bypass fraction and valve opening;
 - riser and downcomer velocities;
 - nozzle velocity and rho-v-squared checks;
-- tube vibration screening indicators;
+- tube vibration screening indicators, including turbulent buffeting;
+- slug forces and their passing frequency on two-phase riser and downcomer lines;
 - mechanical screening indicators;
 - mandatory comparison against available client PDS values;
 - partial and total water volume in the WHB, risers, downcomers and steam drum;
 - estimated component metal weights;
+- numerical health of the run: convergence, clamped quantities, circulation
+  stability and whether a reported limit is a real limit;
+- a constrained search for the largest duty within the design limits, reporting
+  what holds the optimum in place;
 - report tables for engineering review.
 
 ## Intended Use

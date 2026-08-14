@@ -13,6 +13,11 @@
     <AssemblyName>whb</AssemblyName>
     <RootNamespace>Whb.Cli</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Ahead-of-time compile the hot paths into the published image: the calculation is
+         now short enough that JIT warm-up is a visible share of a run. Build setting only,
+         no new dependency and no effect on results. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <TieredPGO>true</TieredPGO>
   </PropertyGroup>
 
   <ItemGroup>

@@ -53,6 +53,7 @@ module Defaults =
               BundleFactor = 1.5
               Correlation = WaterSide.Mostinski
               Csf = 0.013
+              ChfModel = WaterSide.PalenBundle
               TFeed = cToK 250.0 }
           Loop =
             { DzDrumWhb = 6.0

@@ -15,9 +15,16 @@ module GasSide =
         1.0 / (x * x)
     let fColebrook (re: float) (relRough: float) =
         let mutable f = fFilonenko re
-        for _ in 1 .. 40 do
+        let mutable i = 0
+        let mutable running = true
+        while running && i < 40 do
             let rhs = -2.0 * log10 (relRough / 3.7 + 2.51 / (re * sqrt f))
-            f <- 1.0 / (rhs * rhs)
+            let fNext = 1.0 / (rhs * rhs)
+            // The iteration is a contraction: stop as soon as it stops moving in
+            // double precision instead of always paying the full 40 sweeps.
+            running <- abs (fNext - f) > 1e-15 * abs fNext
+            f <- fNext
+            i <- i + 1
         f
     let fLaminar (re: float) = 64.0 / re
     let darcyFriction (re: float) (relRough: float) =

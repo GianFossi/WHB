@@ -65,18 +65,38 @@ module BundleSolver =
         else
             let s = f.Lengths |> List.sumBy fst
             if s <= 0.0 then [ (1.0, 0.0) ] else f.Lengths |> List.map (fun (a, b) -> (a / s, b))
-    let shellHtc (case: DesignCase) (sat: Steam.SatProps) (qOut: float) (x: float) (gCross: float) =
+    /// <summary>
+    /// Part of the shell-side coefficient that is independent of the local heat flux.
+    /// </summary>
+    /// <remarks>
+    /// The Chen convective term, the Chen suppression factor and the bundle factor depend
+    /// only on quality and cross-flow mass flux, both fixed within a cell. Evaluating them
+    /// once per cell instead of once per heat-flux iteration leaves the coefficient
+    /// unchanged term by term.
+    /// </remarks>
+    [<Struct>]
+    type ShellContext =
+        { BundleFactor: float
+          Suppression: float
+          HConvChen: float }
+    let shellContext (case: DesignCase) (sat: Steam.SatProps) (x: float) (gCross: float) =
         let t = case.Tube
         let d = t.Do
-        let wc = case.Water
-        let hnb = WaterSide.hPool wc.Correlation qOut d sat wc.RoughnessUm wc.Csf
         let gl = gCross * (1.0 - x)
         let reMax = max 10.0 (gl * d / sat.MuL)
         let hLo = WaterSide.hZukauskas reMax sat.PrL sat.PrL sat.KL d t.Staggered (1.0 / 0.8660254)
         let fChen = WaterSide.chenF x sat
-        let s = WaterSide.chenS reMax fChen
+        { BundleFactor = WaterSide.bundleFactor case.Water.BundleFactor
+          Suppression = WaterSide.chenS reMax fChen
+          HConvChen = hLo * fChen }
+    let shellHtcWith (case: DesignCase) (sat: Steam.SatProps) (ctx: ShellContext) (qOut: float) =
+        let d = case.Tube.Do
+        let wc = case.Water
+        let hnb = WaterSide.hPool wc.Correlation qOut d sat wc.RoughnessUm wc.Csf
         let hnc = WaterSide.hNaturalConvection d (max 1.0 (qOut / 5000.0)) sat
-        hnb * WaterSide.bundleFactor wc.BundleFactor * s + max (hLo * fChen) hnc
+        hnb * ctx.BundleFactor * ctx.Suppression + max ctx.HConvChen hnc
+    let shellHtc (case: DesignCase) (sat: Steam.SatProps) (qOut: float) (x: float) (gCross: float) =
+        shellHtcWith case sat (shellContext case sat x gCross) qOut
     let private solveCell
         (case: DesignCase) (sat: Steam.SatProps) (props: GasProps.MixProps)
         (z: float) (mdotPerTube: float) (inFerrule: bool)
@@ -97,8 +117,16 @@ module BundleSolver =
         let mutable rFoulOut = 0.0
         let mutable rMetal = 0.0
         let mutable gasRes = Unchecked.defaultof<GasSide.GasHtcResult>
+        let shellCtx = shellContext case sat x gCross
 
-        for _ in 1 .. 14 do
+        // 14 relaxed sweeps settle an ordinary cell to well under a micro-kelvin, so that
+        // count is kept as the minimum and the numbers are unchanged. A cell still moving by
+        // more than a milli-kelvin after them is genuinely not converged - it happens near the
+        // critical heat flux, where the boiling curve turns over - so it is given more sweeps
+        // and reported if it still has not settled.
+        let mutable sweep = 0
+        let mutable moved = infinity
+        while sweep < 14 || (sweep < 40 && moved > 1e-3) do
             let muWall = wallMu (max 300.0 twi) props.P
             let g = case.Gas
             gasRes <-
@@ -114,19 +142,26 @@ module BundleSolver =
             rFoulOut <- case.Water.FoulingOut / (Math.PI * t.Do)
             let rFixed = rGas + rFoulIn + rFerr + rMetal + rFoulOut
             let f (q': float) =
-                let hbl = shellHtc case sat (q' / areaOutPerM) x gCross
+                let hbl = shellHtcWith case sat shellCtx (q' / areaOutPerM)
                 (tg - tsat) / (rFixed + 1.0 / (max hbl 1.0 * areaOutPerM)) - q'
             let qMax = (tg - tsat) / (rFixed + 1e-9)
-            let q' = bisect f 1e-3 (max 1.0 qMax) 1e-2 60
-            hb <- shellHtc case sat (q' / areaOutPerM) x gCross
+            // 1e-4 W/m on a linear duty of order 1e4 W/m keeps the residual two orders
+            // below the convergence the outer relaxation loop below actually delivers.
+            let q' = brent f 1e-3 (max 1.0 qMax) 1e-4 60
+            hb <- shellHtcWith case sat shellCtx (q' / areaOutPerM)
             rBoil <- 1.0 / (max hb 1.0 * areaOutPerM)
             qlin <- q'
             let tmoNew = tsat + q' * (rBoil + rFoulOut)
-            tmo <- tmo + 0.7 * (tmoNew - tmo)
-            tmi <- tmi + 0.7 * (tmoNew + q' * rMetal - tmi)
-            twi <- twi + 0.7 * (tg - q' * (rGas + rFoulIn) - twi)
+            let dTmo = 0.7 * (tmoNew - tmo)
+            let dTmi = 0.7 * (tmoNew + q' * rMetal - tmi)
+            let dTwi = 0.7 * (tg - q' * (rGas + rFoulIn) - twi)
+            tmo <- tmo + dTmo
+            tmi <- tmi + dTmi
+            twi <- twi + dTwi
+            moved <- max (abs dTmo) (max (abs dTmi) (abs dTwi))
+            sweep <- sweep + 1
 
-        (qlin, gasRes, hb, twi, tmi, tmo, rBoil, rFoulOut, rMetal)
+        (qlin, gasRes, hb, twi, tmi, tmo, rBoil, rFoulOut, rMetal, moved <= 1e-3)
     type SolveOutput =
         { Cells: CellResult[,,]
           Axial: AxialResult list
@@ -138,7 +173,14 @@ module BundleSolver =
           NTubesBand: float[]
           Classes: (float * float) list
           Dz: float[]
-          ZC: float[] }
+          ZC: float[]
+          /// Cells whose outlet quality hit the 0.95 barrier, and where the first one was.
+          QualityClamped: int
+          QualityClampFirstZ: float
+          /// Cells whose wall-temperature fixed point was still moving at the iteration cap.
+          NonConvergedCells: int
+          /// Duty raised in each vertical band, integrated over the tube length [W].
+          BandDuty: float[] }
     let solve (case: DesignCase) (bands: Bundle.Band list)
               (wLinField: float[]) (xInField: float[]) : SolveOutput =
         let t = case.Tube
@@ -146,16 +188,17 @@ module BundleSolver =
         let comp0 = GasProps.normalize case.Gas.Composition
         let rH2O = GasProps.molFrac comp0 GasProps.H2O
         let rCO2 = GasProps.molFrac comp0 GasProps.CO2
-        let wallMuCache = Collections.Generic.Dictionary<string, float>()
+        let wallMuCache = Collections.Generic.Dictionary<struct (float * float), float>()
         let tubeKCache = Collections.Generic.Dictionary<float, float>()
         let wallMu tK pPa =
-            let key = sprintf "%.1f|%.0f" (Math.Round(tK * 2.0) / 2.0) (Math.Round(pPa / 100.0) * 100.0)
+            let tRound = Math.Round(tK * 2.0) / 2.0
+            let key = struct (tRound, Math.Round(pPa / 100.0) * 100.0)
             match wallMuCache.TryGetValue key with
             | true, v -> v
             | _ ->
                 let v =
                     (GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0
-                         (Math.Round(tK * 2.0) / 2.0) pPa case.Gas.Z).Mu
+                         tRound pPa case.Gas.Z).Mu
                 wallMuCache.[key] <- v
                 v
         let tubeK tC =
@@ -186,6 +229,12 @@ module BundleSolver =
         let axial = ResizeArray<AxialResult>()
         let mutable steamCum = 0.0
         let mutable dutyCum = 0.0
+        let mutable qualityClamped = 0
+        let mutable qualityClampFirstZ = nan
+        let mutable nonConvergedCells = 0
+        // Duty raised per vertical band: the circulation solver needs the real profile, not a
+        // flat split, because the bottom bands see the hot gas and raise far more steam.
+        let bandDuty = Array.zeroCreate ny
         let qCritTube =
             min (WaterSide.chfHorizontalTube t.Do sat) (WaterSide.chfMostinski sat.P Pc_water)
         let phiB = WaterSide.palenPhiB t.Otl t.Length (Math.PI * t.Do * t.Length * float t.NTubes)
@@ -210,17 +259,33 @@ module BundleSolver =
                         let r = solveCell case sat props z mdotPerTube inFerrule rH2O rCO2 x gCross twiPrev.[j, c] wallMu tubeK
                         (frac, fl, inFerrule, props, r))
                 let dQband =
-                    res |> Array.sumBy (fun (frac, _, _, _, (q, _, _, _, _, _, _, _, _)) ->
+                    res |> Array.sumBy (fun (frac, _, _, _, (q, _, _, _, _, _, _, _, _, _)) ->
                         q * dz * b.NTubes * frac)
-                let xOut = min 0.95 (x + dQband / (max 1e-6 (wl * dz) * sat.Hfg))
+                let xRaw = x + dQband / (max 1e-6 (wl * dz) * sat.Hfg)
+                if xRaw > 0.95 then
+                    // The barrier is kept, but a run that leans on it is working outside the
+                    // range the two-phase correlations were built for and must say so.
+                    qualityClamped <- qualityClamped + 1
+                    if Double.IsNaN qualityClampFirstZ then qualityClampFirstZ <- z
+                let xOut = min 0.95 xRaw
                 let xMean = 0.5 * (x + xOut)
                 let alpha = TwoPhase.voidFraction case.Loop.VoidModel xMean sat gCross
                 let rhoH = TwoPhase.homogeneousDensity xMean sat
-                let qCritLocal = qCritTube * phiB * max 0.05 (1.0 - xOut)
+                // The DNBR field is built with the CHF model selected for the case. Palen's
+                // bundle factor with the quality derating is the default and reproduces the
+                // previous behaviour exactly; the others exist so the same case can be
+                // re-solved against a different limit and the whole map compared, instead of
+                // only the single worst cell as in the comparison table.
+                let qCritLocal =
+                    match case.Water.ChfModel with
+                    | WaterSide.PalenBundle -> qCritTube * phiB * max 0.05 (1.0 - xOut)
+                    | model ->
+                        WaterSide.chfLocal model t.Do (gCross / rhoH) xOut 1.0 phiB qCritTube sat
 
                 for c in 0 .. nc - 1 do
                     let (frac, fl, inFerrule, props, r) = res.[c]
-                    let (qlin, gr, hb, twi, tmi, tmo, rBoil, rFoulOut, rMetal) = r
+                    let (qlin, gr, hb, twi, tmi, tmo, rBoil, rFoulOut, rMetal, cellOk) = r
+                    if not cellOk then nonConvergedCells <- nonConvergedCells + 1
                     twiPrev.[j, c] <- twi
                     let bore = if inFerrule then case.Ferrule.Bore else t.Di
                     let qOut = qlin / (Math.PI * t.Do)
@@ -256,8 +321,8 @@ module BundleSolver =
                           DNBR = (if qOut > 0.0 then qCritLocal / qOut else 999.0)
                           InFerrule = inFerrule }
                     hGas.[j, c] <- hGas.[j, c] - qlin * dz / mdotPerTube
-                    let (_, cN) = Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pGas.[j, c] comp0 hGas.[j, c]
-                    compBand.[j, c] <- cN
+                    compBand.[j, c] <-
+                        Shift.compositionFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pGas.[j, c] comp0 hGas.[j, c]
                     let f = GasSide.darcyFriction gr.Re (t.Roughness / bore)
                     let dpF = GasSide.dpFrictionPerM f bore props.Rho gr.Velocity * dz
                     let dpLoc =
@@ -270,6 +335,7 @@ module BundleSolver =
 
                 x <- xOut
                 dutySlice <- dutySlice + dQband
+                bandDuty.[j] <- bandDuty.[j] + dQband
 
             dutyLin.[i] <- dutySlice / dz
             steamLin.[i] <- dutySlice / dz / sat.Hfg
@@ -333,21 +399,44 @@ module BundleSolver =
 
         let tOut =
             Array2D.init ny nc (fun j c -> fst (Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pGas.[j, c] comp0 hGas.[j, c]))
+        // Momentum term. The gas is cooled at nearly constant pressure, so it roughly doubles
+        // in density and halves in velocity along the tube: decelerating flow recovers
+        // pressure. Summed cell by cell the term telescopes to the inlet and outlet states,
+        // so it is applied once here rather than accumulated inside the march.
+        let aTube = Math.PI * t.Di * t.Di / 4.0
+        let gTube = mdotPerTube / aTube
+        let rhoIn =
+            (GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0 case.Gas.TIn case.Gas.PIn case.Gas.Z).Rho
+        let dpMomentum =
+            Array2D.init ny nc (fun j c ->
+                let rhoOut =
+                    (GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas compBand.[j, c]
+                        tOut.[j, c] pGas.[j, c] case.Gas.Z).Rho
+                gTube * gTube * (1.0 / rhoOut - 1.0 / rhoIn))
+        // Tube-count weighted: bands do not carry the same number of tubes, so a plain mean
+        // over bands is not the pressure drop the gas stream actually sees.
         let mutable dpAcc = 0.0
+        let mutable dpWeight = 0.0
         for j in 0 .. ny - 1 do
             for c in 0 .. nc - 1 do
-                dpAcc <- dpAcc + (case.Gas.PIn - pGas.[j, c])
+                let w = bandArr.[j].NTubes * fst clsArr.[c]
+                dpAcc <- dpAcc + w * (case.Gas.PIn - pGas.[j, c] + dpMomentum.[j, c])
+                dpWeight <- dpWeight + w
         { Cells = cells
           Axial = List.ofSeq axial
           Duty = dutyCum
           Steam = steamCum
-          DpGas = dpAcc / float (ny * nc)
+          DpGas = dpAcc / max 1e-12 dpWeight
           SteamLin = steamLin
           TGasOutBandClass = tOut
           NTubesBand = bandArr |> Array.map (fun b -> b.NTubes)
           Classes = classes
           Dz = dzArr
-          ZC = zc }
+          ZC = zc
+          QualityClamped = qualityClamped
+          QualityClampFirstZ = qualityClampFirstZ
+          NonConvergedCells = nonConvergedCells
+          BandDuty = bandDuty }
 
 
 

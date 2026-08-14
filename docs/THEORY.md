@@ -23,6 +23,24 @@ such as gas Reynolds number, gas Prandtl number, or pressure/model consistency
 move outside practical preliminary-design ranges. These findings are warnings,
 not automatic design rejection criteria.
 
+## Numerical Health
+
+Every design result carries a convergence report alongside the engineering numbers:
+whether the coupled thermal/circulation loop converged or hit its iteration cap,
+how many cells hit the 0.95 quality barrier or failed to settle, how many times the
+circulation balance crosses zero and with what slope, the flashing margin at the
+downcomer inlet, and whether the bypass map actually spans its target. Each of these
+raises a finding.
+
+The intent is simple: a run that did not converge, or that was solved outside the
+domain a method intends, must not look like one that did. Two consequences of that
+principle appear elsewhere in the model. Bracketed solves can report *how* they
+finished, so a clamped endpoint is distinguishable from a real root. And the
+circulation balance is scanned for multiple crossings before it is solved, because
+the demand of a boiling channel is S-shaped in flow and can meet the available head
+more than once - the classical Ledinegg situation, where the operating point is not
+unique and the slope at the crossing decides whether it is stable.
+
 ## Bypass Precision Controls
 
 The bypass map controls the trade-off between calculation time and mixed-outlet
@@ -89,7 +107,24 @@ high-pressure equation of state.
 
 ## Vibration Screening
 
-The vibration analysis estimates tube natural frequency, vortex shedding risk, acoustic behavior, damping, and flow-induced instability indicators. It is intended for screening and comparison, not as a final specialist vibration report.
+The vibration analysis estimates tube natural frequency, added mass, damping, and
+three excitation mechanisms: fluid-elastic instability (Connors), vortex shedding,
+and turbulent buffeting. All three take part in the verdict. Buffeting matters most
+here, because it is the mechanism that dominates in two-phase cross flow, where the
+bubbles break up the coherence of the vortex wake.
+
+Acoustic resonance is deliberately **not** checked. It concerns compressible gas on
+the shell side, whereas a fire-tube WHB has boiling water there. The module
+documentation says so explicitly, so the absence is a decision and not an omission.
+
+Two-phase damping is strongly void-dependent, and the critical velocity goes as its
+square root. The case input remains the basis of the verdict; a void-dependent
+damping shape is reported alongside it as a sensitivity.
+
+For two-phase riser and downcomer lines the flow regime is classified, and in
+intermittent regimes the momentum force swing at each bend and its passing
+frequency are reported: that is the load the pipe supports have to carry, which the
+regime warning alone does not give.
 
 ## Mechanical Screening
 

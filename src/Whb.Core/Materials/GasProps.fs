@@ -104,30 +104,80 @@ module GasProps =
             let z = p * v / (Rw * 1000.0 * t)
             let b = (z - 1.0) * R * t / p
             if tK <= 1073.15 then b else b * Math.Pow(1073.15 / tK, 1.6)
-        let private bPair (a: Species) (b: Species) (tK: float) =
-            if a = b then
-                if a = H2O then bWater tK
-                else
-                    let (tc, pc, om, _) = critical a
-                    pitzer tc pc om tK
+        /// Pseudo-critical constants of one (i, j) interaction pair. They depend only
+        /// on the two species, never on temperature or composition, so they are built
+        /// once per species set and reused for every bMix evaluation.
+        [<Struct>]
+        type private PairTerm =
+            { I: int
+              J: int
+              Mult: float          // 1 on the diagonal, 2 off-diagonal (bPair is symmetric)
+              Tc: float
+              Pc: float
+              Om: float
+              IsWater: bool }
+        let private speciesIndex =
+            function
+            | H2 -> 0 | N2 -> 1 | O2 -> 2 | CO -> 3 | CO2 -> 4
+            | CH4 -> 5 | H2O -> 6 | Ar -> 7 | NH3 -> 8
+        let private buildPairTerms (species: Species[]) =
+            let n = species.Length
+            let acc = ResizeArray<PairTerm>(n * (n + 1) / 2)
+            for i in 0 .. n - 1 do
+                for j in i .. n - 1 do
+                    let a = species.[i]
+                    let b = species.[j]
+                    let mult = if i = j then 1.0 else 2.0
+                    if a = b then
+                        if a = H2O then
+                            acc.Add { I = i; J = j; Mult = mult
+                                      Tc = 0.0; Pc = 0.0; Om = 0.0; IsWater = true }
+                        else
+                            let (tc, pc, om, _) = critical a
+                            acc.Add { I = i; J = j; Mult = mult
+                                      Tc = tc; Pc = pc; Om = om; IsWater = false }
+                    else
+                        let (tca, pca, oma, vca) = critical a
+                        let (tcb, pcb, omb, vcb) = critical b
+                        let tcij = sqrt (tca * tcb)
+                        let omij = 0.5 * (oma + omb)
+                        let zca = pca * vca / (R * tca)
+                        let zcb = pcb * vcb / (R * tcb)
+                        let zcij = 0.5 * (zca + zcb)
+                        let vcij = (0.5 * (Math.Cbrt vca + Math.Cbrt vcb)) ** 3.0
+                        let pcij = zcij * R * tcij / vcij
+                        acc.Add { I = i; J = j; Mult = mult
+                                  Tc = tcij; Pc = pcij; Om = omij; IsWater = false }
+            acc.ToArray()
+        let private pairTermCache =
+            Collections.Concurrent.ConcurrentDictionary<int64, PairTerm[]>()
+        let private pairTermsFor (species: Species[]) =
+            if species.Length > 15 then buildPairTerms species
             else
-                let (tca, pca, oma, vca) = critical a
-                let (tcb, pcb, omb, vcb) = critical b
-                let tcij = sqrt (tca * tcb)
-                let omij = 0.5 * (oma + omb)
-                let zca = pca * vca / (R * tca)
-                let zcb = pcb * vcb / (R * tcb)
-                let zcij = 0.5 * (zca + zcb)
-                let vcij = (0.5 * (Math.Cbrt vca + Math.Cbrt vcb)) ** 3.0
-                let pcij = zcij * R * tcij / vcij
-                pitzer tcij pcij omij tK
+                let mutable key = 1L
+                for sp in species do
+                    key <- (key <<< 4) ||| int64 (speciesIndex sp)
+                match pairTermCache.TryGetValue key with
+                | true, v -> v
+                | _ ->
+                    let v = buildPairTerms species
+                    pairTermCache.[key] <- v
+                    v
 
         let bMix (c: Composition) (tK: float) =
-            let a = c |> List.toArray
+            let n = List.length c
+            let species = Array.zeroCreate n
+            let ys = Array.zeroCreate n
+            let mutable k = 0
+            for (sp, y) in c do
+                species.[k] <- sp
+                ys.[k] <- y
+                k <- k + 1
+            let terms = pairTermsFor species
             let mutable s = 0.0
-            for (si, yi) in a do
-                for (sj, yj) in a do
-                    s <- s + yi * yj * bPair si sj tK
+            for t in terms do
+                let b = if t.IsWater then bWater tK else pitzer t.Tc t.Pc t.Om tK
+                s <- s + t.Mult * ys.[t.I] * ys.[t.J] * b
             s
 
         let residual (c: Composition) (tK: float) (pPa: float) =
@@ -176,12 +226,22 @@ module GasProps =
                 (mus |> List.sumBy (fun (_, y, mu, _, _) -> y * mu),
                  (mus |> List.sumBy (fun (_, y, _, k, m) -> y * sqrt m * k)) / sw)
             | Wilke ->
-                let den (mi: float) (mui: float) =
-                    mus |> List.sumBy (fun (_, yj, muj, _, mj) -> yj * phiWilke mi mj mui muj)
-                (mus |> List.sumBy (fun (_, yi, mui, _, mi) ->
-                    let d = den mi mui in if d <= 0.0 then 0.0 else yi * mui / d),
-                 mus |> List.sumBy (fun (_, yi, mui, ki, mi) ->
-                    let d = den mi mui in if d <= 0.0 then 0.0 else yi * ki / d))
+                // The Wilke denominator depends on species i only, so it is built once and
+                // reused for viscosity and conductivity instead of being summed twice. Same
+                // expression in the same accumulation order, so the result is unchanged.
+                let musArr = List.toArray mus
+                let dens =
+                    musArr
+                    |> Array.map (fun (_, _, mui, _, mi) ->
+                        mus |> List.sumBy (fun (_, yj, muj, _, mj) -> yj * phiWilke mi mj mui muj))
+                let mutable muAcc = 0.0
+                let mutable kAcc = 0.0
+                for i in 0 .. musArr.Length - 1 do
+                    let (_, yi, mui, ki, _) = musArr.[i]
+                    let d = dens.[i]
+                    muAcc <- muAcc + (if d <= 0.0 then 0.0 else yi * mui / d)
+                    kAcc <- kAcc + (if d <= 0.0 then 0.0 else yi * ki / d)
+                (muAcc, kAcc)
         let (zEff, hRes, cpRes) =
             if real then Virial.residual cn tK pPa else (z, 0.0, 0.0)
         let rho = pPa * m / (zEff * R * tK)
@@ -198,18 +258,19 @@ module GasProps =
         let cpm = cn |> List.sumBy (fun (sp, y) -> y * cpMolar sp tK)
         let hm = cn |> List.sumBy (fun (sp, y) -> y * hMolar sp tK)
         let mus = cn |> List.map (fun (sp, y) -> (sp, y, muPure sp tK, kPure sp tK, molarMass sp))
-        let muMix =
-            mus
-            |> List.sumBy (fun (_, yi, mui, _, mi) ->
-                let den =
-                    mus |> List.sumBy (fun (_, yj, muj, _, mj) -> yj * phiWilke mi mj mui muj)
-                if den <= 0.0 then 0.0 else yi * mui / den)
-        let kMix =
-            mus
-            |> List.sumBy (fun (_, yi, mui, ki, mi) ->
-                let den =
-                    mus |> List.sumBy (fun (_, yj, muj, _, mj) -> yj * phiWilke mi mj mui muj)
-                if den <= 0.0 then 0.0 else yi * ki / den)
+        // One denominator per species, shared by viscosity and conductivity (see mixReal).
+        let musArr = List.toArray mus
+        let dens =
+            musArr
+            |> Array.map (fun (_, _, mui, _, mi) ->
+                mus |> List.sumBy (fun (_, yj, muj, _, mj) -> yj * phiWilke mi mj mui muj))
+        let mutable muMix = 0.0
+        let mutable kMix = 0.0
+        for i in 0 .. musArr.Length - 1 do
+            let (_, yi, mui, ki, _) = musArr.[i]
+            let den = dens.[i]
+            muMix <- muMix + (if den <= 0.0 then 0.0 else yi * mui / den)
+            kMix <- kMix + (if den <= 0.0 then 0.0 else yi * ki / den)
         let rho = pPa * m / (z * R * tK)
         let cpMass = cpm / m
         { T = tK; P = pPa; M = m; Rho = rho
@@ -228,6 +289,30 @@ module GasProps =
         let cn = normalize c
         ((cn |> List.sumBy (fun (sp, y) -> y * hMolarAbs sp tK)) + departure real cn tK pPa)
         / mixMolarMass cn
+    /// <summary>
+    /// Absolute mixture enthalpy and its temperature derivative (the mixture cp) in a
+    /// single pass, returned as J/kg and J/(kg·K).
+    /// </summary>
+    /// <remarks>
+    /// The enthalpy is identical to <see cref="enthalpyAbsReal"/>. The virial residual
+    /// already produces the pressure correction on cp, so the derivative is obtained at
+    /// no extra cost, which lets the enthalpy inversion use a Newton iteration instead
+    /// of a bisection.
+    /// </remarks>
+    let enthalpyAbsRealWithCp (real: bool) (c: Composition) (tK: float) (pPa: float) =
+        let cn = normalize c
+        let mutable hm = 0.0
+        let mutable cpm = 0.0
+        for (sp, y) in cn do
+            hm <- hm + y * hMolarAbs sp tK
+            cpm <- cpm + y * cpMolar sp tK
+        let struct (hRes, cpRes) =
+            if real then
+                let (_, h, cp) = Virial.residual cn tK pPa
+                struct (h, cp)
+            else struct (0.0, 0.0)
+        let m = mixMolarMass cn
+        struct ((hm + hRes) / m, (cpm + cpRes) / m)
     let molFrac (c: Composition) (sp: Species) =
         c |> List.tryFind (fun (s, _) -> s = sp) |> Option.map snd |> Option.defaultValue 0.0
     let gasEmissivity (rH2O: float) (rCO2: float) (pPa: float) (sBeam: float) (tK: float) =

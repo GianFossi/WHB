@@ -22,7 +22,11 @@ module Design =
         { BypassMapMode: string
           BypassTargetToleranceK: float
           GasPropertyCache: bool
-          CorrelationValidityWarnings: bool }
+          CorrelationValidityWarnings: bool
+          /// Maximum number of bypass-map points evaluated concurrently. Each point is an
+          /// independent solve of the same immutable case, so this changes run time only,
+          /// never results. Use 1 to force a strictly sequential run.
+          Parallelism: int }
 
     /// <summary>
     /// Provides conservative runtime settings for API callers that do not pass project options.
@@ -34,7 +38,23 @@ module Design =
         { BypassMapMode = "adaptive"
           BypassTargetToleranceK = 0.5
           GasPropertyCache = true
-          CorrelationValidityWarnings = true }
+          CorrelationValidityWarnings = true
+          Parallelism = max 1 Environment.ProcessorCount }
+    /// <summary>
+    /// Process-wide budget of concurrent solves.
+    /// </summary>
+    /// <remarks>
+    /// `Parallelism` is a per-design setting, so nesting a parallel caller above a design run
+    /// would multiply rather than share the machine. The budget is a single gate for the whole
+    /// process: whoever wants a worker takes a slot from it, so total concurrency stays bounded
+    /// no matter how many levels start running at once.
+    /// </remarks>
+    module ParallelBudget =
+        let private gate =
+            new Threading.SemaphoreSlim(max 1 Environment.ProcessorCount, max 1 Environment.ProcessorCount)
+        let acquire () = gate.Wait()
+        let release () = gate.Release() |> ignore
+        let available () = gate.CurrentCount
     let private w fmt = Printf.kprintf id fmt
     let private sev = function Critical -> "CRITICO" | Warning -> "ATTENZIONE" | Note -> "NOTA"
     let private maxRelativeDelta (a: float[]) (b: float[]) =
@@ -65,20 +85,40 @@ module Design =
             while i < a.Length - 2 && a.[i + 1].X < x do i <- i + 1
             let f = (x - a.[i].X) / (a.[i + 1].X - a.[i].X)
             sel a.[i] + f * (sel a.[i + 1] - sel a.[i])
-    let private invertMap (pts: MapPt list) (sel: MapPt -> float) (target: float) =
+    /// <summary>
+    /// How a reported limit came about.
+    /// </summary>
+    /// <remarks>
+    /// A value produced by a genuine crossing and one produced by running out of computed map
+    /// are both single numbers, and printing them identically makes the edge of a calculation
+    /// look like a design limit. This is what keeps them apart.
+    /// </remarks>
+    type LimitKind =
+        /// The target was crossed inside the computed range: a real limit.
+        | FromCrossing
+        /// The target lies beyond the computed range; the value is where the map stops.
+        | FromMapEdge
+    let private limitTag =
+        function
+        | FromCrossing -> "VINCOLANTE"
+        | FromMapEdge -> "BORDO MAPPA - non e' un limite"
+    let private invertMapWithKind (pts: MapPt list) (sel: MapPt -> float) (target: float) =
         let f (x: float) = interpMap pts sel x - target
         let x0 = (List.head pts).X
         let x1 = (List.last pts).X
-        if f x0 >= 0.0 then x0
-        elif f x1 <= 0.0 then x1
-        else bisect f x0 x1 1e-7 60
+        if f x0 >= 0.0 then (x0, FromCrossing)      // already met with no bypass at all
+        elif f x1 <= 0.0 then (x1, FromMapEdge)     // target never reached inside the map
+        else (bisect f x0 x1 1e-7 60, FromCrossing)
+    let private invertMap (pts: MapPt list) (sel: MapPt -> float) (target: float) =
+        fst (invertMapWithKind pts sel target)
     let buildFindings (correlationValidityWarnings: bool) (case: DesignCase) (sat: Steam.SatProps) (cells: CellResult list)
                       (axial: AxialResult list) (circ: CirculationResult)
                       (ft: FixedTubesheetResult) (risers: RiserCheck list)
                       (expansions: ExpansionResult list) (bp: Bypass.Result option) (dpGas: float)
                       (stress: StressResult) (valve: ValveResult option)
                       (notConnected: Piping.Line list)
-                      (vibration: Vibration.Result list) =
+                      (vibration: Vibration.Result list)
+                      (conv: ConvergenceReport) =
         let fs = ResizeArray<Finding>()
         let hot = cells |> List.filter (fun c -> not c.InFerrule)
         let qmax = hot |> List.maxBy (fun c -> c.QFluxOut)
@@ -97,6 +137,66 @@ module Design =
         let add s area title value limit where action detail =
             fs.Add { Severity = s; Area = area; Title = title; Value = value
                      Limit = limit; Where = where; Action = action; Detail = detail }
+
+        // --- Numerical health -------------------------------------------------------------
+        // A result that did not converge, or that was produced outside the domain the method
+        // intends, must be visible in the same place as every other engineering finding.
+        if not conv.CoupledConverged then
+            add Critical "CONVERGENZA" "Ciclo termico/circolazione non convergente"
+                (sprintf "residuo relativo %.2e dopo %d iterazioni" conv.CoupledResidual conv.CoupledIterations)
+                "residuo < 1e-5 su portata di campo e titolo in ingresso"
+                "accoppiamento fra scambio termico e circolazione naturale"
+                "Verificare il caso: geometria del circuito, battente disponibile e portata gas. I risultati sotto NON sono un punto fisso convergente."
+                "Il ciclo alterna il solutore di fascio e quello di circolazione fino a che la ripartizione di portata non si stabilizza. Fermarsi al tetto di iterazioni significa che le due parti stanno ancora spostandosi a vicenda: duty, titolo e DNBR riportati sono quelli dell'ultima passata, non della soluzione."
+        if not conv.CirculationBracketOk then
+            add Critical "CIRCOLAZIONE" "Bilancio di circolazione senza soluzione nell'intervallo esplorato"
+                "nessun cambio di segno nel bracket"
+                "battente disponibile = domanda del fascio, con portata fra 1.5 e 200 volte il vapore prodotto"
+                "circuito di circolazione naturale"
+                "Il circuito non e' sostenibile con questa geometria: rivedere dislivello, numero e diametro di downcomer e riser."
+                "In assenza di cambio di segno la portata riportata e' l'estremo dell'intervallo con residuo minore, NON una soluzione. Il rapporto di circolazione che ne deriva e' numericamente plausibile ma privo di significato fisico."
+        elif conv.CirculationRoots > 1 then
+            add Warning "CIRCOLAZIONE" "Punto di lavoro della circolazione non unico"
+                (sprintf "%d attraversamenti dello zero nel bilancio" conv.CirculationRoots)
+                "una sola soluzione (punto di lavoro stabile)"
+                "circuito di circolazione naturale"
+                "Verificare la stabilita' del circuito ai carichi parziali e valutare una perdita concentrata all'imbocco dei downcomer, che irrigidisce la curva di domanda."
+                "La domanda di un canale bollente e' a S: a bassa portata cresce per il vuoto, ad alta portata per l'attrito. Se il battente disponibile la interseca piu' volte esistono piu' punti di lavoro e l'apparecchio puo' saltare dall'uno all'altro (instabilita' statica di Ledinegg). La soluzione riportata e' una delle possibili."
+        if conv.QualityClampedCells > 0 then
+            add Warning "EBOLLIZIONE" "Titolo troncato al limite del modello bifase"
+                (sprintf "%d celle a x = 0.95" conv.QualityClampedCells)
+                "x < 0.95 per restare nel campo delle correlazioni bifase"
+                (sprintf "prima cella troncata a z = %.2f m" conv.QualityClampFirstZ)
+                "Aumentare la circolazione o ridurre il flusso termico locale nelle bande alte."
+                "Il titolo e' limitato a 0.95 per non uscire dal campo delle correlazioni di frazione di vuoto e di attrito bifase. La potenza scambiata non ne risente, perche' il vapore si ricava dalla potenza; ma frazione di vuoto, DNBR e perdite di carico di quelle celle usano il titolo troncato e vanno letti come stime conservative."
+        if conv.NonConvergedCells > 0 then
+            add Warning "CONVERGENZA" "Celle con temperatura di parete non convergente"
+                (sprintf "%d celle oltre il tetto di iterazioni" conv.NonConvergedCells)
+                "punto fisso stabile entro 1 mK"
+                "solutore di cella, tipicamente vicino al flusso termico critico"
+                "Verificare le celle a flusso piu' alto: e' li' che la curva di ebollizione si impenna e il punto fisso fatica a chiudere."
+                "La temperatura di parete si ottiene iterando fra resistenza gas, metallo e ebollizione. Vicino al CHF il coefficiente di ebollizione cambia rapidamente con il flusso e l'iterazione puo' non chiudere: per quelle celle T metallo e DNBR sono indicativi."
+        if conv.CirculationBracketOk && conv.CirculationSlope > 0.0 then
+            add Critical "CIRCOLAZIONE" "Punto di lavoro instabile per escursione di portata"
+                (sprintf "pendenza del bilancio %+.3e Pa/(kg/s) al punto di lavoro" conv.CirculationSlope)
+                "pendenza negativa: la domanda del fascio deve crescere piu' in fretta del battente disponibile"
+                "circuito di circolazione naturale"
+                "Irrigidire la curva di domanda con una perdita concentrata all'imbocco dei downcomer, oppure aumentare il battente."
+                "E' il criterio di Ledinegg. Con pendenza positiva una piccola riduzione di portata fa calare la domanda piu' del battente: la portata continua a scendere invece di tornare indietro. E' un'instabilita' statica, non un'oscillazione, e porta il fascio a un punto di lavoro completamente diverso."
+        if conv.DowncomerSubcooling < conv.DowncomerSubcoolingRequired then
+            add Warning "CIRCOLAZIONE" "Margine al flash all'imbocco dei downcomer insufficiente"
+                (sprintf "sottoraffreddamento disponibile %.2f K" conv.DowncomerSubcooling)
+                (sprintf "richiesti %.2f K dalla caduta locale di imbocco" conv.DowncomerSubcoolingRequired)
+                "bocchelli di discesa sul corpo cilindrico"
+                "Alzare il livello sul bocchello, ridurre la velocita' di imbocco (bocchelli piu' grandi o piu' numerosi) o aumentare il sottoraffreddamento dell'alimento."
+                "All'imbocco la perdita di ingresso e la testa cinetica abbassano la pressione statica prima che la colonna la faccia risalire. Se il sottoraffreddamento non copre quel salto, si formano bolle nel downcomer: il battente motore cala, la portata oscilla e il fascio viene alimentato in modo intermittente. Il sottoraffreddamento disponibile viene dalla miscelazione con l'acqua alimento nel corpo cilindrico."
+        if not conv.BypassMapBracketsTarget then
+            add Warning "BY-PASS" "Mappa del by-pass piu' stretta della temperatura richiesta"
+                "il bersaglio cade oltre l'ultimo punto calcolato"
+                "la mappa deve contenere la temperatura miscelata di progetto"
+                "mappa del by-pass"
+                "Usare calculation.bypassMapMode = full, oppure estendere la griglia delle frazioni di by-pass."
+                "Ogni limite della valvola si ottiene invertendo la mappa. Se il bersaglio cade fuori, l'inversione restituisce l'estremo della mappa e quel valore compare come se fosse un vincolo: la finestra operativa riportata e' quindi piu' stretta di quella reale."
 
         if correlationValidityWarnings then
             let reMin = cells |> List.map (fun c -> c.ReGas) |> List.min
@@ -455,14 +555,14 @@ module Design =
         let nz = max 6 case.NZ
         let comp0 = GasProps.normalize case.Gas.Composition
         let wGasTot = case.Gas.MassFlow
-        let gasCache = System.Collections.Generic.Dictionary<string, GasProps.MixProps>()
+        let gasCache =
+            System.Collections.Concurrent.ConcurrentDictionary<struct (string * bool * float * float * float), GasProps.MixProps>()
         let mixRealCached rule real comp tK pPa z =
             if not settings.GasPropertyCache then GasProps.mixReal rule real comp tK pPa z
             else
                 let key =
-                    sprintf "%s|%b|%.1f|%.0f|%.4f"
-                        (GasProps.mixingRuleName rule) real
-                        (Math.Round(tK, 1)) (Math.Round(pPa, 0)) z
+                    struct (GasProps.mixingRuleName rule, real,
+                            Math.Round(tK, 1), Math.Round(pPa, 0), Math.Round(z, 4))
                 match gasCache.TryGetValue key with
                 | true, value -> value
                 | _ ->
@@ -476,21 +576,25 @@ module Design =
             let mutable wField = Array.create nz (15.0 * steamGuess / t.Length)
             let mutable xIn = Array.create nz 0.0
             let mutable o = BundleSolver.solve cx bands wField xIn
-            let mutable d = Circulation.solve cx sat bands o.SteamLin o.Dz
+            let mutable d = Circulation.solve cx sat bands o.BandDuty o.SteamLin o.Dz
             let mutable iter = 1
             let mutable converged = false
+            let mutable residual = infinity
             while iter <= 5 && not converged do
                 let wPrev = wField
                 let xPrev = xIn
                 wField <- d.WFieldLin
                 xIn <- d.XInField
                 o <- BundleSolver.solve cx bands wField xIn
-                d <- Circulation.solve cx sat bands o.SteamLin o.Dz
+                d <- Circulation.solve cx sat bands o.BandDuty o.SteamLin o.Dz
                 let dw = maxRelativeDelta wPrev wField
                 let dx = maxRelativeDelta xPrev xIn
+                residual <- max dw dx
                 converged <- dw < 1e-5 && dx < 1e-5
                 iter <- iter + 1
-            (o, d)
+            // The loop can exit either converged or capped, and the two must not look alike
+            // downstream: the caller records which one happened.
+            (o, d, iter - 1, converged, residual)
 
         let caseWith (x: float) =
             { case with Gas = { case.Gas with MassFlow = wGasTot * (1.0 - x) } }
@@ -507,13 +611,16 @@ module Design =
                     ta <- ta + wgt * o.TGasOutBandClass.[j, c]
             ta / wq
 
+        // Convergence data travels back with the result rather than through shared state,
+        // because map points are evaluated concurrently.
         let evaluate (x: float) =
-            let (o, d) = coupled (caseWith x)
+            let (o, d, iters, conv, residual) = coupled (caseWith x)
+            let health = struct (iters, conv, residual)
             let tTubes = tubeOutOf o
             if not case.Bypass.Enabled || x <= 1e-6 then
-                (tTubes, o, d, None)
+                (tTubes, o, d, None, health)
             else
-                let (nodes, tBp, qBp, dpBp) =
+                let (nodes, tBp, qBp, dpBp, bpConverged) =
                     Bypass.march case.Bypass comp0 case.Gas.PIn 0.0 case.Gas.TIn
                         case.Gas.MixingRule case.Gas.RealGas case.Gas.ShiftMode sat (wGasTot * x) o.ZC o.Dz
                 let hMix =
@@ -533,13 +640,13 @@ module Design =
                       TLinerMax = nodes |> List.map (fun n -> n.TLinerIn) |> List.max
                       TPipeMax = nodes |> List.map (fun n -> n.TPipeIn) |> List.max
                       DpBypass = dpBp
-                      Converged = true }
-                (tMix, o, d, Some res)
+                      Converged = bpConverged }
+                (tMix, o, d, Some res, health)
 
         let bpSpec = case.Bypass
         let aLiner = Math.PI * bpSpec.LinerId * bpSpec.LinerId / 4.0
         let mapPoint (x: float) =
-            let (tm, o, d, bp) = evaluate x
+            let (tm, o, d, bp, _) = evaluate x
             let (tBp, tLin, rhoV, tV) =
                 match bp with
                 | Some b ->
@@ -581,26 +688,67 @@ module Design =
                 | None ->
                     [ 0.0; 0.006; 0.010 ]
         phase "Evaluating bypass map and coupled thermal/circulation points"
+        // Points may be solved concurrently, so the log records the completion of each one
+        // with its own elapsed time; a start-only message would show the whole grid at once
+        // and then go silent for the entire solve. A failure is re-raised carrying the bypass
+        // fraction that produced it, otherwise the caller only sees an opaque nested error.
         let mapPointWithPhase x =
                 phase (sprintf "Evaluating bypass map point x = %.3f" x)
-                mapPoint x
+                let sw = Diagnostics.Stopwatch.StartNew()
+                try
+                    let p = mapPoint x
+                    phase (sprintf "Bypass map point x = %.3f solved in %.2f s" x sw.Elapsed.TotalSeconds)
+                    p
+                with ex ->
+                    raise (
+                        InvalidOperationException(
+                            sprintf "Bypass map point x = %.4f failed after %.2f s: %s"
+                                x sw.Elapsed.TotalSeconds ex.Message, ex))
+        // Bypass-map points are independent solves of the same immutable case, so the
+        // base grid is evaluated concurrently. Results are stored by index, which keeps
+        // the map order - and therefore every downstream interpolation - deterministic.
+        let evaluateGrid (xs: float list) =
+            let arr = List.toArray xs
+            let dop = min (max 1 settings.Parallelism) arr.Length
+            if dop <= 1 then arr |> Array.map (fun x -> (x, mapPointWithPhase x)) |> List.ofArray
+            else
+                let res = Array.zeroCreate arr.Length
+                let opts = Threading.Tasks.ParallelOptions(MaxDegreeOfParallelism = dop)
+                try
+                    Threading.Tasks.Parallel.For(
+                        0, arr.Length, opts,
+                        Action<int>(fun i ->
+                            // Take a slot from the process-wide budget so a caller running
+                            // several designs at once cannot oversubscribe the machine.
+                            ParallelBudget.acquire ()
+                            try res.[i] <- (arr.[i], mapPointWithPhase arr.[i])
+                            finally ParallelBudget.release ())) |> ignore
+                with :? AggregateException as agg ->
+                    // Surface the first real failure rather than the aggregate wrapper: the
+                    // inner exception already names the bypass fraction that produced it.
+                    raise (agg.Flatten().InnerExceptions |> Seq.head)
+                List.ofArray res
         let pmap =
-            let initial = xGridBase |> List.map (fun x -> x, mapPointWithPhase x)
+            let initial = evaluateGrid xGridBase
             if not case.Bypass.Enabled || mode <> "adaptive" || case.Bypass.Fraction.IsSome || case.Bypass.ValveOpenDeg.IsSome then
                 initial
             else
                 let points = ResizeArray(initial)
                 let mutable candidates = [ 0.015; 0.021; 0.030; 0.045; 0.065; 0.090; 0.125; 0.170 ]
                 let closeEnough (p: MapPt) = abs (p.TMix - case.Bypass.TargetMixOut) <= max 0.05 settings.BypassTargetToleranceK
-                let mutable done_ =
+                // The mixed outlet temperature RISES with the bypass fraction, so the grid has
+                // to keep growing until the last point reaches the target. Stopping while the
+                // map is still below it leaves the target outside the map, and every later
+                // inversion then clamps to the map edge instead of to a real limit.
+                let bracketsTarget () =
                     (snd points.[0]).TMix >= case.Bypass.TargetMixOut
-                    || (snd points.[points.Count - 1]).TMix <= case.Bypass.TargetMixOut
-                    || (points |> Seq.exists (snd >> closeEnough))
+                    || (snd points.[points.Count - 1]).TMix >= case.Bypass.TargetMixOut
+                let mutable done_ = bracketsTarget () || (points |> Seq.exists (snd >> closeEnough))
                 while not done_ && not candidates.IsEmpty do
                     let x = List.head candidates
                     candidates <- List.tail candidates
                     points.Add(x, mapPointWithPhase x)
-                    done_ <- (snd points.[points.Count - 1]).TMix <= case.Bypass.TargetMixOut || (points |> Seq.exists (snd >> closeEnough))
+                    done_ <- bracketsTarget () || (points |> Seq.exists (snd >> closeEnough))
                 points |> Seq.toList
             |> List.map snd
 
@@ -639,7 +787,56 @@ module Design =
                         else invertMap pmap (fun p -> p.TMix) case.Bypass.TargetMixOut
 
         phase "Solving final coupled thermal and natural-circulation case"
-        let (tMixed, out, dist, bpRes) = evaluate xUsed
+        let (tMixed, out, dist, bpRes, struct (coupledIters, coupledOk, coupledResidual)) =
+            evaluate xUsed
+        // The bypass map is only a valid basis for the valve limits if it actually spans the
+        // target: otherwise every inversion below clamps to the map edge, and an edge is not
+        // a constraint.
+        let bypassMapBracketsTarget =
+            not case.Bypass.Enabled
+            || (List.head pmap).TMix >= case.Bypass.TargetMixOut
+            || (List.last pmap).TMix >= case.Bypass.TargetMixOut
+        // Two different steam figures, both legitimate, and the report has to name which is
+        // which. `out.Steam` is the evaporation rate inside the bundle, computed from the duty
+        // and the latent heat with the entering water already at saturation - the basis the
+        // reference datasheet uses. The net figure is what actually leaves the drum once the
+        // feedwater has been heated from TFeed up to saturation.
+        let totalDuty = out.Duty + (match bpRes with Some b -> b.HeatLoss | None -> 0.0)
+        let hFeed = Steam.hLiquid case.Water.DrumPressure (min case.Water.TFeed (sat.Tsat - 0.01))
+        let feedSubcooling = max 0.0 (sat.Tsat - case.Water.TFeed)
+        let steamNet =
+            let rise = sat.HV - hFeed
+            if rise > 1.0 then totalDuty / rise else nan
+        // Downcomer inlet flashing margin. Water leaves the drum essentially saturated; the
+        // entry loss and the velocity head drop the local pressure BEFORE the column has any
+        // height to recover it. If the subcooling from mixing with the feedwater is not enough
+        // to cover that drop, bubbles form exactly where only liquid is wanted, and the
+        // driving head that the design counts on is not there.
+        let dcSubcooling =
+            let wCirc = max 1e-9 dist.Global.CircFlow
+            let dh = (sat.HL - hFeed) * min 1.0 (steamNet / wCirc)
+            if Double.IsNaN dh then 0.0 else max 0.0 (dh / max 1.0 sat.CpL)
+        let dcSubcoolingRequired =
+            // Clausius-Clapeyron gives the saturation pressure slope, which converts the local
+            // pressure dip into the temperature margin it demands.
+            let dpdT = sat.Hfg * sat.RhoV * sat.RhoL / (sat.Tsat * max 1e-9 (sat.RhoL - sat.RhoV))
+            let v = dist.Global.VelDowncomer
+            let kEntry = 0.5 + max 0.0 case.Loop.Drum.DowncomerVortexBreakerK
+            let dpLocal = kEntry * sat.RhoL * v * v / 2.0
+            if dpdT <= 0.0 then 0.0 else dpLocal / dpdT
+        let convergence =
+            { CoupledIterations = coupledIters
+              CoupledConverged = coupledOk
+              CoupledResidual = coupledResidual
+              QualityClampedCells = out.QualityClamped
+              QualityClampFirstZ = out.QualityClampFirstZ
+              NonConvergedCells = out.NonConvergedCells
+              CirculationRoots = dist.RootCount
+              CirculationBracketOk = dist.BracketOk
+              CirculationSlope = dist.BalanceSlope
+              DowncomerSubcooling = dcSubcooling
+              DowncomerSubcoolingRequired = dcSubcoolingRequired
+              BypassMapBracketsTarget = bypassMapBracketsTarget }
         let circ = dist.Global
         let axial0 =
             List.mapi (fun i (a: AxialResult) ->
@@ -783,15 +980,25 @@ module Design =
                     if f 1e-6 <= 0.0 then 1e-6
                     elif f xTop >= 0.0 then xTop
                     else bisect f 1e-6 xTop 1e-9 60
-                let xLiner =
+                let (xLiner, kLiner) =
                     let lim = cToK bpSpec.LinerMaterial.TmaxDesign
-                    if (List.last pmap).TLinerMax <= lim then xTop
-                    else invertMap pmap (fun p -> p.TLinerMax) lim
+                    if (List.last pmap).TLinerMax <= lim then (xTop, FromMapEdge)
+                    else invertMapWithKind pmap (fun p -> p.TLinerMax) lim
+                let (xTMixMin, kTMixMin) = invertMapWithKind pmap (fun p -> p.TMix) bpSpec.TMixMin
+                let (xTMixMax, kTMixMax) = invertMapWithKind pmap (fun p -> p.TMix) bpSpec.TMixMax
+                // A driver whose angle only reflects where the map stops is not a limit, and
+                // saying so is the difference between "the valve has no room left" and "the
+                // calculation was not carried far enough".
+                let why (k: LimitKind) (text: string) =
+                    match k with
+                    | FromCrossing -> text
+                    | FromMapEdge ->
+                        text + sprintf " -- ATTENZIONE: %s: la mappa del by-pass si ferma prima di raggiungere questo limite, quindi l'angolo mostrato e' il bordo del calcolo, non il vincolo. Rilanciare con calculation.bypassMapMode = full." (limitTag k)
                 let minDrivers =
                     [ "controllabilita' meccanica", bpSpec.MinOpenDeg,
                       sprintf "sotto %.0f° di apertura il guadagno d(ln zeta)/d(theta) esplode: la farfalla diventa di fatto on-off" bpSpec.MinOpenDeg
-                      "T miscelata minima di processo", angFromX (invertMap pmap (fun p -> p.TMix) bpSpec.TMixMin),
-                      sprintf "sotto questo angolo la miscelata scende sotto %.0f °C" (kToC bpSpec.TMixMin)
+                      "T miscelata minima di processo", angFromX xTMixMin,
+                      why kTMixMin (sprintf "sotto questo angolo la miscelata scende sotto %.0f °C" (kToC bpSpec.TMixMin))
                       "lavaggio minimo del liner", angFromX xPurge,
                       sprintf "serve almeno %.1f m/s nel liner per non avere un ramo morto (stratificazione, deposito, corrosione sotto deposito)" bpSpec.MinPurgeVel
                       "erosione/rumore in vena contratta", angFromX xEros,
@@ -799,10 +1006,10 @@ module Design =
                 let maxDrivers =
                     [ "autorita' della valvola", bpSpec.MaxOpenDeg,
                       sprintf "oltre %.0f° zeta e' quasi costante: aprendo di piu' non cambia nulla" bpSpec.MaxOpenDeg
-                      "T miscelata massima di processo", angFromX (invertMap pmap (fun p -> p.TMix) bpSpec.TMixMax),
-                      sprintf "oltre questo angolo la miscelata supera %.0f °C" (kToC bpSpec.TMixMax)
+                      "T miscelata massima di processo", angFromX xTMixMax,
+                      why kTMixMax (sprintf "oltre questo angolo la miscelata supera %.0f °C" (kToC bpSpec.TMixMax))
                       "limite metallurgico del liner", angFromX xLiner,
-                      sprintf "%s: %.0f °C" bpSpec.LinerMaterial.Name bpSpec.LinerMaterial.TmaxDesign ]
+                      why kLiner (sprintf "%s: %.0f °C" bpSpec.LinerMaterial.Name bpSpec.LinerMaterial.TmaxDesign) ]
                 let thMin = minDrivers |> List.map (fun (_, a, _) -> a) |> List.max
                 let thMax = maxDrivers |> List.map (fun (_, a, _) -> a) |> List.min
                 let thNorm = angFromX xUsed
@@ -1153,7 +1360,7 @@ module Design =
                         let v =
                             Vibration.check j w.Y sp lam case.TubeLayout case.VibrationDamping
                                 t.Do t.Di t.Pitch (case.Material.E (kToC w.TMetalWallAvg)) 7850.0
-                                w.VelCross rhoH rhoGas
+                                w.VelCross rhoH rhoGas w.Alpha
                         match vibrationBest.[j] with
                         | Some old when old.FeiRatio >= v.FeiRatio -> ()
                         | _ -> vibrationBest.[j] <- Some v
@@ -1298,7 +1505,7 @@ module Design =
                       Note = ln.Note }))
         let findings =
             buildFindings settings.CorrelationValidityWarnings case sat cells axial circ ftRes riserChecks expansions bpRes out.DpGas
-                stressRes valveRes notConnected vibration
+                stressRes valveRes notConnected vibration convergence
         let warnings =
             findings
             |> List.map (fun f ->
@@ -1376,6 +1583,9 @@ module Design =
           AreaIn = areaIn
           UMean = (if lm > 0.0 then out.Duty / (areaOut * lm) else 0.0)
           LmtdMean = lm
+          SteamProductionNet = steamNet
+          FeedSubcooling = feedSubcooling
+          Convergence = convergence
           Warnings = warnings }
 
     /// <summary>

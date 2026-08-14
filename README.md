@@ -16,7 +16,7 @@ an elevated steam drum.
 - [Acronyms and terms](docs/ACRONYMS.md)
 - [Input schema and options](docs/INPUT_SCHEMA.md)
 - [Validation and regression benchmarks](docs/VALIDATION.md)
-- [Future implementation TODO](docs/TODO.md)
+- [Work list and backlog](TODO.md)
 - [Detailed correlation and issue notes](DOC_correlazioni_e_problematiche.md)
 - [AI assistant memory and modification rules](AGENTS.md)
 
@@ -83,9 +83,16 @@ estimated progress bar, the current task description, elapsed time and estimated
 remaining time.
 
 The CLI also supports timestamped phase logging through `whb.options.json`.
-By default logs are written to `logs/whb-run.log`, temporary/service files use
-`tmp/`, and preflight checks verify active runs, read/write access and disk
-space before the calculation starts.
+Logging is on by default for every calculation command (the default run,
+`--sizing` and `--loads`); keys omitted from an options file keep their
+documented defaults, so logging stays on unless `logging.enabled` is set to
+`false` explicitly. By default logs are written to `logs/whb-run.log`,
+temporary/service files use `tmp/`, and preflight checks verify active runs,
+read/write access and disk space before the calculation starts.
+
+Bypass-map points are solved concurrently (see `calculation.parallelism`), so
+the log records the completion and elapsed time of each point rather than only
+its start.
 
 The same options file controls whether full engineering reports are generated.
 Summary, criticality, PDS comparison and inventory outputs are always written;
@@ -151,11 +158,24 @@ whb --options-template [file.json]
 whb --selftest
 whb --loads [case.json] [--out <folder>]
 whb --sizing [case.json] [--out <folder>]
+whb --optimize [case.json] [--out <folder>]
 whb --github-plan [options.json]
 whb --github-push [options.json]
+whb --help
 ```
 
+`whb --help` prints the complete manual: every command, every option, the keys of
+the project options file, the files each command writes, and the exit codes.
+
 If no case file is supplied, the reference case is executed.
+
+`--optimize` runs a constrained search over ferrule length and tube length for
+the largest duty that still satisfies the design limits (DNBR, metal temperature,
+gas pressure drop, flow-induced vibration). It writes `ottimizzazione.txt`, which
+states not just where the optimum is but **what holds it there**: an active
+constraint, the edge of the search range, a genuine interior stationary point, or
+no feasible point at all. Each evaluation is a full coupled solve, so the search
+takes minutes rather than seconds.
 
 ## Local Tasks
 
@@ -261,6 +281,9 @@ Default output is written to `results/` unless `--out` is provided.
 | `valvola_bypass.csv` | Bypass valve data |
 | `maldistribuzione.txt` | Maldistribution notes |
 | `vibrazioni.txt` | Vibration checks |
+| `dimensionamento.txt` | Sizing sheet; the only file written by `--sizing` |
+| `carichi.txt` / `carichi.csv` | Partial-load curves, written by `--loads` |
+| `ottimizzazione.txt` | Constrained search result, written by `--optimize` |
 
 ## Validation
 
@@ -271,10 +294,11 @@ The built-in `--selftest` command checks:
 - selected gas-property values for air and the reference syngas mixture;
 - real-gas virial correction traces used by the gas model.
 
-The repository test suite currently covers 21 tests across core numerical
-utilities, unit conversions, grid generation, piping geometry helpers, material
-lookup, heat-transfer behavior, two-phase multipliers, validation tables and
-reporting contracts.
+The repository test suite currently covers 42 tests across core numerical
+utilities and root finders, unit conversions, grid generation, piping geometry
+helpers, material lookup, heat-transfer behavior, two-phase multipliers, the
+enthalpy inversion, the constrained search and its optimum classification,
+validation tables, options-file merging and reporting contracts.
 
 Run:
 

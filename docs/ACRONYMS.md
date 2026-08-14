@@ -9,6 +9,12 @@
 | CHF | Critical Heat Flux |
 | DNBR | Departure from Nucleate Boiling Ratio |
 | HTC | Heat Transfer Coefficient |
+| FIV | Flow-Induced Vibration |
+| AIV | Acoustically Induced Vibration; excitation from the acoustic power a throttling valve radiates into the downstream pipe |
+| Ledinegg | Static flow-excursion instability: the demand curve of a boiling channel is S-shaped in flow and can meet the available head at more than one point |
+| Buffeting | Random broadband excitation of a tube by turbulence in the cross flow; the dominant mechanism in two-phase flow |
+| Slug flow | Intermittent two-phase regime in which liquid slugs and vapour plugs alternate, producing momentum-force swings at pipe bends |
+| Palen | Bundle-factor method for the critical heat flux of a tube bundle; the conservative default of this model |
 | LMTD | Log Mean Temperature Difference |
 | IF97 | IAPWS Industrial Formulation 1997 for water and steam properties |
 | IAPWS | International Association for the Properties of Water and Steam |

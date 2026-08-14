@@ -68,18 +68,31 @@ module Shift =
                 let xiEq = extent (molFrac c CO) (molFrac c H2O) (molFrac c CO2) (molFrac c H2) (kp tK)
                 normalize (applyExtent c (frac * xiEq))
     let stateFromEnthalpyAt (mode: Mode) (real: bool) (pPa: float) (cIn: Composition) (h: float) =
-        let hOf (c: Composition) (t: float) =
-            if real then enthalpyAbsReal true c t pPa else enthalpyAbs c t
+        // Enthalpy grows monotonically with temperature (cp > 0), so the inversion is
+        // driven by a bracketed Newton iteration on the residual, using the mixture cp
+        // that the property evaluation already returns as the derivative.
+        let residualAt (c: Composition) (t: float) =
+            let struct (hc, cp) = enthalpyAbsRealWithCp real c t pPa
+            struct (hc - h, cp)
         match mode with
         | Frozen ->
-            let t = bisect (fun t -> hOf cIn t - h) 250.0 2500.0 1e-4 200
+            let t = newtonIncreasing (residualAt cIn) 250.0 2500.0 1000.0 1e-9 60
             (t, cIn)
         | _ ->
-            let f (t: float) =
-                let c = equilibrate mode cIn t
-                hOf c t - h
-            let t = bisect f 250.0 2500.0 1e-4 200
+            let f (t: float) = residualAt (equilibrate mode cIn t) t
+            let t = newtonIncreasing f 250.0 2500.0 1000.0 1e-9 60
             (t, equilibrate mode cIn t)
+    /// <summary>
+    /// Gas composition in equilibrium with the given enthalpy state.
+    /// </summary>
+    /// <remarks>
+    /// In <c>Frozen</c> mode the composition is invariant, so the enthalpy inversion
+    /// is skipped entirely; other modes fall back to the full state solve.
+    /// </remarks>
+    let compositionFromEnthalpyAt (mode: Mode) (real: bool) (pPa: float) (cIn: Composition) (h: float) =
+        match mode with
+        | Frozen -> cIn
+        | _ -> snd (stateFromEnthalpyAt mode real pPa cIn h)
     let stateFromEnthalpy (mode: Mode) (cIn: Composition) (h: float) =
         stateFromEnthalpyAt mode false 0.0 cIn h
 

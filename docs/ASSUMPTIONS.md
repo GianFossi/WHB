@@ -55,7 +55,13 @@ This document summarizes the main engineering assumptions used by WHB.
 - Mechanical checks are screening calculations, not code-stamped pressure-part design.
 - Vibration checks are screening checks based on empirical and theoretical relationships.
 - The automated vibration testing campaign covers empirical coefficients, theoretical frequency scaling, velocity sensitivity, allowable-span response and one frozen validation row.
-- Tube support, damping, acoustic behavior, and boundary conditions must be validated against project rules and vendor data.
+- Tube support, damping and boundary conditions must be validated against project
+  rules and vendor data. Damping is taken from the case input; the void-dependent
+  two-phase shape is reported only as a sensitivity.
+- Steam production is quoted as the evaporation rate inside the bundle, with the
+  water entering the tubes at saturation. This is the basis the reference datasheet
+  uses. The net steam flow leaving the drum, which accounts for heating the
+  feedwater from `vapore.t_alimento_C` up to saturation, is reported alongside it.
 
 ## Inventory Basis
 

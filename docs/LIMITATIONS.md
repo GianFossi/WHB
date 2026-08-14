@@ -38,11 +38,27 @@ This document lists important limitations and simplifications to keep visible du
 - Mechanical checks are screening calculations only.
 - Vibration checks are screening calculations only.
 - Detailed finite-element analysis is not included.
-- Detailed acoustic modeling is not included.
+- Acoustic resonance is deliberately not checked: it concerns compressible gas on
+  the shell side, and a fire-tube WHB has boiling water there. Acoustically induced
+  vibration downstream of the bypass valve is not screened either, and that one is a
+  genuine gap rather than a decision.
+- Slug forces on two-phase lines are reported as a screening estimate per bend, with
+  a unit-cell assumption; they are not a substitute for a pipe-stress analysis.
 - Support clearances, fabrication tolerances, tube wear, and local damage mechanisms are not fully represented.
 
 ## Current Technical Limits
 
+- Gas-side tube flow is not redistributed between parallel tubes: every band marches
+  with the same mass flow per tube and ends at a slightly different outlet pressure,
+  where physically the tubes share one pressure drop and redistribute. The reported
+  gas pressure drop is a tube-count weighted mean over the bands.
+- Feedwater temperature drives the reported net steam flow and the downcomer
+  flashing margin, but the bundle evaporation rate is still quoted on the saturated
+  basis, which is the basis the reference datasheet uses.
+- Fouling resistances are constant: the self-accelerating deposit mechanism the
+  findings describe is not simulated.
+- Circulation stability is screened statically (Ledinegg slope and root count).
+  Density-wave and geysering screening is not implemented.
 - IAPWS region 3 is not implemented.
 - Steam pressure is practically limited to about 165 bar for this model.
 - Vendor-specific proprietary methods are not included.
