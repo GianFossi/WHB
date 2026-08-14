@@ -24,6 +24,7 @@
 | HTML | HyperText Markup Language |
 | API | Application Programming Interface |
 | CI | Continuous Integration |
+| EOS | Equation of State |
 | FEA | Finite Element Analysis |
 | NPS | Nominal Pipe Size |
 | Sch | Pipe schedule |

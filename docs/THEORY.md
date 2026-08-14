@@ -35,6 +35,8 @@ specified bypass fraction directly.
 The adaptive mode was introduced because the full map repeated several complete
 WHB thermal/hydraulic solves at bypass fractions that do not affect the base
 case. For final issue or sensitivity work, the full mode remains available.
+An optional gas-property cache can also reduce repeated thermophysical
+evaluations during one design run.
 
 ## Water-Side Heat Transfer
 
