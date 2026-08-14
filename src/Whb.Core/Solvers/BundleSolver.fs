@@ -80,7 +80,8 @@ module BundleSolver =
     let private solveCell
         (case: DesignCase) (sat: Steam.SatProps) (props: GasProps.MixProps)
         (z: float) (mdotPerTube: float) (inFerrule: bool)
-        (rH2O: float) (rCO2: float) (x: float) (gCross: float) (twiGuess: float) =
+        (rH2O: float) (rCO2: float) (x: float) (gCross: float) (twiGuess: float)
+        (wallMu: float -> float -> float) (tubeK: float -> float) =
 
         let t = case.Tube
         let bore = if inFerrule then case.Ferrule.Bore else t.Di
@@ -98,8 +99,7 @@ module BundleSolver =
         let mutable gasRes = Unchecked.defaultof<GasSide.GasHtcResult>
 
         for _ in 1 .. 14 do
-            let muWall =
-                (GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas case.Gas.Composition (max 300.0 twi) props.P case.Gas.Z).Mu
+            let muWall = wallMu (max 300.0 twi) props.P
             let g = case.Gas
             gasRes <-
                 GasSide.localHtc g.Correlation props muWall bore mdotPerTube z
@@ -109,7 +109,7 @@ module BundleSolver =
             let rFerr =
                 if inFerrule then ferruleResistance case.Ferrule t.Di (kToC (0.5 * (twi + tmi)))
                 else 0.0
-            let km = case.Material.K (kToC (0.5 * (tmi + tmo)))
+            let km = tubeK (kToC (0.5 * (tmi + tmo)))
             rMetal <- log (t.Do / t.Di) / (2.0 * Math.PI * km)
             rFoulOut <- case.Water.FoulingOut / (Math.PI * t.Do)
             let rFixed = rGas + rFoulIn + rFerr + rMetal + rFoulOut
@@ -146,6 +146,26 @@ module BundleSolver =
         let comp0 = GasProps.normalize case.Gas.Composition
         let rH2O = GasProps.molFrac comp0 GasProps.H2O
         let rCO2 = GasProps.molFrac comp0 GasProps.CO2
+        let wallMuCache = Collections.Generic.Dictionary<string, float>()
+        let tubeKCache = Collections.Generic.Dictionary<float, float>()
+        let wallMu tK pPa =
+            let key = sprintf "%.1f|%.0f" (Math.Round(tK * 2.0) / 2.0) (Math.Round(pPa / 100.0) * 100.0)
+            match wallMuCache.TryGetValue key with
+            | true, v -> v
+            | _ ->
+                let v =
+                    (GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas comp0
+                         (Math.Round(tK * 2.0) / 2.0) pPa case.Gas.Z).Mu
+                wallMuCache.[key] <- v
+                v
+        let tubeK tC =
+            let key = Math.Round(tC * 2.0) / 2.0
+            match tubeKCache.TryGetValue key with
+            | true, v -> v
+            | _ ->
+                let v = case.Material.K key
+                tubeKCache.[key] <- v
+                v
         let bandArr = bands |> List.toArray
         let ny = bandArr.Length
         let classes = ferruleClasses case.Ferrule
@@ -187,7 +207,7 @@ module BundleSolver =
                         let tG = fst (Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pGas.[j, c] comp0 hGas.[j, c])
                         let props =
                             GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas compBand.[j, c] tG pGas.[j, c] case.Gas.Z
-                        let r = solveCell case sat props z mdotPerTube inFerrule rH2O rCO2 x gCross twiPrev.[j, c]
+                        let r = solveCell case sat props z mdotPerTube inFerrule rH2O rCO2 x gCross twiPrev.[j, c] wallMu tubeK
                         (frac, fl, inFerrule, props, r))
                 let dQband =
                     res |> Array.sumBy (fun (frac, _, _, _, (q, _, _, _, _, _, _, _, _)) ->
@@ -204,7 +224,7 @@ module BundleSolver =
                     twiPrev.[j, c] <- twi
                     let bore = if inFerrule then case.Ferrule.Bore else t.Di
                     let qOut = qlin / (Math.PI * t.Do)
-                    let km = case.Material.K (kToC (0.5 * (tmi + tmo)))
+                    let km = tubeK (kToC (0.5 * (tmi + tmo)))
                     let rm = 0.5 * (t.Di + t.Do) / 2.0
                     let ri = t.Di / 2.0
                     let ro = t.Do / 2.0
@@ -256,21 +276,44 @@ module BundleSolver =
             dutyCum <- dutyCum + dutySlice
             steamCum <- steamCum + dutySlice / sat.Hfg
 
-            let col = [ for j in 0 .. ny - 1 do for c in 0 .. nc - 1 -> cells.[i, j, c] ]
-            let wSum = col |> List.sumBy (fun x -> x.NTubes)
+            let mutable wSum = 0.0
+            let mutable tGasWeighted = 0.0
+            let mutable tGasMin = Double.PositiveInfinity
+            let mutable tGasMax = Double.NegativeInfinity
+            let mutable qFluxWeighted = 0.0
+            let mutable qFluxMax = Double.NegativeInfinity
+            let mutable tMetalInMax = Double.NegativeInfinity
+            let mutable tMetalOutMax = Double.NegativeInfinity
+            let mutable dnbrMin = Double.PositiveInfinity
+            let mutable pGasWeighted = 0.0
+            for j in 0 .. ny - 1 do
+                for c in 0 .. nc - 1 do
+                    let cell = cells.[i, j, c]
+                    let wt = cell.NTubes
+                    wSum <- wSum + wt
+                    tGasWeighted <- tGasWeighted + cell.TGas * wt
+                    pGasWeighted <- pGasWeighted + cell.PGas * wt
+                    qFluxWeighted <- qFluxWeighted + cell.QFluxOut * wt
+                    if cell.TGas < tGasMin then tGasMin <- cell.TGas
+                    if cell.TGas > tGasMax then tGasMax <- cell.TGas
+                    if cell.QFluxOut > qFluxMax then qFluxMax <- cell.QFluxOut
+                    if cell.TMetalIn > tMetalInMax then tMetalInMax <- cell.TMetalIn
+                    if cell.TMetalOut > tMetalOutMax then tMetalOutMax <- cell.TMetalOut
+                    if cell.DNBR < dnbrMin then dnbrMin <- cell.DNBR
             let top = cells.[i, ny - 1, 0]
             let bot = cells.[i, 0, 0]
             let alphaTop = TwoPhase.voidFraction case.Loop.VoidModel top.XOut sat top.GCross
             let rhoHTop = TwoPhase.homogeneousDensity top.XOut sat
+            let invWSum = 1.0 / max 1e-12 wSum
             axial.Add
                 { Z = z
-                  TGasMean = (col |> List.sumBy (fun x -> x.TGas * x.NTubes)) / wSum
-                  TGasMin = col |> List.map (fun x -> x.TGas) |> List.min
-                  TGasMax = col |> List.map (fun x -> x.TGas) |> List.max
-                  QFluxMean = (col |> List.sumBy (fun x -> x.QFluxOut * x.NTubes)) / wSum
-                  QFluxMax = col |> List.map (fun x -> x.QFluxOut) |> List.max
-                  TMetalInMax = col |> List.map (fun x -> x.TMetalIn) |> List.max
-                  TMetalOutMax = col |> List.map (fun x -> x.TMetalOut) |> List.max
+                  TGasMean = tGasWeighted * invWSum
+                  TGasMin = tGasMin
+                  TGasMax = tGasMax
+                  QFluxMean = qFluxWeighted * invWSum
+                  QFluxMax = qFluxMax
+                  TMetalInMax = tMetalInMax
+                  TMetalOutMax = tMetalOutMax
                   SteamLin = steamLin.[i]
                   DutyLin = dutyLin.[i]
                   WFieldLin = wl
@@ -283,8 +326,8 @@ module BundleSolver =
                   VelVapOut = (if alphaTop > 1e-6 then top.GCross * top.XOut / (sat.RhoV * alphaTop) else 0.0)
                   VelAxialBottom = 0.0
                   VelAxialTop = 0.0
-                  DNBRMin = col |> List.map (fun x -> x.DNBR) |> List.min
-                  PGas = (col |> List.sumBy (fun x -> x.PGas * x.NTubes)) / wSum
+                  DNBRMin = dnbrMin
+                  PGas = pGasWeighted * invWSum
                   SteamCum = steamCum
                   DutyCum = dutyCum }
 

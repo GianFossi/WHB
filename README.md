@@ -69,13 +69,13 @@ dotnet run --project src/Whb.Cli
 Generate an editable JSON input file:
 
 ```bash
-dotnet run --project src/Whb.Cli -- --template caso.json
+dotnet run --project src/Whb.Cli -- --template case.json
 ```
 
 Run a custom case:
 
 ```bash
-dotnet run --project src/Whb.Cli -- caso.json --out results
+dotnet run --project src/Whb.Cli -- case.json --out results
 ```
 
 During long calculations the CLI shows a console status window with an
@@ -127,7 +127,13 @@ dotnet run --project src/Whb.Cli -- my-case.json --options whb.options.json --ou
 Generate partial-load curves from a case file:
 
 ```bash
-dotnet run --project src/Whb.Cli -- --carichi my-case.json --out results/load-curves
+dotnet run --project src/Whb.Cli -- --loads my-case.json --out results/load-curves
+```
+
+Generate the automatic sizing report:
+
+```bash
+dotnet run --project src/Whb.Cli -- --sizing my-case.json --out results/sizing
 ```
 
 Check installed correlations and reference values:
@@ -139,11 +145,12 @@ dotnet run --project src/Whb.Cli -- --selftest
 ## CLI Commands
 
 ```text
-whb [caso.json] [--out <cartella>] [--options <whb.options.json>]
+whb [case.json] [--out <folder>] [--options <whb.options.json>]
 whb --template [file.json]
 whb --options-template [file.json]
 whb --selftest
-whb --carichi [caso.json] [--out <cartella>]
+whb --loads [case.json] [--out <folder>]
+whb --sizing [case.json] [--out <folder>]
 whb --github-plan [options.json]
 whb --github-push [options.json]
 ```

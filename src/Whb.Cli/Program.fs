@@ -614,6 +614,7 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
     File.WriteAllText(Path.Combine(outDir, "valvola_bypass.csv"), Report.csvValve r)
     File.WriteAllText(Path.Combine(outDir, "maldistribuzione.txt"), Report.maldistributionText r)
     File.WriteAllText(Path.Combine(outDir, "vibrazioni.txt"), Report.vibrationText r)
+    File.WriteAllText(Path.Combine(outDir, "dimensionamento.txt"), Report.sizingText r)
     if options.Reporting.GenerateHtmlReport then
         File.WriteAllText(Path.Combine(outDir, "report.html"), HtmlReport.build r)
         logger "Full HTML report written"
@@ -625,15 +626,33 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
     printfn "Calcolo completato in %.1f s. File scritti in: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
     logger (sprintf "Run completed in %.1f s; output folder: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir))
     0
+
+let sizingOnly (options: Options.ProjectOptions) (case: DesignCase) (outDir: string) =
+    Directory.CreateDirectory outDir |> ignore
+    let sw = Diagnostics.Stopwatch.StartNew()
+    let runSettings : Design.RunSettings =
+        { BypassMapMode = options.Calculation.BypassMapMode
+          BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
+          GasPropertyCache = options.Calculation.GasPropertyCache
+          CorrelationValidityWarnings = options.Calculation.CorrelationValidityWarnings }
+    let r = Design.runWithSettingsAndProgress runSettings ignore case
+    let txt = Report.sizingText r
+    File.WriteAllText(Path.Combine(outDir, "dimensionamento.txt"), txt)
+    printfn "%s" txt
+    printfn "Sizing completed in %.1f s. File written to: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
+    0
+
 let writeDefaultOptions path =
+    let dir = Path.GetDirectoryName(Path.GetFullPath path)
+    if not (String.IsNullOrWhiteSpace dir) then Directory.CreateDirectory dir |> ignore
     Options.save path Options.defaultOptions
-    printfn "Opzioni progetto scritte in: %s" (Path.GetFullPath path)
+    printfn "Project options written to: %s" (Path.GetFullPath path)
     0
 let githubPlan optionsPath =
     let opts = Options.load optionsPath
     let plan = GitHubTransfer.plan opts
-    printfn "Piano trasferimento GitHub"
-    printfn "  repository: %s" (if String.IsNullOrWhiteSpace plan.RepositoryUrl then "(non impostato)" else plan.RepositoryUrl)
+    printfn "GitHub transfer plan"
+    printfn "  repository: %s" (if String.IsNullOrWhiteSpace plan.RepositoryUrl then "(not set)" else plan.RepositoryUrl)
     printfn "  branch:     %s" plan.Branch
     printfn "  commit:     %s" plan.CommitMessage
     printfn ""
@@ -644,27 +663,28 @@ let githubPush optionsPath =
     let opts = Options.load optionsPath
     match GitHubTransfer.execute (Directory.GetCurrentDirectory()) opts with
     | Ok output ->
-        printfn "Trasferimento GitHub completato."
+        printfn "GitHub transfer completed."
         if not (String.IsNullOrWhiteSpace output) then printfn "%s" output
         0
     | Error err ->
-        eprintfn "Trasferimento GitHub non completato: %s" err
+        eprintfn "GitHub transfer failed: %s" err
         3
 
 [<EntryPoint>]
 let main argv =
     let args = List.ofArray argv
     let printUsage () =
-        printfn "Uso:"
-        printfn "  whb [caso.json] [--out <cartella>] [--options <whb.options.json>]"
+        printfn "Usage:"
+        printfn "  whb [case.json] [--out <folder>] [--options <whb.options.json>]"
         printfn "  whb --template [file.json]"
         printfn "  whb --options-template [file.json]"
         printfn "  whb --selftest"
-        printfn "  whb --carichi [caso.json] [--out <cartella>]"
+        printfn "  whb --loads [case.json] [--out <folder>]"
+        printfn "  whb --sizing [case.json] [--out <folder>]"
         printfn "  whb --github-plan [options.json]"
         printfn "  whb --github-push [options.json]"
         printfn ""
-        printfn "Se il caso non viene indicato viene usato il caso di riferimento."
+        printfn "If no case file is provided, the reference case is used."
     let getOpt name def =
         let rec go = function
             | a :: b :: _ when a = name -> b
@@ -676,16 +696,18 @@ let main argv =
     let outDir = getOpt "--out" projectOptions.Folders.ResultsFolder
     try
         match args with
-        | [] | "--out" :: _ ->
-            printfn "Nessun file di caso indicato: eseguo il caso di riferimento.\n"
+        | [] | "--out" :: _ | "--options" :: _ ->
+            printfn "No case file provided: running the reference case.\n"
             runCase projectOptions None Defaults.referenceCase outDir
         | "--help" :: _ | "-h" :: _ ->
             printUsage ()
             0
         | "--template" :: rest ->
-            let f = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "caso.json"
+            let f = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "case.json"
+            let dir = Path.GetDirectoryName(Path.GetFullPath f)
+            if not (String.IsNullOrWhiteSpace dir) then Directory.CreateDirectory dir |> ignore
             File.WriteAllText(f, template)
-            printfn "Template scritto in %s" (Path.GetFullPath f)
+            printfn "Template written to %s" (Path.GetFullPath f)
             0
         | "--selftest" :: _ -> selfTest ()
         | "--options-template" :: rest ->
@@ -697,33 +719,42 @@ let main argv =
         | "--github-push" :: rest ->
             let f = match rest with | x :: _ when File.Exists x -> x | _ -> "whb.options.json"
             githubPush f
-        | "--carichi" :: rest ->
+        | "--sizing" :: rest ->
             let c =
-                match rest |> List.filter (fun x -> x <> "--out" && x <> outDir) with
+                match rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath) with
                 | f :: _ when File.Exists f -> loadCase f
                 | f :: _ when not (f.StartsWith("--")) ->
-                    eprintfn "File caso non trovato: %s" f
-                    raise (FileNotFoundException("File caso non trovato", f))
+                    eprintfn "Case file not found: %s" f
+                    raise (FileNotFoundException("Case file not found", f))
+                | _ -> Defaults.referenceCase
+            sizingOnly projectOptions c outDir
+        | "--loads" :: rest ->
+            let c =
+                match rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath) with
+                | f :: _ when File.Exists f -> loadCase f
+                | f :: _ when not (f.StartsWith("--")) ->
+                    eprintfn "Case file not found: %s" f
+                    raise (FileNotFoundException("Case file not found", f))
                 | _ -> Defaults.referenceCase
             loadCurves c outDir
         | opt :: _ when opt.StartsWith("--") ->
-            eprintfn "Opzione non riconosciuta: %s" opt
+            eprintfn "Unknown option: %s" opt
             printUsage ()
             2
         | file :: _ when File.Exists file -> runCase projectOptions (Some file) (loadCase file) outDir
         | x :: _ ->
-            eprintfn "File non trovato: %s" x
+            eprintfn "File not found: %s" x
             printUsage ()
             2
     with
     | :? JsonException as ex ->
-        eprintfn "JSON non valido: %s" ex.Message
+        eprintfn "Invalid JSON: %s" ex.Message
         4
     | :? IOException as ex ->
-        eprintfn "Errore file: %s" ex.Message
+        eprintfn "File error: %s" ex.Message
         5
     | ex ->
-        eprintfn "Errore: %s" ex.Message
+        eprintfn "Error: %s" ex.Message
         1
 
 

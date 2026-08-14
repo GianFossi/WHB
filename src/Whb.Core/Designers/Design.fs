@@ -37,6 +37,13 @@ module Design =
           CorrelationValidityWarnings = true }
     let private w fmt = Printf.kprintf id fmt
     let private sev = function Critical -> "CRITICO" | Warning -> "ATTENZIONE" | Note -> "NOTA"
+    let private maxRelativeDelta (a: float[]) (b: float[]) =
+        let n = min a.Length b.Length
+        let mutable d = 0.0
+        for i in 0 .. n - 1 do
+            let den = max 1e-9 (max (abs a.[i]) (abs b.[i]))
+            d <- max d (abs (a.[i] - b.[i]) / den)
+        d
     type private MapPt =
         { X: float
           TMix: float
@@ -470,11 +477,19 @@ module Design =
             let mutable xIn = Array.create nz 0.0
             let mutable o = BundleSolver.solve cx bands wField xIn
             let mutable d = Circulation.solve cx sat bands o.SteamLin o.Dz
-            for _ in 1 .. 5 do
+            let mutable iter = 1
+            let mutable converged = false
+            while iter <= 5 && not converged do
+                let wPrev = wField
+                let xPrev = xIn
                 wField <- d.WFieldLin
                 xIn <- d.XInField
                 o <- BundleSolver.solve cx bands wField xIn
                 d <- Circulation.solve cx sat bands o.SteamLin o.Dz
+                let dw = maxRelativeDelta wPrev wField
+                let dx = maxRelativeDelta xPrev xIn
+                converged <- dw < 1e-5 && dx < 1e-5
+                iter <- iter + 1
             (o, d)
 
         let caseWith (x: float) =
@@ -574,19 +589,19 @@ module Design =
             if not case.Bypass.Enabled || mode <> "adaptive" || case.Bypass.Fraction.IsSome || case.Bypass.ValveOpenDeg.IsSome then
                 initial
             else
-                let mutable points = initial
+                let points = ResizeArray(initial)
                 let mutable candidates = [ 0.015; 0.021; 0.030; 0.045; 0.065; 0.090; 0.125; 0.170 ]
                 let closeEnough (p: MapPt) = abs (p.TMix - case.Bypass.TargetMixOut) <= max 0.05 settings.BypassTargetToleranceK
                 let mutable done_ =
-                    (List.head points |> snd).TMix >= case.Bypass.TargetMixOut
-                    || (List.last points |> snd).TMix <= case.Bypass.TargetMixOut
-                    || (points |> List.exists (snd >> closeEnough))
+                    (snd points.[0]).TMix >= case.Bypass.TargetMixOut
+                    || (snd points.[points.Count - 1]).TMix <= case.Bypass.TargetMixOut
+                    || (points |> Seq.exists (snd >> closeEnough))
                 while not done_ && not candidates.IsEmpty do
                     let x = List.head candidates
                     candidates <- List.tail candidates
-                    points <- points @ [ x, mapPointWithPhase x ]
-                    done_ <- (List.last points |> snd).TMix <= case.Bypass.TargetMixOut || (points |> List.exists (snd >> closeEnough))
-                points
+                    points.Add(x, mapPointWithPhase x)
+                    done_ <- (snd points.[points.Count - 1]).TMix <= case.Bypass.TargetMixOut || (points |> Seq.exists (snd >> closeEnough))
+                points |> Seq.toList
             |> List.map snd
 
         let qDyn (x: float) =
@@ -1117,31 +1132,41 @@ module Design =
                     (z0, z1, sp) ]
         let nSpans = List.length spanRanges
         phase "Running vibration screening over tube bands and support spans"
-        let vibrationAll =
-            [ for (si, (z0, z1, sp)) in List.indexed spanRanges do
+        let vibrationBest = Array.zeroCreate<Vibration.Result option> ny
+        for (si, (z0, z1, sp)) in List.indexed spanRanges do
                 let clamped =
                     let atTubesheet = (si = 0) || (si = nSpans - 1)
                     if atTubesheet && case.TubesheetJoint = Vibration.FullPenetrationWeld then 1 else 0
                 let lam = Vibration.lambda2Of clamped
                 for j in 0 .. ny - 1 do
-                    let inSpan =
-                        cells |> List.filter (fun c -> c.J = j && c.Z >= z0 && c.Z <= z1)
-                    if not inSpan.IsEmpty then
-                        let w = inSpan |> List.maxBy (fun c -> c.VelCross)
+                    let mutable worst = Unchecked.defaultof<CellResult>
+                    let mutable hasWorst = false
+                    for c in cells do
+                        if c.J = j && c.Z >= z0 && c.Z <= z1 && (not hasWorst || c.VelCross > worst.VelCross) then
+                            worst <- c
+                            hasWorst <- true
+                    if hasWorst then
+                        let w = worst
                         let rhoH = TwoPhase.homogeneousDensity w.XOut sat
                         let rhoGas =
                             (mixRealCached case.Gas.MixingRule case.Gas.RealGas comp0 w.TGas w.PGas case.Gas.Z).Rho
-                        yield
+                        let v =
                             Vibration.check j w.Y sp lam case.TubeLayout case.VibrationDamping
                                 t.Do t.Di t.Pitch (case.Material.E (kToC w.TMetalWallAvg)) 7850.0
-                                w.VelCross rhoH rhoGas ]
+                                w.VelCross rhoH rhoGas
+                        match vibrationBest.[j] with
+                        | Some old when old.FeiRatio >= v.FeiRatio -> ()
+                        | _ -> vibrationBest.[j] <- Some v
         let vibration =
             [ for j in 0 .. ny - 1 ->
-                vibrationAll |> List.filter (fun v -> v.Band = j) |> List.maxBy (fun v -> v.FeiRatio) ]
+                match vibrationBest.[j] with
+                | Some v -> v
+                | None -> failwithf "No vibration cell found for band %d" j ]
         phase "Running maldistribution sensitivity campaign"
         let maldist =
             let jb = cellDnb.J
             let wTube0 = wGasTot * (1.0 - xUsed) / float t.NTubes
+            let baseCells = Array.init nz (fun i -> out.Cells.[i, jb, 0])
             [ for ex in [ 0.0; 0.05; 0.10; 0.15; 0.20; 0.30 ] ->
                 let w = wTube0 * (1.0 + ex)
                 let mutable h = GasProps.enthalpyAbsReal case.Gas.RealGas comp0 case.Gas.TIn case.Gas.PIn
@@ -1153,7 +1178,7 @@ module Design =
                 let mutable reIn = 0.0
                 let mutable hPeak = 0.0
                 for i in 0 .. nz - 1 do
-                    let bc = out.Cells.[i, jb, 0]
+                    let bc = baseCells.[i]
                     let p = bc.PGas
                     let tG = fst (Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas p comp0 h)
                     let pr = mixRealCached case.Gas.MixingRule case.Gas.RealGas comp0 tG p case.Gas.Z
@@ -1312,16 +1337,27 @@ module Design =
           FerruleClasses =
             out.Classes
             |> List.mapi (fun ci (frac, fl) ->
-                let sub = cells |> List.filter (fun c -> c.C = ci)
-                let hotSub = sub |> List.filter (fun c -> not c.InFerrule)
-                let qm = hotSub |> List.maxBy (fun c -> c.QFluxOut)
+                let mutable qFluxMax = Double.NegativeInfinity
+                let mutable zQMax = 0.0
+                let mutable tMetalInMax = Double.NegativeInfinity
+                let mutable dnbrMin = Double.PositiveInfinity
+                let mutable duty = 0.0
+                for cell in cells do
+                    if cell.C = ci then
+                        if cell.TMetalIn > tMetalInMax then tMetalInMax <- cell.TMetalIn
+                        duty <- duty + cell.QLin * out.Dz.[cell.I] * cell.NTubes
+                        if not cell.InFerrule then
+                            if cell.QFluxOut > qFluxMax then
+                                qFluxMax <- cell.QFluxOut
+                                zQMax <- cell.Z
+                            if cell.DNBR < dnbrMin then dnbrMin <- cell.DNBR
                 { Index = ci
                   Frac = frac
                   Length = fl
-                  QFluxMax = qm.QFluxOut
-                  ZQMax = qm.Z
-                  TMetalInMax = sub |> List.map (fun c -> c.TMetalIn) |> List.max
-                  DNBRMin = hotSub |> List.map (fun c -> c.DNBR) |> List.min
+                  QFluxMax = qFluxMax
+                  ZQMax = zQMax
+                  TMetalInMax = tMetalInMax
+                  DNBRMin = dnbrMin
                   TGasOut =
                     (let mutable a = 0.0
                      let mutable wq = 0.0
@@ -1329,7 +1365,7 @@ module Design =
                         a <- a + ntb.[j] * out.TGasOutBandClass.[j, ci]
                         wq <- wq + ntb.[j]
                      a / wq)
-                  Duty = sub |> List.sumBy (fun c -> c.QLin * out.Dz.[c.I] * c.NTubes) })
+                  Duty = duty })
           Duty = out.Duty + (match bpRes with Some b -> b.HeatLoss | None -> 0.0)
           SteamProduction = out.Steam + (match bpRes with Some b -> b.SteamFromBypass | None -> 0.0)
           TGasOutMean = tOutMean

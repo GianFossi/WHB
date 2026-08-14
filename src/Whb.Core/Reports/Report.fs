@@ -14,6 +14,7 @@ module Report =
     let inventoryCsv = ReportCommon.inventoryCsv
     let text = ReportText.text
     let synthesis = ReportSynthesis.synthesis
+    let sizingText = ReportSizing.text
     let csvCells = ReportCsv.csvCells
     let maldistributionText = ReportCsv.maldistributionText
     let vibrationText = ReportCsv.vibrationText

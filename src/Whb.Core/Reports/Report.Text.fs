@@ -1467,6 +1467,7 @@ module ReportText =
              (churn/anulare, alte velocita'). Per i riser di una caldaia la strada praticabile
              e' la seconda: riser piu' numerosi e piu' piccoli, che alzano la velocita'."
         sb.AppendLine("  Nota: tutte le portate del caso sono maggiorate del 10% come da datasheet.") |> ignore
+        sb.Append(ReportSizing.section r) |> ignore
         sb.ToString()
 
 

@@ -31,7 +31,10 @@ module Circulation =
         let flowAt (dp: float) =
             bs |> List.sumBy (fun l -> float l.Count * rho * velLiquid rho mu l dp * Piping.area l)
         let dp = bisect (fun dp -> flowAt dp - wTot) 1.0 5.0e6 1e-3 200
-        let vMax = bs |> List.map (fun l -> velLiquid rho mu l dp) |> List.max
+        let mutable vMax = 0.0
+        for l in bs do
+            let v = velLiquid rho mu l dp
+            if v > vMax then vMax <- v
         (dp, vMax)
     let dpLineTwoPhase (case: DesignCase) (sat: Steam.SatProps) (x: float) (l: Piping.Line) (w: float) =
         let rhoH = TwoPhase.homogeneousDensity x sat
@@ -109,13 +112,12 @@ module Circulation =
         let v = abs wLin / (rho * max 1e-9 aByp)
         rho * g * h + float (sign wLin) * kTot * rho * v * v / 2.0
     let splitSlice (case: DesignCase) (sat: Steam.SatProps) (bands: Bundle.Band list)
-                   (aByp: float) (wExt: float) (steamLin: float) =
+                   (aFieldMean: float) (aByp: float) (wExt: float) (steamLin: float) =
         let h = case.Tube.Otl
         if aByp <= 1e-9 then
             let (dp, _, _) = dpFieldColumn case sat bands wExt steamLin 0.0
             (wExt, 0.0, dp, 0.0, 0.0, 0.0)
         else
-            let aFieldMean = bands |> List.averageBy (fun b -> b.FieldFreeArea)
             let stateOf (wField: float) =
                 let wByp = wExt - wField
                 let xTop0 = min 0.95 (steamLin / max 1e-6 wField)
@@ -144,7 +146,10 @@ module Circulation =
         let l = case.Loop
         let t = case.Tube
         let nz = steamLin.Length
-        let steamTot = max 1e-6 (Array.map2 (*) steamLin dzArr |> Array.sum)
+        let mutable steamIntegral = 0.0
+        for i in 0 .. nz - 1 do
+            steamIntegral <- steamIntegral + steamLin.[i] * dzArr.[i]
+        let steamTot = max 1e-6 steamIntegral
         let aDc = branchArea l.Downcomers
         let aR = branchArea l.Risers
         let gravDc = sat.RhoL * g * hDc
@@ -153,6 +158,7 @@ module Circulation =
                 Bundle.openAnnulusArea t.ShellId t.BaffleOd t.Otl
                 * max 0.0 (min 1.0 case.BypassOpenFraction)
             else 0.0
+        let aFieldMean = bands |> List.averageBy (fun b -> b.FieldFreeArea)
 
         let drumDp (wTot: float) (xBar: float) =
             if l.Drum.Enabled then
@@ -175,7 +181,7 @@ module Circulation =
             let mutable dem = 0.0
             for i in 0 .. nz - 1 do
                 let wl = max 1e-4 (cr * steamLin.[i])
-                let (_, _, dp, _, _, _) = splitSlice case sat bands aByp wl steamLin.[i]
+                let (_, _, dp, _, _, _) = splitSlice case sat bands aFieldMean aByp wl steamLin.[i]
                 dem <- dem + dp * wl * dzArr.[i] / wTot
             dem
 
@@ -192,27 +198,39 @@ module Circulation =
         let mutable aBypAcc = 0.0
         let mutable xcAcc = 0.0
         let mutable fricAcc = 0.0
+        let mutable wFieldTot = 0.0
+        let mutable wFieldSum = 0.0
+        let mutable wBypTot = 0.0
+        let mutable steamSum = 0.0
+        let mutable xInSum = 0.0
         for i in 0 .. nz - 1 do
-            let (wf, wb, _, xi, ab, xc) = splitSlice case sat bands aByp wExt.[i] steamLin.[i]
+            let (wf, wb, _, xi, ab, xc) = splitSlice case sat bands aFieldMean aByp wExt.[i] steamLin.[i]
             wField.[i] <- wf
             wByp.[i] <- wb
             xIn.[i] <- xi
+            wFieldTot <- wFieldTot + wf * dzArr.[i]
+            wFieldSum <- wFieldSum + wf
+            wBypTot <- wBypTot + wb * dzArr.[i]
+            steamSum <- steamSum + steamLin.[i]
+            xInSum <- xInSum + xi
             let wgt = wExt.[i] * dzArr.[i] / wTot
             aBypAcc <- aBypAcc + wgt * ab
             xcAcc <- xcAcc + wgt * xc
             fricAcc <- fricAcc + wgt * dpFieldFriction case sat bands wf steamLin.[i] xi
 
-        let wFieldTot = Array.map2 (*) wField dzArr |> Array.sum
         let effCr = wFieldTot / steamTot
-        let xField = min 0.95 (1.0 / effCr + (xIn |> Array.average))
-        let aFieldMean = bands |> List.averageBy (fun b -> b.FieldFreeArea)
+        let invNz = 1.0 / float nz
+        let wFieldMean = wFieldSum * invNz
+        let steamMean = steamSum * invNz
+        let xInMean = xInSum * invNz
+        let xField = min 0.95 (1.0 / effCr + xInMean)
         let alphaB =
-            TwoPhase.voidFraction l.VoidModel xField sat ((wField |> Array.average) / aFieldMean)
+            TwoPhase.voidFraction l.VoidModel xField sat (wFieldMean / aFieldMean)
         let rhoField =
             let (_, _, rho) =
-                dpFieldColumn case sat bands (wField |> Array.average)
-                    (steamLin |> Array.average) (xIn |> Array.average)
+                dpFieldColumn case sat bands wFieldMean steamMean xInMean
             rho
+        let dpDrumFinal = drumDp wTot xBar
 
         { WExtLin = wExt
           WFieldLin = wField
@@ -226,8 +244,8 @@ module Circulation =
               DpDowncomer = dpDc
               DpBundle = fricAcc
               DpRiser = dpR
-              DpNozzles = drumDp wTot xBar
-              DpTotal = dpDc + dpR + fricAcc + drumDp wTot xBar
+              DpNozzles = dpDrumFinal
+              DpTotal = dpDc + dpR + fricAcc + dpDrumFinal
               XOutBundle = xField
               XOutRiser = xBar
               AlphaOutBundle = alphaB
@@ -237,7 +255,7 @@ module Circulation =
               HDowncomer = hDc
               HShell = hF
               HRiser = hR
-              BypassFraction = (Array.map2 (*) wByp dzArr |> Array.sum) / max 1e-9 wTot
+              BypassFraction = wBypTot / max 1e-9 wTot
               EffectiveCR = effCr
               BypassAlpha = aBypAcc
               XCarryUnder = xcAcc
@@ -258,21 +276,34 @@ module Circulation =
                 let h = max 0.0 (min (2.0 * r) h)
                 r * r * acos ((r - h) / r) - (r - h) * sqrt (max 0.0 (2.0 * r * h - h * h))
             let aPlenum = max 1e-3 (segArea rs (rs - ro))
-            let nearest (positions: float list) (z: float) =
-                positions |> List.mapi (fun i p -> (i, abs (p - z))) |> List.minBy snd |> fst
+            let nearest (positions: float[]) (z: float) =
+                let mutable best = 0
+                let mutable bestDist = Double.PositiveInfinity
+                for i in 0 .. positions.Length - 1 do
+                    let d = abs (positions.[i] - z)
+                    if d < bestDist then
+                        best <- i
+                        bestDist <- d
+                best
             let axialFlow (positions: float list) =
-                let idx = arr |> Array.map (fun a -> nearest positions a.Z)
+                let pos = positions |> List.toArray
+                let idx = arr |> Array.map (fun a -> nearest pos a.Z)
                 let res = Array.zeroCreate n
-                for k in 0 .. (List.length positions - 1) do
-                    let members = [ for i in 0 .. n - 1 do if idx.[i] = k then yield i ]
-                    if not members.IsEmpty then
-                        let zN = positions.[k]
-                        let left = members |> List.filter (fun i -> arr.[i].Z <= zN) |> List.sortDescending
+                for k in 0 .. pos.Length - 1 do
+                    let zN = pos.[k]
+                    let left = ResizeArray<int>()
+                    let right = ResizeArray<int>()
+                    for i in 0 .. n - 1 do
+                        if idx.[i] = k then
+                            if arr.[i].Z <= zN then left.Add i else right.Add i
+                    if left.Count + right.Count > 0 then
+                        left.Sort()
+                        right.Sort()
                         let mutable acc = 0.0
-                        for i in left do
+                        for p in left.Count - 1 .. -1 .. 0 do
+                            let i = left.[p]
                             acc <- acc + wExtLin.[i] * dzArr.[i]
                             res.[i] <- acc
-                        let right = members |> List.filter (fun i -> arr.[i].Z > zN) |> List.sort
                         acc <- 0.0
                         for i in right do
                             acc <- acc + wExtLin.[i] * dzArr.[i]

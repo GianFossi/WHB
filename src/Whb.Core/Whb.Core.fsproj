@@ -55,8 +55,10 @@
     <Compile Include="Solvers\Circulation.fs" />
     <Compile Include="Loads\Mechanics.fs" />
     <Compile Include="Components\Equipment\Nozzles.fs" />
+    <Compile Include="Designers\Sizing.fs" />
     <Compile Include="Designers\Design.fs" />
     <Compile Include="Reports\Report.Common.fs" />
+    <Compile Include="Reports\Report.Sizing.fs" />
     <Compile Include="Reports\Report.Text.fs" />
     <Compile Include="Reports\Report.Synthesis.fs" />
     <Compile Include="Reports\Report.Csv.fs" />

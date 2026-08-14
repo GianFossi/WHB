@@ -72,9 +72,27 @@ module Bypass =
         let mutable p = pIn
         let nodes = ResizeArray<Node>()
         let mutable qTot = 0.0
+        let gasCache = Collections.Generic.Dictionary<string, GasProps.MixProps>()
+        let wallCache = Collections.Generic.Dictionary<string, float * float * float>()
+        let gasProps tK pPa =
+            let key = sprintf "%.1f|%.0f" (Math.Round(tK * 2.0) / 2.0) (Math.Round(pPa / 100.0) * 100.0)
+            match gasCache.TryGetValue key with
+            | true, v -> v
+            | _ ->
+                let v = GasProps.mixReal mixRule real comp0 (Math.Round(tK * 2.0) / 2.0) pPa 1.0
+                gasCache.[key] <- v
+                v
+        let cachedWallResistance linerC pipeC =
+            let key = sprintf "%.1f|%.1f" (Math.Round(linerC * 2.0) / 2.0) (Math.Round(pipeC * 2.0) / 2.0)
+            match wallCache.TryGetValue key with
+            | true, v -> v
+            | _ ->
+                let v = wallResistance s linerC pipeC
+                wallCache.[key] <- v
+                v
         for i in 0 .. zc.Length - 1 do
             let tg = fst (Shift.stateFromEnthalpyAt shiftMode real p comp0 h)
-            let props = GasProps.mixReal mixRule real comp0 tg p 1.0
+            let props = gasProps tg p
             let g_ = wBp / a
             let vel = g_ / props.Rho
             let re = g_ * s.LinerId / props.Mu
@@ -93,7 +111,7 @@ module Bypass =
                 hg <- hConv + hRad
                 let rGas = 1.0 / (hg * Math.PI * s.LinerId)
                 let rFoul = s.FoulingIn / (Math.PI * s.LinerId)
-                let (rL, rI, rP) = wallResistance s (kToC (0.5 * (tli + tlo))) (kToC (0.5 * (tpi + tpo)))
+                let (rL, rI, rP) = cachedWallResistance (kToC (0.5 * (tli + tlo))) (kToC (0.5 * (tpi + tpo)))
                 let hb =
                     WaterSide.hMostinski (max 1000.0 (q / (Math.PI * s.PipeOd))) sat.P Pc_water * 1.2
                     + 250.0
