@@ -35,29 +35,8 @@ module Design =
           BypassTargetToleranceK = 0.5
           GasPropertyCache = true
           CorrelationValidityWarnings = true }
-
-    /// <summary>
-    /// Calculates or returns w for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
-    /// </remarks>
     let private w fmt = Printf.kprintf id fmt
-
-    /// <summary>
-    /// Calculates or returns sev for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
-    /// </remarks>
     let private sev = function Critical -> "CRITICO" | Warning -> "ATTENZIONE" | Note -> "NOTA"
-
-    /// <summary>
-    /// Represents private data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
-    /// </remarks>
     type private MapPt =
         { X: float
           TMix: float
@@ -70,13 +49,6 @@ module Design =
           TLinerMax: float
           RhoValve: float
           TValve: float }
-
-    /// <summary>
-    /// Calculates or returns interpMap for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
-    /// </remarks>
     let private interpMap (pts: MapPt list) (sel: MapPt -> float) (x: float) =
         let a = pts |> List.toArray
         if x <= a.[0].X then sel a.[0]
@@ -86,13 +58,6 @@ module Design =
             while i < a.Length - 2 && a.[i + 1].X < x do i <- i + 1
             let f = (x - a.[i].X) / (a.[i + 1].X - a.[i].X)
             sel a.[i] + f * (sel a.[i + 1] - sel a.[i])
-
-    /// <summary>
-    /// Calculates or returns invertMap for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
-    /// </remarks>
     let private invertMap (pts: MapPt list) (sel: MapPt -> float) (target: float) =
         let f (x: float) = interpMap pts sel x - target
         let x0 = (List.head pts).X
@@ -100,13 +65,6 @@ module Design =
         if f x0 >= 0.0 then x0
         elif f x1 <= 0.0 then x1
         else bisect f x0 x1 1e-7 60
-
-    /// <summary>
-    /// Calculates or returns buildfindings for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
-    /// </remarks>
     let buildFindings (correlationValidityWarnings: bool) (case: DesignCase) (sat: Steam.SatProps) (cells: CellResult list)
                       (axial: AxialResult list) (circ: CirculationResult)
                       (ft: FixedTubesheetResult) (risers: RiserCheck list)
@@ -469,13 +427,6 @@ module Design =
                 "Prevedere ferrula refrattaria." "Protegge la giunzione tubo/piastra dal picco di flusso d'imbocco."
 
         List.ofSeq fs
-
-    /// <summary>
-    /// Calculates or returns run for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Coordinates process, thermal, hydraulic, vibration, mechanical, and equipment checks into the WHB design result. Correlation choices, assumptions, limits, and warnings should be reviewed together before using the output for engineering decisions.
-    /// </remarks>
     let runWithSettingsAndProgress (settings: RunSettings) (reportProgress: string -> unit) (caseIn: DesignCase) : DesignResult =
         let phase text = reportProgress text
         phase "Preparing connected risers, downcomers, steam properties, and tube bands"
@@ -1408,5 +1359,7 @@ module Design =
     /// </remarks>
     let run (caseIn: DesignCase) : DesignResult =
         runWithSettingsAndProgress defaultRunSettings ignore caseIn
+
+
 
 

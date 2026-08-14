@@ -2,21 +2,7 @@ namespace Whb.Core
 
 open Constants
 open Types
-
-/// <summary>
-/// Provides defaults functionality for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 module Defaults =
-
-    /// <summary>
-    /// Calculates or returns referencecomposition for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let referenceComposition : GasProps.Composition =
         [ GasProps.H2,  0.3707
           GasProps.N2,  0.1577
@@ -25,13 +11,6 @@ module Defaults =
           GasProps.CH4, 0.0027
           GasProps.Ar,  0.0020
           GasProps.H2O, 0.3260 ]
-
-    /// <summary>
-    /// Calculates or returns referencecase for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let referenceCase : DesignCase =
         { Name = "WHB reformer secondario - 848 tubi OD38.1x3.05 L12998 - vapore 117.84 bar (portate +10%)"
           Tube =
@@ -40,11 +19,11 @@ module Defaults =
               Length = 12.998
               NTubes = 848
               Pitch = 0.0508
-              Staggered = true            // triangolare 60°
+              Staggered = true            // triangular 60°
               ShellId = 2.025
               Otl = 1.71111
               Itl = 0.571
-              BaffleOd = 2.015          // diaframmi quasi a filo mantello (ID 2025)
+              BaffleOd = 2.015          // baffles nearly flush with shell (ID 2025)
               Roughness = 4.5e-5 }
           Ferrule =
             { Enabled = true
@@ -172,7 +151,7 @@ module Defaults =
           ShellInsulationU = 0.6
           Bypass =
             { Enabled = true
-              Fraction = None                    // calcolata per centrare 355 °C
+              Fraction = None                    // calculated to target 355 °C
               TargetMixOut = cToK 355.0
               LinerId = 0.275
               LinerOd = 0.281
@@ -193,3 +172,6 @@ module Defaults =
               MaxRhoV2Valve = 40000.0 }
           AllowInternalRecirculation = false
           BypassOpenFraction = 0.10 }
+
+
+

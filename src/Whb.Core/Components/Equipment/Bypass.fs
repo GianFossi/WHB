@@ -10,13 +10,6 @@ open Constants
 /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
 /// </remarks>
 module Bypass =
-
-    /// <summary>
-    /// Represents spec data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
-    /// </remarks>
     type Spec =
         { Enabled: bool
           Fraction: float option
@@ -38,64 +31,36 @@ module Bypass =
           TMixMax: float
           MinPurgeVel: float
           MaxRhoV2Valve: float }
-
-    /// <summary>
-    /// Represents node data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
-    /// </remarks>
     type Node =
         { Z: float
           TGas: float          // K
           Vel: float           // m/s
           Re: float
           HGas: float          // W/(m²·K)
-          QLin: float          // W/m ceduti all'acqua
-          TLinerIn: float      // K, faccia interna del liner
+          QLin: float          // W/m transferred to water
+          TLinerIn: float      // K, liner inner face
           TLinerOut: float     // K
-          TPipeIn: float       // K, faccia interna del tubo di contenimento
+          TPipeIn: float       // K, containment pipe inner face
           TPipeOut: float      // K
-          DTInsul: float }     // K, salto sull'isolante
-
-    /// <summary>
-    /// Represents result data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
-    /// </remarks>
+          DTInsul: float }     // K, insulation temperature drop
     type Result =
         { Fraction: float
-          MassFlow: float          // kg/s deviati
-          TOutBypass: float        // K, uscita dal by-pass
-          TOutTubes: float         // K, uscita dai tubi
-          TOutMixed: float         // K, dopo miscelazione
-          HeatLoss: float          // W ceduti dal by-pass all'acqua
+          MassFlow: float          // kg/s diverted
+          TOutBypass: float        // K, bypass outlet
+          TOutTubes: float         // K, tube outlet
+          TOutMixed: float         // K, after mixing
+          HeatLoss: float          // W transferred from bypass to water
           SteamFromBypass: float   // kg/s
           Nodes: Node list
           TLinerMax: float         // K
           TPipeMax: float          // K
           DpBypass: float          // Pa
           Converged: bool }
-
-    /// <summary>
-    /// Calculates or returns wallResistance for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
-    /// </remarks>
     let private wallResistance (s: Spec) (tLinerC: float) (tPipeC: float) =
         let rLiner = log (s.LinerOd / s.LinerId) / (2.0 * Math.PI * s.LinerMaterial.K tLinerC)
         let rIns = log (s.InsulOd / s.LinerOd) / (2.0 * Math.PI * s.InsulK (0.5 * (tLinerC + tPipeC)))
         let rPipe = log (s.PipeOd / s.InsulOd) / (2.0 * Math.PI * s.PipeMaterial.K tPipeC)
         (rLiner, rIns, rPipe)
-
-    /// <summary>
-    /// Calculates or returns march for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates bypass duct thermal and hydraulic behavior using gas-side convection, radiation, wall resistance, insulation, and pressure-drop estimates. Validate empirical coefficients, material conductivity, fouling, geometry, and operating range before final sizing.
-    /// </remarks>
     let march (s: Spec) (comp: GasProps.Composition) (pIn: float) (z: float) (tIn: float)
               (mixRule: GasProps.MixingRule) (real: bool) (shiftMode: Shift.Mode)
               (sat: Steam.SatProps) (wBp: float) (zc: float[]) (dz: float[]) =
@@ -150,5 +115,8 @@ module Bypass =
             p <- p - GasSide.dpFrictionPerM f s.LinerId props.Rho vel * dzi
         let tOut = fst (Shift.stateFromEnthalpyAt shiftMode real p comp0 h)
         (List.ofSeq nodes, tOut, qTot, pIn - p)
+
+
+
 
 

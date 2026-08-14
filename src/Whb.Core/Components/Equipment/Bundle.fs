@@ -1,21 +1,7 @@
 namespace Whb.Core
 
 open System
-
-/// <summary>
-/// Provides bundle functionality for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 module Bundle =
-
-    /// <summary>
-    /// Represents band data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type Band =
         { Index: int
           Y: float
@@ -26,13 +12,6 @@ module Bundle =
           FieldFreeArea: float
           BypassArea: float
           Rows: float }
-
-    /// <summary>
-    /// Calculates or returns build for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let build (shellId: float) (otl: float) (itl: float) (pitch: float)
               (dOut: float) (nTubes: int) (nBands: int) (bypassOd: float) =
         let rs = shellId / 2.0
@@ -79,23 +58,9 @@ module Bundle =
                     else 0.0
                 max 1e-6 (sw - tw - blockedByPipe)
               Rows = h / vPitch })
-
-    /// <summary>
-    /// Calculates or returns meanbypassarea for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let meanBypassArea (bands: Band list) =
         if bands.IsEmpty then 0.0
         else bands |> List.averageBy (fun b -> b.BypassArea)
-
-    /// <summary>
-    /// Calculates or returns openannulusarea for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let openAnnulusArea (shellId: float) (baffleOd: float) (otl: float) =
         let rs = shellId / 2.0
         let rb = baffleOd / 2.0
@@ -111,11 +76,6 @@ module Bundle =
                 let y = -ro + otl * (float k + 0.5) / float n
                 acc <- acc + (chord rs y - chord rb y)
             max 0.0 (acc / float n)
-
-    /// <summary>
-    /// Calculates or returns totaltubes for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let totalTubes (bands: Band list) = bands |> List.sumBy (fun b -> b.NTubes)
+
+

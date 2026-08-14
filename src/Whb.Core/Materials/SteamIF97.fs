@@ -10,25 +10,11 @@ open Constants
 /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
 /// </remarks>
 module Steam =
-
-    /// <summary>
-    /// Calculates or returns n4 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private n4 =
         [| 0.11670521452767e4; -0.72421316703206e6; -0.17073846940092e2;
            0.12020824702470e5; -0.32325550322333e7;  0.14915108613530e2;
            -0.48232657361591e4;  0.40511340542057e6; -0.23855557567849;
            0.65017534844798e3 |]
-
-    /// <summary>
-    /// Calculates or returns psat_mpa for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let psat_MPa (tK: float) =
         let th = tK + n4.[8] / (tK - n4.[9])
         let a = th * th + n4.[0] * th + n4.[1]
@@ -36,13 +22,6 @@ module Steam =
         let c = n4.[5] * th * th + n4.[6] * th + n4.[7]
         let x = 2.0 * c / (-b + sqrt (b * b - 4.0 * a * c))
         x ** 4.0
-
-    /// <summary>
-    /// Calculates or returns tsat_k for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let tsat_K (pMPa: float) =
         let beta = pMPa ** 0.25
         let e = beta * beta + n4.[2] * beta + n4.[5]
@@ -50,13 +29,6 @@ module Steam =
         let gg = n4.[1] * beta * beta + n4.[4] * beta + n4.[7]
         let d = 2.0 * gg / (-f - sqrt (f * f - 4.0 * e * gg))
         0.5 * (n4.[9] + d - sqrt ((n4.[9] + d) * (n4.[9] + d) - 4.0 * (n4.[8] + n4.[9] * d)))
-
-    /// <summary>
-    /// Calculates or returns r1 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private r1 =
         [| (0, -2, 0.14632971213167);   (0, -1, -0.84548187169114)
            (0,  0, -0.37563603672040e1);(0,  1,  0.33855169168385e1)
@@ -80,13 +52,6 @@ module Steam =
            (30,-39,-0.11947622640071e-22)
            (31,-40, 0.18228094581404e-23)
            (32,-41,-0.93537087292458e-25) |]
-
-    /// <summary>
-    /// Calculates or returns reg1 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private reg1 (pMPa: float) (tK: float) =
         let pi = pMPa / 16.53
         let tau = 1386.0 / tK
@@ -110,32 +75,11 @@ module Steam =
         let cp = -tau * tau * gtt * Rw
         let s = (tau * gtau - gam) * Rw
         (v, h, cp, s)
-
-    /// <summary>
-    /// Calculates or returns r2j0 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private r2j0 = [| 0; 1; -5; -4; -3; -2; -1; 2; 3 |]
-
-    /// <summary>
-    /// Calculates or returns r2n0 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private r2n0 =
         [| -0.96927686500217e1;  0.10086655968018e2; -0.56087911283020e-2;
            0.71452738081455e-1; -0.40710498223928;    0.14240819171444e1;
            -0.43839511319450e1; -0.28408632460772;    0.21268463753307e-1 |]
-
-    /// <summary>
-    /// Calculates or returns r2r for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private r2r =
         [| (1, 0,  -0.17731742473213e-2); (1, 1, -0.17834862292358e-1)
            (1, 2,  -0.45996013696365e-1); (1, 3, -0.57581259083432e-1)
@@ -159,13 +103,6 @@ module Steam =
            (22,53,  0.37826947613457e-5); (23,39,-0.12768608934681e-14)
            (24,26,  0.73087610595061e-28);(24,40, 0.55414715350778e-16)
            (24,58, -0.94369707241210e-6) |]
-
-    /// <summary>
-    /// Calculates or returns reg2 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private reg2 (pMPa: float) (tK: float) =
         let pi = pMPa
         let tau = 540.0 / tK
@@ -198,21 +135,7 @@ module Steam =
         let cp = -tau * tau * (g0tt + grtt) * Rw
         let s = (tau * (g0t + grt) - (g0 + gr)) * Rw
         (v, h, cp, s)
-
-    /// <summary>
-    /// Calculates or returns hVisc0 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private hVisc0 = [| 1.67752; 2.20462; 0.6366564; -0.241605 |]
-
-    /// <summary>
-    /// Calculates or returns hVisc1 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private hVisc1 =
         [| (0,0, 5.20094e-1); (1,0, 8.50895e-2); (2,0,-1.08374);    (3,0,-2.89555e-1)
            (0,1, 2.22531e-1); (1,1, 9.99115e-1); (2,1, 1.88797);    (3,1, 1.26613)
@@ -223,13 +146,6 @@ module Steam =
            (0,4,-3.25372e-2); (3,4, 6.98452e-2)
            (4,5, 8.72102e-3)
            (3,6,-4.35673e-3); (5,6,-5.93264e-4) |]
-
-    /// <summary>
-    /// Calculates or returns viscosity for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let viscosity (tK: float) (rho: float) =
         let tb = tK / Tc_water
         let rb = rho / Rhoc_water
@@ -242,21 +158,7 @@ module Steam =
             s <- s + Math.Pow(1.0 / tb - 1.0, float i) * h * Math.Pow(rb - 1.0, float j)
         let mu1 = exp (rb * s)
         mu0 * mu1 * 1e-6
-
-    /// <summary>
-    /// Calculates or returns lam0 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private lam0 = [| 2.443221e-3; 1.323095e-2; 6.770357e-3; -3.454586e-3; 4.096266e-4 |]
-
-    /// <summary>
-    /// Calculates or returns lam1 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let private lam1 =
         array2D
             [ [  1.60397357; -0.646013523;  0.111443906;  0.102997357; -0.0504123634;  0.00609859258 ]
@@ -264,13 +166,6 @@ module Steam =
               [  2.19650529; -4.54580785;   3.55777244;  -1.40944978;   0.275418278;  -0.0205938816  ]
               [ -1.21051378;  1.60812989;  -0.621178141;  0.0716373224; 0.0;           0.0           ]
               [ -2.7203370;   4.57586331;  -3.18369245;   1.1168348;   -0.19268305;    0.012913842   ] ]
-
-    /// <summary>
-    /// Calculates or returns conductivity for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let conductivity (tK: float) (rho: float) =
         let tb = tK / Tc_water
         let rb = rho / Rhoc_water
@@ -286,24 +181,10 @@ module Steam =
             s <- s + Math.Pow(1.0 / tb - 1.0, float i) * inner
         let l1 = exp (rb * s)
         l0 * l1 * 1e-3
-
-    /// <summary>
-    /// Calculates or returns surfacetension for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let surfaceTension (tK: float) =
         let tau = 1.0 - tK / Tc_water
         if tau <= 0.0 then 0.0
         else 235.8e-3 * Math.Pow(tau, 1.256) * (1.0 - 0.625 * tau)
-
-    /// <summary>
-    /// Represents satprops data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     type SatProps =
         { P: float          // Pa
           Tsat: float       // K
@@ -321,13 +202,6 @@ module Steam =
           Sigma: float      // N/m
           PrL: float
           PrV: float }
-
-    /// <summary>
-    /// Calculates or returns sat for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let sat (pPa: float) : SatProps =
         let pMPa = pPa / 1.0e6
         let tK = tsat_K pMPa
@@ -355,40 +229,15 @@ module Steam =
           Sigma = surfaceTension tK
           PrL = cpl * 1000.0 * mul / kl
           PrV = cpv * 1000.0 * muv / kv }
-
-    /// <summary>
-    /// Calculates or returns region1 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let region1 (pMPa: float) (tK: float) = reg1 pMPa tK
-    /// <summary>
-    /// Calculates or returns region2 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let region2 (pMPa: float) (tK: float) = reg2 pMPa tK
-
-    /// <summary>
-    /// Calculates or returns hliquid for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let hLiquid (pPa: float) (tK: float) =
         let (_, h, _, _) = reg1 (pPa / 1.0e6) tK
         h * 1000.0
-
-    /// <summary>
-    /// Calculates or returns rholiquid for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Provides steam and water thermodynamic properties based on IF97-style region calculations and saturation relations. Keep pressure, temperature, enthalpy, and SI-unit assumptions explicit when coupling these properties to thermal and process calculations.
-    /// </remarks>
     let rhoLiquid (pPa: float) (tK: float) =
         let (v, _, _, _) = reg1 (pPa / 1.0e6) tK
         1.0 / v
+
+
 
 

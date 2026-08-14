@@ -11,12 +11,6 @@ open Whb.Core.Optimizer
 module Designer =
 
     [<CLIMutable>]
-    /// <summary>
-    /// Represents designbasis data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Exposes high-level design orchestration for WHB calculations. Results inherit the assumptions and validity limits of the underlying empirical and theoretical correlations.
-    /// </remarks>
     type DesignBasis =
         { Name: string
           Duty: float
@@ -26,12 +20,6 @@ module Designer =
           Constraints: Optimization.Constraint list }
 
     [<CLIMutable>]
-    /// <summary>
-    /// Represents designcandidate data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Exposes high-level design orchestration for WHB calculations. Results inherit the assumptions and validity limits of the underlying empirical and theoretical correlations.
-    /// </remarks>
     type DesignCandidate =
         { Name: string
           TubeCount: int
@@ -40,5 +28,7 @@ module Designer =
           ShellInnerDiameter: float
           Score: float
           Notes: string list }
+
+
 
 

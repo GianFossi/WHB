@@ -7,22 +7,9 @@ namespace Whb.Core.Loads
 /// Defines process and mechanical load data used by WHB thermal, hydraulic, and structural screening calculations. Keep units, design cases, and load-combination assumptions aligned with the governing project basis.
 /// </remarks>
 module Loads =
-
-    /// <summary>
-    /// Represents loadsource data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Defines process and mechanical load data used by WHB thermal, hydraulic, and structural screening calculations. Keep units, design cases, and load-combination assumptions aligned with the governing project basis.
-    /// </remarks>
     type LoadSource = ClientPds | VendorPds | Calculated | Manual
 
     [<CLIMutable>]
-    /// <summary>
-    /// Represents thermalload data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Defines process and mechanical load data used by WHB thermal, hydraulic, and structural screening calculations. Keep units, design cases, and load-combination assumptions aligned with the governing project basis.
-    /// </remarks>
     type ThermalLoad =
         { Tag: string
           Source: LoadSource
@@ -34,13 +21,9 @@ module Loads =
           Notes: string }
 
     [<CLIMutable>]
-    /// <summary>
-    /// Represents loadset data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Defines process and mechanical load data used by WHB thermal, hydraulic, and structural screening calculations. Keep units, design cases, and load-combination assumptions aligned with the governing project basis.
-    /// </remarks>
     type LoadSet =
         { Name: string; Loads: ThermalLoad list }
+
+
 
 

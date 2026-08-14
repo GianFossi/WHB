@@ -11,13 +11,6 @@ open Types
 /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
 /// </remarks>
 module BundleSolver =
-
-    /// <summary>
-    /// Calculates or returns ferruleresistance for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
-    /// </remarks>
     let ferruleResistance (f: Ferrule) (di: float) (tMeanC: float) =
         if not f.Enabled then 0.0
         else
@@ -28,22 +21,8 @@ module BundleSolver =
                 if di > f.SleeveOd then log (di / f.SleeveOd) / (2.0 * Math.PI * f.InsulK tMeanC)
                 else 0.0
             rSleeve + rIns
-
-    /// <summary>
-    /// Calculates or returns the radial insulation paper thickness available around the ferrule sleeve.
-    /// </summary>
-    /// <remarks>
-    /// The value is half of the tube ID minus sleeve OD clearance and should be checked against drawing and installation tolerances.
-    /// </remarks>
     let ferruleInsulationThickness (f: Ferrule) (di: float) =
         if not f.Enabled then 0.0 else max 0.0 (0.5 * (di - f.SleeveOd))
-
-    /// <summary>
-    /// Calculates or returns whether the ferrule sleeve and insulation fit inside the tube ID.
-    /// </summary>
-    /// <remarks>
-    /// The fit check is geometric only; final acceptance still requires vendor drawing tolerances and installation details.
-    /// </remarks>
     let ferruleInsulationFitStatus (f: Ferrule) (di: float) =
         if not f.Enabled then "NOT INSTALLED"
         elif f.Bore <= 0.0 || f.SleeveOd <= 0.0 || di <= 0.0 then "CHECK - invalid ferrule geometry"
@@ -81,25 +60,11 @@ module BundleSolver =
             let kExpansion = (1.0 - (bore / tubeDi) ** 2.0) ** 2.0
             let dpExpansion = GasSide.dpLocal kExpansion props.Rho velocity
             dpFriction + dpExpansion
-
-    /// <summary>
-    /// Calculates or returns ferruleclasses for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
-    /// </remarks>
     let ferruleClasses (f: Ferrule) =
         if not f.Enabled || f.Lengths.IsEmpty then [ (1.0, 0.0) ]
         else
             let s = f.Lengths |> List.sumBy fst
             if s <= 0.0 then [ (1.0, 0.0) ] else f.Lengths |> List.map (fun (a, b) -> (a / s, b))
-
-    /// <summary>
-    /// Calculates or returns shellhtc for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
-    /// </remarks>
     let shellHtc (case: DesignCase) (sat: Steam.SatProps) (qOut: float) (x: float) (gCross: float) =
         let t = case.Tube
         let d = t.Do
@@ -112,13 +77,6 @@ module BundleSolver =
         let s = WaterSide.chenS reMax fChen
         let hnc = WaterSide.hNaturalConvection d (max 1.0 (qOut / 5000.0)) sat
         hnb * WaterSide.bundleFactor wc.BundleFactor * s + max (hLo * fChen) hnc
-
-    /// <summary>
-    /// Calculates or returns solveCell for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
-    /// </remarks>
     let private solveCell
         (case: DesignCase) (sat: Steam.SatProps) (props: GasProps.MixProps)
         (z: float) (mdotPerTube: float) (inFerrule: bool)
@@ -169,13 +127,6 @@ module BundleSolver =
             twi <- twi + 0.7 * (tg - q' * (rGas + rFoulIn) - twi)
 
         (qlin, gasRes, hb, twi, tmi, tmo, rBoil, rFoulOut, rMetal)
-
-    /// <summary>
-    /// Represents solveoutput data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
-    /// </remarks>
     type SolveOutput =
         { Cells: CellResult[,,]
           Axial: AxialResult list
@@ -188,13 +139,6 @@ module BundleSolver =
           Classes: (float * float) list
           Dz: float[]
           ZC: float[] }
-
-    /// <summary>
-    /// Calculates or returns solve for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Solves coupled WHB bundle thermal performance using gas-side heat transfer, water-side boiling, wall resistance, fouling, and axial discretization. Results depend on empirical correlation choices, grid resolution, material properties, and process boundary conditions.
-    /// </remarks>
     let solve (case: DesignCase) (bands: Bundle.Band list)
               (wLinField: float[]) (xInField: float[]) : SolveOutput =
         let t = case.Tube
@@ -361,5 +305,7 @@ module BundleSolver =
           Classes = classes
           Dz = dzArr
           ZC = zc }
+
+
 
 

@@ -1,23 +1,9 @@
 namespace Whb.Core
 
 open System
-
-/// <summary>
-/// Provides types functionality for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 module Types =
-
-    /// <summary>
-    /// Represents tubegeometry data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type TubeGeometry =
-        { /// Diametro interno tubo [m]
+        { /// Tube inside diameter [m]
           Di: float
           Do: float
           Length: float
@@ -29,13 +15,6 @@ module Types =
           Itl: float
           BaffleOd: float
           Roughness: float }
-
-    /// <summary>
-    /// Represents ferrule data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type Ferrule =
         { Enabled: bool
           Lengths: (float * float) list
@@ -43,13 +22,6 @@ module Types =
           SleeveOd: float
           SleeveK: float -> float
           InsulK: float -> float }
-
-    /// <summary>
-    /// Represents gasstream data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type GasStream =
         { Composition: GasProps.Composition
           MassFlow: float
@@ -64,15 +36,8 @@ module Types =
           ShiftMode: Shift.Mode
           MixingRule: GasProps.MixingRule
           RealGas: bool }
-
-    /// <summary>
-    /// Represents watersidespec data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type WaterSideSpec =
-        { /// Pressione nel corpo cilindrico [Pa]
+        { /// Steam-drum pressure [Pa]
           DrumPressure: float
           FoulingOut: float
           RoughnessUm: float
@@ -80,15 +45,8 @@ module Types =
           Correlation: WaterSide.PoolBoilingCorrelation
           Csf: float
           TFeed: float }
-
-    /// <summary>
-    /// Represents loopgeometry data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type LoopGeometry =
-        { /// Quota asse corpo cilindrico - asse WHB [m]
+        { /// Steam-drum axis elevation minus WHB axis elevation [m]
           DzDrumWhb: float
           DrumLevelOffset: float
           Downcomers: Piping.Line list
@@ -97,21 +55,7 @@ module Types =
           Drum: Drum.Internals
           VoidModel: TwoPhase.VoidModel
           FrictionModel: TwoPhase.FrictionModel }
-
-    /// <summary>
-    /// Represents material data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type Material = Materials.Material
-
-    /// <summary>
-    /// Represents designcase data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type DesignCase =
         { Name: string
           Tube: TubeGeometry
@@ -142,13 +86,6 @@ module Types =
           Bypass: Bypass.Spec
           AllowInternalRecirculation: bool
           BypassOpenFraction: float }
-
-    /// <summary>
-    /// Represents cellresult data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type CellResult =
         { I: int
           J: int
@@ -156,7 +93,7 @@ module Types =
           Frac: float
           FerruleLen: float
           Z: float                 // m
-          Y: float                 // m (dal centro mantello)
+          Y: float                 // m from shell centerline
           NTubes: float
           TGas: float              // K
           PGas: float              // Pa
@@ -165,14 +102,14 @@ module Types =
           HConvGas: float
           HRadGas: float
           EpsGas: float
-          XIn: float               // titolo all'ingresso della banda
-          XOut: float              // titolo all'uscita della banda
-          Alpha: float             // frazione di vuoto media nella banda
-          GCross: float            // kg/(m²·s) nel campo tubi
-          VelCross: float          // m/s velocità della miscela
+          XIn: float               // quality at band inlet
+          XOut: float              // quality at band outlet
+          Alpha: float             // mean void fraction in the band
+          GCross: float            // kg/(m²·s) across the tube field
+          VelCross: float          // m/s mixture velocity
           HBoil: float
           U_o: float
-          QLin: float              // W/m per tubo
+          QLin: float              // W/m per tube
           QFluxIn: float           // W/m²
           QFluxOut: float          // W/m²
           TMetalIn: float          // K
@@ -183,19 +120,12 @@ module Types =
           DTsatWall: float
           DTDeposit: float
           DTMetalSat: float
-          QCritLocal: float        // W/m² (CHF di fascio corretto per il titolo)
+          QCritLocal: float        // W/m² (bundle CHF corrected for quality)
           DNBR: float
           InFerrule: bool }
-
-    /// <summary>
-    /// Represents axialresult data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type AxialResult =
         { Z: float
-          TGasMean: float          // K, media pesata sulla portata
+          TGasMean: float          // K, flow-weighted mean
           TGasMin: float
           TGasMax: float
           QFluxMean: float         // W/m²
@@ -204,9 +134,9 @@ module Types =
           TMetalOutMax: float
           SteamLin: float          // kg/(s·m)
           DutyLin: float           // W/m
-          WFieldLin: float         // kg/(s·m) attraverso il campo tubi
-          WBypassLin: float        // kg/(s·m) nei canali liberi (negativo = discesa)
-          XTop: float              // titolo in uscita dal fascio
+          WFieldLin: float         // kg/(s·m) across the tube field
+          WBypassLin: float        // kg/(s·m) in free channels (negative = downward flow)
+          XTop: float              // quality at bundle outlet
           AlphaTop: float
           GCross: float
           VelLiqIn: float
@@ -218,13 +148,6 @@ module Types =
           PGas: float
           SteamCum: float
           DutyCum: float }
-
-    /// <summary>
-    /// Represents circulationresult data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type CirculationResult =
         { CirculationRatio: float
           CircFlow: float
@@ -251,26 +174,12 @@ module Types =
           OpenAnnulus: float
           StarvedSlices: int
           Converged: bool }
-
-    /// <summary>
-    /// Represents flowregime data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type FlowRegime =
         | Bubbly
         | DispersedBubble
         | Slug
         | Churn
         | Annular
-
-    /// <summary>
-    /// Represents linecheck data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type LineCheck =
         { Tag: string
           Nps: string
@@ -281,20 +190,13 @@ module Types =
           DevelopedLength: float
           NElbows: int
           KTotal: float
-          Flow: float          // kg/s nella singola linea
+          Flow: float          // kg/s in one line
           Velocity: float      // m/s
           RhoV2: float
           Regime: FlowRegime option
           Connected: bool
           Bom: string
           Note: string }
-
-    /// <summary>
-    /// Represents nozzlespec data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type NozzleSpec =
         { Service: string
           Count: int
@@ -305,21 +207,7 @@ module Types =
           RhoV2: float
           RhoUsed: float
           Note: string }
-
-    /// <summary>
-    /// Represents severity data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type Severity = Critical | Warning | Note
-
-    /// <summary>
-    /// Represents finding data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type Finding =
         { Severity: Severity
           Area: string
@@ -329,25 +217,18 @@ module Types =
           Where: string
           Action: string
           Detail: string }
-
-    /// <summary>
-    /// Represents fixedtubesheetresult data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type FixedTubesheetResult =
-        { TTubeMeanEq: float       // K, temperatura media equivalente del fascio
-          TTubeHotEq: float        // K, tubo piu' caldo
-          TShellEq: float          // K, mantello
+        { TTubeMeanEq: float       // K, equivalent bundle mean temperature
+          TTubeHotEq: float        // K, hottest tube
+          TShellEq: float          // K, shell
           AlphaTube: float
           AlphaShell: float
-          AreaTube: float          // m² sezione metallica totale dei tubi
-          AreaShell: float         // m² sezione metallica del mantello
+          AreaTube: float          // m² total tube metal area
+          AreaShell: float         // m² shell metal area
           ETube: float             // Pa
           EShell: float            // Pa
-          DeltaFree: float         // m, dilatazione differenziale libera
-          Force: float             // N (positiva = tubi in COMPRESSIONE)
+          DeltaFree: float         // m, free differential expansion
+          Force: float             // N (positive = tubes in compression)
           SigmaTube: float         // Pa
           SigmaShell: float        // Pa
           ForcePerTube: float      // N
@@ -357,30 +238,15 @@ module Types =
           SigmaBucklingAllow: float // Pa
           BucklingUtilisation: float
           ShellMaterial: string }
-
-
-    /// <summary>
-    /// Represents stresspoint data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type StressPoint =
-        { /// "interna" | "media" | "esterna"
+        { /// "inner" | "middle" | "outer"
           Position: string
           R: float                 // m
-          SigmaR: float            // Pa (compressione negativa)
+          SigmaR: float            // Pa (negative compression)
           SigmaTheta: float        // Pa
-          SigmaZ: float            // Pa (membranale + gradiente termico)
+          SigmaZ: float            // Pa (membrane plus thermal-gradient stress)
           SigmaVM: float           // Pa, von Mises
           SigmaTresca: float }     // Pa
-
-    /// <summary>
-    /// Represents stressmember data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type StressMember =
         { Label: string
           MaterialName: string
@@ -393,13 +259,6 @@ module Types =
           SigmaZ: float
           SigmaZThermal: float
           SigmaZPressure: float }
-
-    /// <summary>
-    /// Represents bucklingcheck data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type BucklingCheck =
         { Label: string
           MaterialName: string
@@ -417,13 +276,6 @@ module Types =
           PCollapse: float
           CollapseUtil: float
           Note: string }
-
-    /// <summary>
-    /// Represents stresscell data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type StressCell =
         { Component: string        // "TUBI" | "BY-PASS"
           I: int
@@ -434,26 +286,19 @@ module Types =
           TMetalIn: float          // K
           TMetalOut: float         // K
           TMetalAvg: float         // K
-          DTWall: float            // K, salto nello spessore
-          PInt: float              // Pa assoluti
-          PExt: float              // Pa assoluti
+          DTWall: float            // K, through-wall temperature drop
+          PInt: float              // Pa absolute
+          PExt: float              // Pa absolute
           SigmaZMembrane: float
           SigmaZThermal: float
           SigmaZPressure: float
           Points: StressPoint list
           SigmaVMMax: float        // Pa
           WorstAt: string
-          Sy: float                // Pa alla temperatura locale
+          Sy: float                // Pa at local temperature
           Utilisation: float }
-
-    /// <summary>
-    /// Represents linercheck data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type LinerCheck =
-        { /// salto di riferimento = perdita di carico lato tubi [Pa]
+        { /// Reference pressure drop equals tube-side pressure drop [Pa]
           DpTubes: float
           DpDesign: float
           Factor: float
@@ -470,15 +315,8 @@ module Types =
           UtilisationCode: float
           HoopStress: float
           Notes: string list }
-
-    /// <summary>
-    /// Represents stressresult data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type StressResult =
-        { /// spostamento assiale comune imposto dalle piastre [m]
+        { /// Common axial displacement imposed by the tubesheets [m]
           CommonDelta: float
           PressureEndLoad: float
           AreaFluidShell: float
@@ -493,23 +331,16 @@ module Types =
           LinerFreeElongation: float
           Liner: LinerCheck
           Notes: string list }
-
-    /// <summary>
-    /// Represents valvepoint data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type ValvePoint =
-        { /// angolo di APERTURA [gradi] (0 = chiusa, 90 = tutta aperta)
+        { /// Opening angle [degrees] (0 = closed, 90 = fully open)
           OpenDeg: float
           ClosureDeg: float
           Zeta: float
           Fraction: float
           MassFlowBypass: float    // kg/s
           RhoValve: float          // kg/m³
-          VelPipe: float           // m/s nel liner
-          VelThroat: float         // m/s nella vena contratta
+          VelPipe: float           // m/s in liner
+          VelThroat: float         // m/s in contracted jet
           Mach: float
           RhoV2Throat: float       // Pa
           DpValve: float           // Pa
@@ -527,13 +358,6 @@ module Types =
           Steam: float             // kg/s
           TLinerMax: float         // K
           Note: string }
-
-    /// <summary>
-    /// Represents valveresult data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type ValveResult =
         { Normal: ValvePoint
           MinOpen: ValvePoint
@@ -543,41 +367,20 @@ module Types =
           MaxDrivers: (string * float * string) list
           Diameter: float
           AtOutlet: bool }
-
-    /// <summary>
-    /// Represents chfcomparison data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type ChfComparison =
         { Model: string
           QCrit: float             // W/m2
           DNBR: float
           Note: string }
-
-    /// <summary>
-    /// Represents sensitivityitem data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type SensitivityItem =
-        { Group: string            // "gas" | "ebollizione" | "miscelazione" | ...
+        { Group: string            // "gas" | "boiling" | "mixing" | ...
           Name: string
           HGas: float
           HBoil: float
           U: float
-          QFlux: float             // W/m2 con U ricalcolato a pari LMTD locale
+          QFlux: float             // W/m2 with U recalculated at the same local LMTD
           TMetalIn: float          // K
-          Delta: float }           // scostamento % rispetto alla scelta di base
-
-    /// <summary>
-    /// Represents foulingcase data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
+          Delta: float }           // percent deviation from the base selection
     type FoulingCase =
         { Label: string
           RfIn: float
@@ -588,34 +391,20 @@ module Types =
           TMetalOut: float
           DTDeposit: float
           DNBR: float }
-
-    /// <summary>
-    /// Represents maldistributionpoint data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type MaldistributionPoint =
-        { /// eccesso di portata rispetto al tubo medio
+        { /// Excess flow relative to the average tube
           Excess: float
           FlowPerTube: float       // kg/s
           ReIn: float
-          HGasPeak: float          // W/(m2 K) nel punto di picco
+          HGasPeak: float          // W/(m2 K) at the peak point
           QFluxMax: float          // W/m2
           ZQMax: float             // m
           TMetalInMax: float       // K
           TGasOut: float           // K
           DNBRMin: float
-          DutyTube: float }        // W per tubo
-
-    /// <summary>
-    /// Represents transientresult data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
+          DutyTube: float }        // W per tube
     type TransientResult =
-        { /// costante di tempo termica del metallo del tubo [s]
+        { /// Tube-metal thermal time constant [s]
           TauMetal: float
           WaterInventory: float
           DrumInventory: float
@@ -627,13 +416,6 @@ module Types =
           TimeToOverheat: float
           MakeupRate: float
           Notes: string list }
-
-    /// <summary>
-    /// Represents loadpoint data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type LoadPoint =
         { LoadFraction: float
           GasFlow: float
@@ -650,26 +432,12 @@ module Types =
           DpGas: float
           AlphaMax: float
           Note: string }
-
-    /// <summary>
-    /// Represents expansionresult data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type ExpansionResult =
         { Label: string
           TEquivalent: float
           AlphaMean: float
           Length: float
           DeltaL: float }
-
-    /// <summary>
-    /// Represents risercheck data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type RiserCheck =
         { Label: string
           Id: float
@@ -683,13 +451,6 @@ module Types =
           RhoV2: float
           Ok: bool
           Note: string }
-
-    /// <summary>
-    /// Represents ferruleclassresult data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type FerruleClassResult =
         { Index: int
           Frac: float
@@ -700,13 +461,6 @@ module Types =
           DNBRMin: float
           TGasOut: float
           Duty: float }
-
-    /// <summary>
-    /// Represents designresult data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type DesignResult =
         { Case: DesignCase
           Sat: Steam.SatProps
@@ -742,3 +496,6 @@ module Types =
           UMean: float
           LmtdMean: float
           Warnings: string list }
+
+
+

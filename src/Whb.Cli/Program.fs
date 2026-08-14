@@ -1,9 +1,3 @@
-/// <summary>
-/// Provides whb.cli.program functionality for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 module Whb.Cli.Program
 
 open System
@@ -17,573 +11,7 @@ open Whb.Core
 open Whb.Core.Constants
 open Whb.Core.Types
 open Whb.Core.Options
-
-/// <summary>
-/// Provides json functionality for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
-module Json =
-
-    /// <summary>
-    /// Calculates or returns tryPath for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
-    let private tryPath (root: JsonElement) (path: string) =
-        let parts = path.Split('.')
-        let mutable cur = root
-        let mutable ok = true
-        for p in parts do
-            if ok then
-                if cur.ValueKind = JsonValueKind.Object then
-                    match cur.TryGetProperty p with
-                    | true, v -> cur <- v
-                    | _ -> ok <- false
-                else ok <- false
-        if ok then Some cur else None
-
-    /// <summary>
-    /// Calculates or returns f for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
-    let f (root: JsonElement) (path: string) (def: float) =
-        match tryPath root path with
-        | Some v when v.ValueKind = JsonValueKind.Number -> v.GetDouble()
-        | _ -> def
-
-    /// <summary>
-    /// Calculates or returns i for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
-    let i (root: JsonElement) (path: string) (def: int) =
-        match tryPath root path with
-        | Some v when v.ValueKind = JsonValueKind.Number -> v.GetInt32()
-        | _ -> def
-
-    /// <summary>
-    /// Calculates or returns b for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
-    let b (root: JsonElement) (path: string) (def: bool) =
-        match tryPath root path with
-        | Some v when v.ValueKind = JsonValueKind.True -> true
-        | Some v when v.ValueKind = JsonValueKind.False -> false
-        | _ -> def
-
-    /// <summary>
-    /// Calculates or returns s for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
-    let s (root: JsonElement) (path: string) (def: string) =
-        match tryPath root path with
-        | Some v when v.ValueKind = JsonValueKind.String -> v.GetString()
-        | _ -> def
-
-    /// <summary>
-    /// Calculates or returns composition for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
-    let composition (root: JsonElement) (def: GasProps.Composition) =
-        match tryPath root "gas.composizione" with
-        | Some v when v.ValueKind = JsonValueKind.Object ->
-            let map =
-                [ "H2", GasProps.H2; "N2", GasProps.N2; "O2", GasProps.O2
-                  "CO", GasProps.CO; "CO2", GasProps.CO2; "CH4", GasProps.CH4
-                  "H2O", GasProps.H2O; "AR", GasProps.Ar; "NH3", GasProps.NH3 ] |> Map.ofList
-            let res =
-                v.EnumerateObject()
-                |> Seq.choose (fun p ->
-                    match map.TryFind(p.Name.ToUpperInvariant()) with
-                    | Some sp -> Some(sp, p.Value.GetDouble())
-                    | None -> None)
-                |> List.ofSeq
-            if res.IsEmpty then def else res
-        | _ -> def
-
-    /// <summary>
-    /// Calculates or returns tryArray for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
-    let tryArray (root: JsonElement) (path: string) =
-        match tryPath root path with
-        | Some v when v.ValueKind = JsonValueKind.Array ->
-            Some(v.EnumerateArray() |> Seq.map (fun x -> x.GetDouble()) |> List.ofSeq)
-        | _ -> None
-
-    /// <summary>
-    /// Calculates or returns lengths for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
-    let lengths (root: JsonElement) (path: string) =
-        match tryPath root path with
-        | Some v when v.ValueKind = JsonValueKind.Array ->
-            let res =
-                v.EnumerateArray()
-                |> Seq.map (fun e ->
-                    let g name d =
-                        match e.TryGetProperty(name: string) with
-                        | true, x when x.ValueKind = JsonValueKind.Number -> x.GetDouble()
-                        | _ -> d
-                    (g "frazione" 1.0, g "lunghezza_mm" 200.0 / 1000.0))
-                |> List.ofSeq
-            if res.IsEmpty then None else Some res
-        | _ -> None
-
-    /// <summary>
-    /// Calculates or returns lines for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
-    let lines (root: JsonElement) (path: string) (def: Piping.Line list) =
-        match tryPath root path with
-        | Some v when v.ValueKind = JsonValueKind.Array ->
-            let res =
-                v.EnumerateArray()
-                |> Seq.map (fun e ->
-                    let gd name d =
-                        match e.TryGetProperty(name: string) with
-                        | true, x when x.ValueKind = JsonValueKind.Number -> x.GetDouble()
-                        | _ -> d
-                    let gs name d =
-                        match e.TryGetProperty(name: string) with
-                        | true, x when x.ValueKind = JsonValueKind.String -> x.GetString()
-                        | _ -> d
-                    let straights =
-                        match e.TryGetProperty "diritti_mm" with
-                        | true, a when a.ValueKind = JsonValueKind.Array ->
-                            a.EnumerateArray() |> Seq.map (fun x -> x.GetDouble() / 1000.0) |> List.ofSeq
-                        | _ -> []
-                    let elbows =
-                        match e.TryGetProperty "curve" with
-                        | true, a when a.ValueKind = JsonValueKind.Array ->
-                            a.EnumerateArray()
-                            |> Seq.map (fun c ->
-                                let g2 n d =
-                                    match c.TryGetProperty(n: string) with
-                                    | true, x when x.ValueKind = JsonValueKind.Number -> x.GetDouble()
-                                    | _ -> d
-                                ({ AngleDeg = g2 "gradi" 90.0
-                                   ROverD = g2 "r_su_d" 1.5
-                                   Count = int (g2 "n" 1.0) } : Piping.Elbow))
-                            |> List.ofSeq
-                        | _ -> []
-                    ({ Tag = gs "tag" "?"
-                       Nps = gs "nps" "?"
-                       Id = gd "id_mm" 400.0 / 1000.0
-                       Count = int (gd "n" 1.0)
-                       Straights = straights
-                       Elbows = elbows
-                       ExtraK = gd "k_extra" 0.0
-                       ZNozzle = gd "z_m" 0.0
-                       AngleDeg = gd "angolo_gradi" 0.0
-                       Connected =
-                         (match e.TryGetProperty "collegato" with
-                          | true, x when x.ValueKind = JsonValueKind.False -> false
-                          | _ -> true)
-                       Note = gs "nota" "" } : Piping.Line))
-                |> List.ofSeq
-            if res.IsEmpty then def else res
-        | _ -> def
-
-/// <summary>
-/// Writes timestamped phase and diagnostic log messages for CLI runs.
-/// </summary>
-/// <remarks>
-/// The logger is controlled by project options and is intentionally append-only so failed runs preserve their last visible phase.
-/// </remarks>
-module PhaseLogger =
-
-    /// <summary>
-    /// Represents one lightweight logging function.
-    /// </summary>
-    /// <remarks>
-    /// The function accepts a message and writes it with local date/time when logging is enabled.
-    /// </remarks>
-    type Logger = string -> unit
-
-    /// <summary>
-    /// Creates a phase logger from project options.
-    /// </summary>
-    /// <remarks>
-    /// Parent folders are created automatically; write errors are reported to stderr but do not stop the calculation.
-    /// </remarks>
-    let create (options: Options.ProjectOptions) : Logger =
-        if not options.Logging.Enabled then ignore
-        else
-            let logPath = Path.GetFullPath options.Logging.LogFile
-            let dir = Path.GetDirectoryName logPath
-            if not (String.IsNullOrWhiteSpace dir) then Directory.CreateDirectory dir |> ignore
-            fun message ->
-                try
-                    let stamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)
-                    File.AppendAllText(logPath, sprintf "%s | %s%s" stamp message Environment.NewLine)
-                with ex ->
-                    eprintfn "Logging disabled for this message: %s" ex.Message
-
-    /// <summary>
-    /// Writes a log message and updates a mutable current-task label.
-    /// </summary>
-    /// <remarks>
-    /// This keeps console progress and the diagnostic log synchronized.
-    /// </remarks>
-    let phase (logger: Logger) (currentTask: string ref) (message: string) =
-        currentTask.Value <- message
-        logger message
-
-/// <summary>
-/// Performs preliminary checks before starting long WHB calculations.
-/// </summary>
-/// <remarks>
-/// Preflight checks catch common operational blockers such as stale WHB processes, missing folders, low disk space, and read/write permission problems.
-/// </remarks>
-module Preflight =
-
-    /// <summary>
-    /// Represents one preflight check result.
-    /// </summary>
-    /// <remarks>
-    /// Failed checks stop the run; warnings are logged and printed but allow the calculation to continue.
-    /// </remarks>
-    type Check =
-        { Name: string
-          Ok: bool
-          WarningOnly: bool
-          Message: string }
-
-    /// <summary>
-    /// Creates a preflight result row.
-    /// </summary>
-    /// <remarks>
-    /// The row is used for both console messages and phase logging.
-    /// </remarks>
-    let private row name ok warningOnly message =
-        { Name = name; Ok = ok; WarningOnly = warningOnly; Message = message }
-
-    /// <summary>
-    /// Verifies that a directory can be created and written.
-    /// </summary>
-    /// <remarks>
-    /// A temporary probe file is created and deleted inside the directory.
-    /// </remarks>
-    let private canWriteDirectory name path =
-        try
-            Directory.CreateDirectory path |> ignore
-            let probe = Path.Combine(path, sprintf ".whb_write_probe_%s.tmp" (Guid.NewGuid().ToString("N")))
-            File.WriteAllText(probe, "probe")
-            File.Delete probe
-            row name true false (sprintf "Writable: %s" (Path.GetFullPath path))
-        with ex ->
-            row name false false (sprintf "Cannot write %s: %s" (Path.GetFullPath path) ex.Message)
-
-    /// <summary>
-    /// Verifies that an input file is readable.
-    /// </summary>
-    /// <remarks>
-    /// The check opens and closes the file before the calculation starts.
-    /// </remarks>
-    let private canReadFile name path =
-        try
-            use _stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
-            row name true false (sprintf "Readable: %s" (Path.GetFullPath path))
-        with ex ->
-            row name false false (sprintf "Cannot read %s: %s" (Path.GetFullPath path) ex.Message)
-
-    /// <summary>
-    /// Checks available disk space on the output drive.
-    /// </summary>
-    /// <remarks>
-    /// The default threshold is intentionally modest because normal report output is small, but low space is still reported early.
-    /// </remarks>
-    let private diskSpace path =
-        try
-            let root = Path.GetPathRoot(Path.GetFullPath path)
-            let drive = DriveInfo root
-            let minBytes = 200L * 1024L * 1024L
-            let ok = drive.AvailableFreeSpace >= minBytes
-            row "Disk space" ok false (sprintf "Free space on %s: %.1f MB" root (float drive.AvailableFreeSpace / 1024.0 / 1024.0))
-        with ex ->
-            row "Disk space" false true (sprintf "Could not check disk space: %s" ex.Message)
-
-    /// <summary>
-    /// Checks whether another WHB executable is still active.
-    /// </summary>
-    /// <remarks>
-    /// Existing WHB processes can lock build outputs and make multitasking unreliable.
-    /// </remarks>
-    let private activeWhbProcesses () =
-        try
-            let currentId = Process.GetCurrentProcess().Id
-            let procs =
-                Process.GetProcessesByName("whb")
-                |> Array.filter (fun p -> p.Id <> currentId)
-                |> Array.toList
-            if List.isEmpty procs then
-                row "Active WHB processes" true true "No other whb.exe process detected"
-            else
-                let ids = procs |> List.map (fun p -> string p.Id) |> String.concat ", "
-                row "Active WHB processes" false false (sprintf "Other whb.exe process(es) detected: %s. Close them before starting a new run." ids)
-        with ex ->
-            row "Active WHB processes" false true (sprintf "Could not inspect WHB processes: %s" ex.Message)
-
-    /// <summary>
-    /// Runs preflight checks and raises an error when blocking checks fail.
-    /// </summary>
-    /// <remarks>
-    /// All results are logged so the user can diagnose what happened before the calculation started.
-    /// </remarks>
-    let run (options: Options.ProjectOptions) (casePath: string option) (outDir: string) (logger: PhaseLogger.Logger) =
-        logger "Preflight checks started"
-        let logFolder =
-            let folder = Path.GetDirectoryName(Path.GetFullPath options.Logging.LogFile)
-            if String.IsNullOrWhiteSpace folder then "." else folder
-        let checks =
-            [ activeWhbProcesses()
-              canWriteDirectory "Output folder" outDir
-              canWriteDirectory "Temp folder" options.Folders.TempFolder
-              canWriteDirectory "Log folder" logFolder
-              diskSpace outDir ]
-            @ (match casePath with Some p -> [ canReadFile "Case file" p ] | None -> [])
-        for c in checks do
-            let level = if c.Ok then "OK" elif c.WarningOnly then "WARNING" else "ERROR"
-            let msg = sprintf "Preflight %s | %s | %s" level c.Name c.Message
-            logger msg
-            if not c.Ok then
-                let printer = if c.WarningOnly then eprintfn else eprintfn
-                printer "%s" msg
-        let blocking = checks |> List.filter (fun c -> not c.Ok && not c.WarningOnly)
-        if not blocking.IsEmpty then
-            let details = blocking |> List.map (fun c -> sprintf "%s: %s" c.Name c.Message) |> String.concat "; "
-            failwithf "Preflight failed: %s" details
-        logger "Preflight checks completed"
-
-/// <summary>
-/// Provides console progress rendering for long-running WHB calculations.
-/// </summary>
-/// <remarks>
-/// The helper shows a status bar, current task description, elapsed time, and estimated remaining time while the calculation runs.
-/// </remarks>
-module Progress =
-
-    /// <summary>
-    /// Formats a duration as a compact human-readable time value.
-    /// </summary>
-    /// <remarks>
-    /// The formatted value is used by the CLI progress window and keeps output stable for redirected consoles.
-    /// </remarks>
-    let private formatDuration (span: TimeSpan) =
-        if span.TotalHours >= 1.0 then sprintf "%02d:%02d:%02d" (int span.TotalHours) span.Minutes span.Seconds
-        else sprintf "%02d:%02d" span.Minutes span.Seconds
-
-    /// <summary>
-    /// Builds a fixed-width progress bar line.
-    /// </summary>
-    /// <remarks>
-    /// Progress is estimated from elapsed time and the configured expected duration when the operation does not report internal steps.
-    /// </remarks>
-    let private bar (fraction: float) =
-        let width = 32
-        let filled = int (Math.Round((max 0.0 (min 1.0 fraction)) * float width))
-        let left = String('#', filled)
-        let right = String('-', width - filled)
-        sprintf "[%s%s] %3.0f%%" left right (100.0 * max 0.0 (min 1.0 fraction))
-
-    /// <summary>
-    /// Writes a progress update to the console.
-    /// </summary>
-    /// <remarks>
-    /// Interactive consoles are updated in place; redirected output receives separate progress lines.
-    /// </remarks>
-    let private render (header: string) (description: string) (fraction: float) (elapsed: TimeSpan) (remaining: TimeSpan option) =
-        let remainingText =
-            match remaining with
-            | Some value -> formatDuration value
-            | None -> "running longer than expected"
-        let line1 = sprintf "%s %s" header (bar fraction)
-        let line2 = sprintf "Running: %s" description
-        let line3 = sprintf "Elapsed: %s | Estimated remaining: %s" (formatDuration elapsed) remainingText
-        if Console.IsOutputRedirected then
-            printfn "%s | %s | %s" line1 line2 line3
-        else
-            Console.Write("\r{0,-100}\n{1,-100}\n{2,-100}", line1, line2, line3)
-            Console.SetCursorPosition(0, max 0 (Console.CursorTop - 2))
-
-    /// <summary>
-    /// Runs a calculation while showing an estimated console progress window.
-    /// </summary>
-    /// <remarks>
-    /// The calculation itself remains unchanged; the progress estimate is time based and intended as user feedback, not a solver convergence metric.
-    /// </remarks>
-    let runWithStatusDynamic<'T> (description: unit -> string) (estimatedSeconds: float) (work: unit -> 'T) =
-        let estimate = TimeSpan.FromSeconds(max 1.0 estimatedSeconds)
-        use finished = new ManualResetEventSlim(false)
-        let sw = Diagnostics.Stopwatch.StartNew()
-        let task =
-            Task.Run<'T>(Func<'T>(fun () ->
-                try work ()
-                finally finished.Set()))
-        while not task.IsCompleted do
-            let elapsed = sw.Elapsed
-            let fraction = min 0.98 (elapsed.TotalSeconds / estimate.TotalSeconds)
-            let remaining =
-                if elapsed <= estimate && fraction > 0.0 then
-                    Some(TimeSpan.FromSeconds(max 0.0 (estimate.TotalSeconds - elapsed.TotalSeconds)))
-                else None
-            render "WHB status" (description()) fraction elapsed remaining
-            finished.Wait(TimeSpan.FromMilliseconds(500.0)) |> ignore
-        sw.Stop()
-        if not Console.IsOutputRedirected then
-            Console.SetCursorPosition(0, Console.CursorTop + 2)
-        render "WHB status" (description()) 1.0 sw.Elapsed (Some TimeSpan.Zero)
-        task.GetAwaiter().GetResult()
-
-    /// <summary>
-    /// Runs a calculation while showing a fixed task description.
-    /// </summary>
-    /// <remarks>
-    /// Use <c>runWithStatusDynamic</c> when the operation can report phase-level diagnostics.
-    /// </remarks>
-    let runWithStatus<'T> (description: string) (estimatedSeconds: float) (work: unit -> 'T) =
-        runWithStatusDynamic (fun () -> description) estimatedSeconds work
-
-
-/// <summary>
-/// Provides mandatory comparison between calculated output and available client PDS data.
-/// </summary>
-/// <remarks>
-/// The comparison is emitted for every normal application run so calculated results are always checked against the client reference basis.
-/// </remarks>
-module PdsComparison =
-
-    /// <summary>
-    /// Represents one client PDS comparison row.
-    /// </summary>
-    /// <remarks>
-    /// Values are stored in report units so text and CSV output use the same numbers.
-    /// </remarks>
-    type Row =
-        { Quantity: string
-          Unit: string
-          ClientPds: float
-          Calculated: float
-          Difference: float
-          DifferencePercent: float option
-          Limit: string
-          Status: string }
-
-    /// <summary>
-    /// Formats a floating-point value for PDS comparison output.
-    /// </summary>
-    /// <remarks>
-    /// Invariant formatting keeps CSV files stable across local Windows language settings.
-    /// </remarks>
-    let private f3 (value: float) =
-        value.ToString("F3", CultureInfo.InvariantCulture)
-
-    /// <summary>
-    /// Builds a comparison row from client PDS and calculated values.
-    /// </summary>
-    /// <remarks>
-    /// The status uses the provided absolute acceptance band when one is available for the PDS quantity.
-    /// </remarks>
-    let private row quantity unit pds calculated tolerance =
-        let diff = calculated - pds
-        let pct = if abs pds > 1e-12 then Some(100.0 * diff / pds) else None
-        let ok = abs diff <= tolerance
-        { Quantity = quantity
-          Unit = unit
-          ClientPds = pds
-          Calculated = calculated
-          Difference = diff
-          DifferencePercent = pct
-          Limit = sprintf "+/- %s %s" (f3 tolerance) unit
-          Status = if ok then "OK" else "CHECK" }
-
-    /// <summary>
-    /// Builds all available client PDS comparison rows for a completed WHB result.
-    /// </summary>
-    /// <remarks>
-    /// Current client PDS values match the reference datasheet values documented in the README and validation table.
-    /// </remarks>
-    let rows (result: DesignResult) =
-        [ row "Exchanged duty" "MW" 116.614 (result.Duty / 1e6) 0.25
-          row "Steam production" "kg/h" 347743.0 (result.SteamProduction * 3600.0) 1500.0
-          row "Gas outlet temperature" "degC" 355.0 (kToC result.TGasOutMean) 8.0
-          row "Gas-side pressure drop" "bar" 0.300 (paToBar result.DpGas) 0.300 ]
-
-    /// <summary>
-    /// Builds the text report for the mandatory client PDS comparison.
-    /// </summary>
-    /// <remarks>
-    /// The text report is intended for direct engineering review next to the main calculation report.
-    /// </remarks>
-    let text (result: DesignResult) =
-        let sb = Text.StringBuilder()
-        sb.AppendLine("CLIENT PDS COMPARISON CHECK") |> ignore
-        sb.AppendLine("This check is generated for every WHB run using the available client PDS reference data.") |> ignore
-        sb.AppendLine("Review every CHECK row before accepting the calculation output.") |> ignore
-        sb.AppendLine(String('-', 112)) |> ignore
-        sb.AppendLine(sprintf "%-28s %12s %14s %14s %14s %14s %8s" "Quantity" "Unit" "Client PDS" "Calculated" "Difference" "Limit" "Status") |> ignore
-        sb.AppendLine(String('-', 112)) |> ignore
-        for r in rows result do
-            let diffText =
-                match r.DifferencePercent with
-                | Some pct -> sprintf "%s (%+.2f%%)" (f3 r.Difference) pct
-                | None -> f3 r.Difference
-            sb.AppendLine(sprintf "%-28s %12s %14s %14s %14s %14s %8s"
-                              r.Quantity r.Unit (f3 r.ClientPds) (f3 r.Calculated) diffText r.Limit r.Status) |> ignore
-        sb.AppendLine(String('-', 112)) |> ignore
-        sb.ToString()
-
-    /// <summary>
-    /// Builds the CSV report for the mandatory client PDS comparison.
-    /// </summary>
-    /// <remarks>
-    /// The CSV output supports audit trails and spreadsheet review of calculated versus PDS values.
-    /// </remarks>
-    let csv (result: DesignResult) =
-        let sb = Text.StringBuilder()
-        sb.AppendLine("quantity,unit,client_pds,calculated,difference,difference_percent,limit,status") |> ignore
-        for r in rows result do
-            let pct =
-                match r.DifferencePercent with
-                | Some value -> f3 value
-                | None -> ""
-            sb.AppendLine(String.Join(",",
-                [| r.Quantity
-                   r.Unit
-                   f3 r.ClientPds
-                   f3 r.Calculated
-                   f3 r.Difference
-                   pct
-                   r.Limit
-                   r.Status |])) |> ignore
-        sb.ToString()
-
-
-/// <summary>
-/// Calculates or returns gasCorrelation for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this private helper synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
+open Whb.Cli
 let private gasCorrelation (name: string) =
     match name.ToLowerInvariant() with
     | "dittus-boelter" | "dittusboelter" | "db" -> GasSide.DittusBoelter
@@ -592,13 +20,6 @@ let private gasCorrelation (name: string) =
     | "petukhov" | "petukhov-kirillov" -> GasSide.PetukhovKirillov
     | "hausen" -> GasSide.Hausen
     | _ -> GasSide.Gnielinski
-
-/// <summary>
-/// Calculates or returns boilCorrelation for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this private helper synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let private boilCorrelation (name: string) =
     match name.ToLowerInvariant() with
     | "cooper" -> WaterSide.Cooper
@@ -606,95 +27,36 @@ let private boilCorrelation (name: string) =
     | "gorenflo" -> WaterSide.Gorenflo
     | "cornwell" | "cornwell-houston" -> WaterSide.CornwellHouston
     | _ -> WaterSide.Mostinski
-
-/// <summary>
-/// Calculates or returns voidModel for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this private helper synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let private voidModel (name: string) =
     match name.ToLowerInvariant() with
     | "omogeneo" | "homogeneous" -> TwoPhase.Homogeneous
     | "chisholm" -> TwoPhase.ChisholmSlip
     | "smith" -> TwoPhase.Smith
     | _ -> TwoPhase.ZuberFindlay
-
-/// <summary>
-/// Calculates or returns frictionModel for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this private helper synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let private frictionModel (name: string) =
     match name.ToLowerInvariant() with
     | "omogeneo" | "homogeneous" -> TwoPhase.HomogeneousFriction
     | "lockhart" | "lockhart-martinelli" -> TwoPhase.LockhartMartinelli
     | "chisholm" -> TwoPhase.ChisholmB
     | _ -> TwoPhase.Friedel
-
-/// <summary>
-/// Calculates or returns gasModelUsesRealGas for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// The CLI accepts explicit gas-model names while preserving the older gas.gas_reale boolean option.
-/// </remarks>
 let private gasModelUsesRealGas (name: string) (fallback: bool) =
     match name.Trim().ToLowerInvariant() with
     | "" -> fallback
     | "ideale" | "ideal" | "ideal-gas" | "ideal gas" -> false
     | "viriale" | "virial" | "reale" | "real" | "real-gas" | "real gas" | "realistico" | "realistic" -> true
     | _ -> fallback
-
-/// <summary>
-/// Calculates or returns insulK for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this private helper synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let private insulK (name: string) =
     match name.ToLowerInvariant() with
     | "fibra" | "ceramic" -> Materials.Refractory.ceramicFibre
     | "denso" | "dense" -> Materials.Refractory.castableDense
     | "leggero" | "castable" -> Materials.Refractory.castableLight
     | _ -> Materials.Refractory.saffilPaper
-
-/// <summary>
-/// Calculates or returns loadcase for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let loadCase (path: string) : DesignCase =
-    /// <summary>
-    /// Calculates or returns d for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let d = Defaults.referenceCase
     use fs = File.OpenRead path
     use doc = JsonDocument.Parse(fs, JsonDocumentOptions(AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip))
-    /// <summary>
-    /// Calculates or returns r for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let r = doc.RootElement
-    /// <summary>
-    /// Calculates or returns t for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let t = d.Tube
-    /// <summary>
-    /// Calculates or returns tube for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let tube =
         { Di = Json.f r "tubi.di_mm" (t.Di * 1000.0) / 1000.0
           Do = Json.f r "tubi.do_mm" (t.Do * 1000.0) / 1000.0
@@ -707,29 +69,11 @@ let loadCase (path: string) : DesignCase =
           Itl = Json.f r "tubi.itl_mm" (t.Itl * 1000.0) / 1000.0
           BaffleOd = Json.f r "tubi.diaframma_od_mm" (t.BaffleOd * 1000.0) / 1000.0
           Roughness = Json.f r "tubi.rugosita_mm" (t.Roughness * 1000.0) / 1000.0 }
-    /// <summary>
-    /// Calculates or returns fr for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let fr = d.Ferrule
-    /// <summary>
-    /// Calculates or returns ferruleLengths for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let ferruleLengths =
         match Json.lengths r "ferrula.lunghezze" with
         | Some l -> l
         | None -> [ (1.0, Json.f r "ferrula.lunghezza_mm" 200.0 / 1000.0) ]
-    /// <summary>
-    /// Calculates or returns ferrule for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let ferrule =
         { Enabled = Json.b r "ferrula.presente" fr.Enabled
           Lengths = ferruleLengths
@@ -737,26 +81,8 @@ let loadCase (path: string) : DesignCase =
           SleeveOd = Json.f r "ferrula.manicotto_od_mm" (fr.SleeveOd * 1000.0) / 1000.0
           SleeveK = (Materials.byName (Json.s r "ferrula.manicotto_materiale" "800")).K
           InsulK = insulK (Json.s r "ferrula.isolante" "saffil") }
-    /// <summary>
-    /// Calculates or returns g for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let g = d.Gas
-    /// <summary>
-    /// Calculates or returns margin for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let margin = Json.f r "gas.maggiorazione" 1.0
-    /// <summary>
-    /// Calculates or returns gas for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let gas =
         { Composition = Json.composition r g.Composition
           MassFlow = Json.f r "gas.portata_kgs" g.MassFlow * margin
@@ -783,19 +109,7 @@ let loadCase (path: string) : DesignCase =
             gasModelUsesRealGas
                 (Json.s r "gas.modello_gas" "")
                 (Json.b r "gas.gas_reale" g.RealGas) }
-    /// <summary>
-    /// Calculates or returns wt for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let wt = d.Water
-    /// <summary>
-    /// Calculates or returns water for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let water =
         { DrumPressure = barToPa (Json.f r "vapore.pressione_bara" (paToBar wt.DrumPressure))
           FoulingOut = Json.f r "vapore.fouling_m2KW" wt.FoulingOut
@@ -804,19 +118,7 @@ let loadCase (path: string) : DesignCase =
           Correlation = boilCorrelation (Json.s r "vapore.correlazione" "mostinski")
           Csf = Json.f r "vapore.csf" wt.Csf
           TFeed = cToK (Json.f r "vapore.t_alimento_C" (kToC wt.TFeed)) }
-    /// <summary>
-    /// Calculates or returns l for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let l = d.Loop
-    /// <summary>
-    /// Calculates or returns loop for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let loop =
         { DzDrumWhb = Json.f r "circuito.dz_drum_whb_m" l.DzDrumWhb
           DrumLevelOffset = Json.f r "circuito.offset_livello_m" l.DrumLevelOffset
@@ -915,13 +217,6 @@ let loadCase (path: string) : DesignCase =
           MaxRhoV2Valve = Json.f r "bypass.rhov2_max_valvola" d.Bypass.MaxRhoV2Valve }
       AllowInternalRecirculation = Json.b r "ricircolo_interno" d.AllowInternalRecirculation
       BypassOpenFraction = Json.f r "bypass_frazione_aperta" d.BypassOpenFraction }
-
-/// <summary>
-/// Calculates or returns template for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let template = """{
   "nome": "WHB reformer secondario - caso base",
   "materiale": "T11",
@@ -1086,34 +381,9 @@ let template = """{
   }
 }
 """
-
-/// <summary>
-/// Calculates or returns selftest for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let selfTest () =
-    /// <summary>
-    /// Calculates or returns ci for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let ci = CultureInfo.InvariantCulture
-    /// <summary>
-    /// Calculates or returns mutable for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let mutable fails = 0
-    /// <summary>
-    /// Calculates or returns check for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let check name (got: float) (exp: float) (tol: float) =
         let err = abs (got - exp) / abs exp
         if err > tol then fails <- fails + 1
@@ -1152,19 +422,7 @@ let selfTest () =
 
     printfn ""
     printfn "Proprieta' dei gas"
-    /// <summary>
-    /// Calculates or returns air for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let air = [ GasProps.N2, 0.79; GasProps.O2, 0.21 ]
-    /// <summary>
-    /// Calculates or returns p300 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let p300 = GasProps.mix air 300.0 101325.0 1.0
     check "aria 300 K rho [kg/m3]" p300.Rho 1.177 0.01
     check "aria 300 K cp [J/kg/K]" p300.Cp 1005.0 0.02
@@ -1173,45 +431,15 @@ let selfTest () =
 
     printfn ""
     printfn "Confronto con il datasheet (miscela di riferimento)"
-    /// <summary>
-    /// Calculates or returns comp for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let comp = Defaults.referenceComposition
-    /// <summary>
-    /// Calculates or returns pin for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let pin = GasProps.mix comp (cToK 967.5) (barToPa 34.74) 1.0
-    /// <summary>
-    /// Calculates or returns pout for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let pout = GasProps.mix comp (cToK 355.0) (barToPa 34.44) 1.0
     check "MW miscela [kg/kmol]" (GasProps.mixMolarMass comp * 1000.0) 15.99 2e-3
     check "rho ingresso [kg/m3]" pin.Rho 5.36 0.02
     check "rho uscita [kg/m3]" pout.Rho 10.48 0.02
     check "cp ingresso [kJ/kg/K]" (pin.Cp / 1000.0) 2.353 0.05
     check "cp uscita [kJ/kg/K]" (pout.Cp / 1000.0) 2.119 0.05
-    /// <summary>
-    /// Calculates or returns pinM for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let pinM = GasProps.mixWith GasProps.MolarAverage comp (cToK 967.5) (barToPa 34.74) 1.0
-    /// <summary>
-    /// Calculates or returns poutM for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let poutM = GasProps.mixWith GasProps.MolarAverage comp (cToK 355.0) (barToPa 34.44) 1.0
     printfn "  --- mu e k: il datasheet usa la media molare, il codice per default Wilke"
     printfn "  %-50s %14s  (media molare %-10s rif. datasheet %s)"
@@ -1224,43 +452,19 @@ let selfTest () =
         "mu uscita [cP]" ((pout.Mu * 1000.0).ToString("G6", ci)) ((poutM.Mu * 1000.0).ToString("G6", ci)) "0.0223"
     check "media molare: mu ingresso [cP]" (pinM.Mu * 1000.0) 0.0376 0.05
     check "media molare: k ingresso [W/m/K]" pinM.K 0.1722 0.10
-    /// <summary>
-    /// Calculates or returns sat for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let sat = Steam.sat (barToPa 117.84)
     check "Tsat a 117.84 bar [C]" (kToC sat.Tsat) 323.3 5e-4
 
     printfn ""
     printfn "Gas reale: secondo coefficiente del viriale (p = 34.74 bar)"
     printfn "  %-9s %14s %10s %14s %14s" "T [K]" "B_H2O [m3/mol]" "Z mix" "h_res [kJ/kg]" "cp_res [J/kgK]"
-    /// <summary>
-    /// Calculates or returns mwx for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let mwx = GasProps.mixMolarMass (GasProps.normalize comp)
     for t in [ 628.0; 700.0; 850.0; 1000.0; 1240.0 ] do
         let bw = GasProps.Virial.bWater t
         let (z, hr, cpr) = GasProps.Virial.residual (GasProps.normalize comp) t (barToPa 34.74)
         printfn "  %-9.0f %14.4e %10.5f %14.2f %14.2f" t bw z (hr / mwx / 1000.0) (cpr / mwx)
-    /// <summary>
-    /// Calculates or returns dh_id for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let dh_id =
         GasProps.enthalpyAbs comp (cToK 967.5) - GasProps.enthalpyAbs comp (cToK 355.0)
-    /// <summary>
-    /// Calculates or returns dh_re for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let dh_re =
         GasProps.enthalpyAbsReal true comp (cToK 967.5) (barToPa 34.74)
         - GasProps.enthalpyAbsReal true comp (cToK 355.0) (barToPa 34.44)
@@ -1272,77 +476,16 @@ let selfTest () =
     printfn ""
     if fails = 0 then printfn "TUTTI I CONTROLLI SUPERATI" else printfn "%d CONTROLLI FALLITI" fails
     fails
-
-/// <summary>
-/// Calculates or returns loadcurves for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let loadCurves (case0: DesignCase) (outDir: string) =
     Directory.CreateDirectory outDir |> ignore
-    /// <summary>
-    /// Calculates or returns sb for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let sb = Text.StringBuilder()
-    /// <summary>
-    /// Calculates or returns ci for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let ci = CultureInfo.InvariantCulture
-    /// <summary>
-    /// Calculates or returns f1 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let f1 (x: float) = x.ToString("F1", ci)
-    /// <summary>
-    /// Calculates or returns f2 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let f2 (x: float) = x.ToString("F2", ci)
-    /// <summary>
-    /// Calculates or returns f3 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let f3 (x: float) = x.ToString("F3", ci)
-    /// <summary>
-    /// Calculates or returns f4 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let f4 (x: float) = x.ToString("F4", ci)
-    /// <summary>
-    /// Calculates or returns f0 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let f0 (x: float) = x.ToString("F0", ci)
-    /// <summary>
-    /// Calculates or returns coarse for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let coarse = { case0 with NZ = 40; NY = 8; AxialRefine = 6.0 }
-    /// <summary>
-    /// Calculates or returns loads for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let loads = [ 0.50; 0.60; 0.70; 0.80; 0.90; 1.00; 1.10 ]
     sb.AppendLine(String('=', 110)) |> ignore
     sb.AppendLine("WHB / PGC - CURVE DI CARICO PARZIALE") |> ignore
@@ -1355,12 +498,6 @@ let loadCurves (case0: DesignCase) (outDir: string) =
     sb.AppendLine("  carico  w gas   potenza  vapore   T tubi  T MISC  farfalla  by-pass    CR   q''max  T met  DNBR  alpha  dP gas") |> ignore
     sb.AppendLine("     [%] [kg/s]      [MW]   [t/h]     [°C]    [°C]       [°]      [%]         [kW/m2]  [°C]         max  [mbar]") |> ignore
     sb.AppendLine(String('-', 110)) |> ignore
-    /// <summary>
-    /// Calculates or returns pts for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let pts = ResizeArray<LoadPoint>()
     for l in loads do
         let c = { coarse with Gas = { coarse.Gas with MassFlow = case0.Gas.MassFlow * l } }
@@ -1396,28 +533,10 @@ let loadCurves (case0: DesignCase) (outDir: string) =
         printfn "  carico %3.0f %% completato" (100.0 * l)
     sb.AppendLine(String('-', 110)) |> ignore
     sb.AppendLine() |> ignore
-    /// <summary>
-    /// Calculates or returns bp for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let bp = case0.Bypass
-    /// <summary>
-    /// Calculates or returns outOfWindow for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let outOfWindow =
         pts |> Seq.filter (fun p -> p.ValveOpenDeg < bp.MinOpenDeg || p.ValveOpenDeg > bp.MaxOpenDeg) |> List.ofSeq
     sb.AppendLine("  LETTURA") |> ignore
-    /// <summary>
-    /// Calculates or returns para for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let para (t: string) =
         let words = t.Split(' ')
         let mutable cur = ""
@@ -1441,21 +560,9 @@ let loadCurves (case0: DesignCase) (outDir: string) =
     para "CRISI DI EBOLLIZIONE. Il DNBR migliora anch'esso al calare del carico, perche' il flusso termico scende piu' in fretta del flusso critico. La condizione critica resta il carico pieno, e in particolare il carico pieno con apparecchio pulito."
     para "TEMPERATURA DEL METALLO. Cala con il carico, ma meno di quanto ci si aspetti: il coefficiente di scambio lato gas scende come la portata alla 0.8, quindi la resistenza dominante peggiora relativamente e una parte del guadagno si perde."
     para "AVVERTENZA. A carico ridotto la temperatura d'ingresso del gas e' stata mantenuta costante. Nella marcia reale un carico ridotto del reformer di solito comporta anche una temperatura d'ingresso diversa: per una curva d'esercizio realistica serve la coppia (portata, temperatura) del bilancio d'impianto a ogni carico."
-    /// <summary>
-    /// Calculates or returns txt for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let txt = sb.ToString()
     printfn "%s" txt
     File.WriteAllText(Path.Combine(outDir, "carichi.txt"), txt)
-    /// <summary>
-    /// Calculates or returns csv for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let csv = Text.StringBuilder()
     csv.AppendLine("carico;w_gas_kgs;potenza_MW;vapore_th;T_tubi_C;T_miscelata_C;farfalla_gradi;bypass_pc;CR;q_max_kWm2;T_met_max_C;DNBR_min;alpha_max;dp_gas_mbar") |> ignore
     for p in pts do
@@ -1466,31 +573,12 @@ let loadCurves (case0: DesignCase) (outDir: string) =
               f1 (kToC p.TMetalMax); f3 p.DNBRMin; f4 p.AlphaMax; f1 (p.DpGas / 100.0) ])) |> ignore
     File.WriteAllText(Path.Combine(outDir, "carichi.csv"), csv.ToString())
     0
-
-/// <summary>
-/// Calculates or returns runcase for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let runCase (options: Options.ProjectOptions) (casePath: string option) (case: DesignCase) (outDir: string) =
     Directory.CreateDirectory outDir |> ignore
     Directory.CreateDirectory options.Folders.TempFolder |> ignore
     let logger = PhaseLogger.create options
     Preflight.run options casePath outDir logger
-    /// <summary>
-    /// Calculates or returns sw for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let sw = Diagnostics.Stopwatch.StartNew()
-    /// <summary>
-    /// Calculates or returns r for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let currentTask =
         ref "Starting design run"
     logger "Run started"
@@ -1507,40 +595,16 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
     logger "Design calculation completed; writing reports"
     sw.Stop()
     if options.Reporting.GenerateFullReport then
-        /// <summary>
-        /// Calculates or returns rep for the WHB calculation model.
-        /// </summary>
-        /// <remarks>
-        /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-        /// </remarks>
         let rep = Report.text r
         File.WriteAllText(Path.Combine(outDir, "report.txt"), rep)
         logger "Full text report written"
     else
         logger "Full text report skipped by option"
-    /// <summary>
-    /// Calculates or returns syn for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let syn = Report.synthesis r
     File.WriteAllText(Path.Combine(outDir, "criticita.txt"), syn)
-    /// <summary>
-    /// Calculates or returns pdsText for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// The PDS comparison is always emitted so every app output is checked against the available client reference data.
-    /// </remarks>
     let pdsText = PdsComparison.text r
     File.WriteAllText(Path.Combine(outDir, "pds_comparison.txt"), pdsText)
     File.WriteAllText(Path.Combine(outDir, "pds_comparison.csv"), PdsComparison.csv r)
-    /// <summary>
-    /// Calculates or returns inventoryText for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// The inventory summary reports partial and total water volumes plus estimated component metal weights.
-    /// </remarks>
     let inventoryText = Report.inventoryText r
     File.WriteAllText(Path.Combine(outDir, "inventory_summary.txt"), inventoryText)
     File.WriteAllText(Path.Combine(outDir, "inventory_summary.csv"), Report.inventoryCsv r)
@@ -1561,38 +625,12 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
     printfn "Calcolo completato in %.1f s. File scritti in: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
     logger (sprintf "Run completed in %.1f s; output folder: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir))
     0
-
-/// <summary>
-/// Calculates or returns writedefaultoptions for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let writeDefaultOptions path =
     Options.save path Options.defaultOptions
     printfn "Opzioni progetto scritte in: %s" (Path.GetFullPath path)
     0
-
-/// <summary>
-/// Calculates or returns githubplan for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let githubPlan optionsPath =
-    /// <summary>
-    /// Calculates or returns opts for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let opts = Options.load optionsPath
-    /// <summary>
-    /// Calculates or returns plan for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let plan = GitHubTransfer.plan opts
     printfn "Piano trasferimento GitHub"
     printfn "  repository: %s" (if String.IsNullOrWhiteSpace plan.RepositoryUrl then "(non impostato)" else plan.RepositoryUrl)
@@ -1602,20 +640,7 @@ let githubPlan optionsPath =
     for c in plan.Commands do
         printfn "  %s" c
     0
-
-/// <summary>
-/// Calculates or returns githubpush for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let githubPush optionsPath =
-    /// <summary>
-    /// Calculates or returns opts for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let opts = Options.load optionsPath
     match GitHubTransfer.execute (Directory.GetCurrentDirectory()) opts with
     | Ok output ->
@@ -1627,26 +652,8 @@ let githubPush optionsPath =
         3
 
 [<EntryPoint>]
-/// <summary>
-/// Calculates or returns main for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 let main argv =
-    /// <summary>
-    /// Calculates or returns args for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let args = List.ofArray argv
-    /// <summary>
-    /// Calculates or returns printUsage for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let printUsage () =
         printfn "Uso:"
         printfn "  whb [caso.json] [--out <cartella>] [--options <whb.options.json>]"
@@ -1658,24 +665,12 @@ let main argv =
         printfn "  whb --github-push [options.json]"
         printfn ""
         printfn "Se il caso non viene indicato viene usato il caso di riferimento."
-    /// <summary>
-    /// Calculates or returns getOpt for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let getOpt name def =
         let rec go = function
             | a :: b :: _ when a = name -> b
             | _ :: rest -> go rest
             | [] -> def
         go args
-    /// <summary>
-    /// Calculates or returns outDir for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let optionsPath = getOpt "--options" "whb.options.json"
     let projectOptions = Options.load optionsPath
     let outDir = getOpt "--out" projectOptions.Folders.ResultsFolder
@@ -1730,3 +725,5 @@ let main argv =
     | ex ->
         eprintfn "Errore: %s" ex.Message
         1
+
+

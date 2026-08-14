@@ -1,19 +1,5 @@
 namespace Whb.Core
-
-/// <summary>
-/// Provides materials functionality for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 module Materials =
-
-    /// <summary>
-    /// Represents material data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type Material =
         { Name: string
           K: float -> float
@@ -23,21 +9,7 @@ module Materials =
           Sy: float -> float
           MetalDusting: (float * float) option
           Note: string }
-
-    /// <summary>
-    /// Calculates or returns lin for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let private lin (k0: float) (slope: float) = fun (t: float) -> k0 + slope * t
-
-    /// <summary>
-    /// Calculates or returns carbonsteel for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let carbonSteel =
         { Name = "SA-192 / SA-210 A1 (acciaio al carbonio)"
           K = lin 52.0 -0.028
@@ -47,13 +19,6 @@ module Materials =
           TmaxDesign = 450.0
           MetalDusting = Some(400.0, 800.0)
           Note = "Limite pratico 450 °C (creep + grafitizzazione oltre 425 °C)." }
-
-    /// <summary>
-    /// Calculates or returns t1mo for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let t1Mo =
         { Name = "SA-209 T1 (0.5Mo)"
           K = lin 49.0 -0.024
@@ -63,13 +28,6 @@ module Materials =
           TmaxDesign = 480.0
           MetalDusting = Some(400.0, 800.0)
           Note = "Grafitizzazione possibile oltre 450 °C in esercizio prolungato." }
-
-    /// <summary>
-    /// Calculates or returns t11 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let t11 =
         { Name = "SA-213 T11 (1.25Cr-0.5Mo)"
           K = lin 42.0 -0.014
@@ -79,13 +37,6 @@ module Materials =
           TmaxDesign = 550.0
           MetalDusting = Some(430.0, 820.0)
           Note = "Buon compromesso per zone calde di WHB syngas." }
-
-    /// <summary>
-    /// Calculates or returns t22 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let t22 =
         { Name = "SA-213 T22 (2.25Cr-1Mo)"
           K = lin 38.0 -0.010
@@ -95,13 +46,6 @@ module Materials =
           TmaxDesign = 580.0
           MetalDusting = Some(430.0, 850.0)
           Note = "Standard per tubi caldi di WHB reforming." }
-
-    /// <summary>
-    /// Calculates or returns ss321h for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let ss321h =
         { Name = "SA-213 TP321H (austenitico)"
           K = fun t -> 14.5 + 0.0155 * t
@@ -111,13 +55,6 @@ module Materials =
           TmaxDesign = 700.0
           MetalDusting = Some(450.0, 900.0)
           Note = "Suscettibile a SCC da cloruri lato acqua: da evitare a contatto con BFW." }
-
-    /// <summary>
-    /// Calculates or returns alloy800 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let alloy800 =
         { Name = "Alloy 800H/800HT"
           K = fun t -> 11.5 + 0.0165 * t
@@ -127,13 +64,6 @@ module Materials =
           TmaxDesign = 800.0
           MetalDusting = Some(450.0, 900.0)
           Note = "Tipico per ferrule/inserti e boccole in zona ingresso gas." }
-
-    /// <summary>
-    /// Calculates or returns alloy601 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let alloy601 =
         { Name = "Alloy 601 / 602 CA (liner by-pass)"
           K = fun t -> 11.3 + 0.0163 * t
@@ -143,13 +73,6 @@ module Materials =
           TmaxDesign = 1100.0
           MetalDusting = Some(450.0, 900.0)
           Note = "Alto Cr-Al, resistente a ossidazione e carburizzazione ad alta temperatura." }
-
-    /// <summary>
-    /// Calculates or returns sa533b2 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let sa533b2 =
         { Name = "SA-533 Gr.B Cl.2 (Mn-Mo-Ni bonificato)"
           K = lin 41.0 -0.017
@@ -159,13 +82,6 @@ module Materials =
           TmaxDesign = 400.0
           MetalDusting = None
           Note = "Lamiera per recipienti a pressione, bonificata. Limite pratico ASME VIII ~371 °C." }
-
-    /// <summary>
-    /// Calculates or returns alloy602 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let alloy602 =
         { Name = "SB-168 UNS N06025 (Alloy 602 CA)"
           K = lin 10.5 0.0160
@@ -175,13 +91,6 @@ module Materials =
           TmaxDesign = 1200.0
           MetalDusting = Some(450.0, 900.0)
           Note = "Lega per liner ad altissima temperatura: resistenza alla carburazione data dal 2.2 % di Al." }
-
-    /// <summary>
-    /// Calculates or returns sa516 for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let sa516 =
         { Name = "SA-516 Gr.70 (lamiera mantello)"
           K = lin 52.0 -0.028
@@ -191,43 +100,17 @@ module Materials =
           TmaxDesign = 425.0
           MetalDusting = None
           Note = "Materiale di mantello tipico; non esposto al gas di processo." }
-
-    /// <summary>
-    /// Calculates or returns all for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let all = [ carbonSteel; t1Mo; t11; t22; ss321h; alloy800; alloy601; alloy602; sa516; sa533b2 ]
-
-    /// <summary>
-    /// Calculates or returns byname for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let byName (n: string) =
         all
         |> List.tryFind (fun m -> m.Name.ToLowerInvariant().Contains(n.ToLowerInvariant()))
         |> Option.defaultValue carbonSteel
-
-    /// <summary>
-    /// Calculates or returns elongation for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let elongation (m: Material) (tRoom: float) (l: float) (t: float) =
         m.Alpha t * (t - tRoom) * l
-
-    /// <summary>
-    /// Provides refractory functionality for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     module Refractory =
         let castableLight (t: float) = 0.35 + 0.00025 * t
         let ceramicFibre (t: float) = 0.12 + 0.00035 * t
         let castableDense (t: float) = 1.2 + 0.0003 * t
         let saffilPaper (t: float) = 0.07 + 0.00015 * t
+
+

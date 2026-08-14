@@ -4,35 +4,15 @@ open System
 open System.Diagnostics
 open System.IO
 open Whb.Core.Options
-
-/// <summary>
-/// Provides githubtransfer functionality for the WHB calculation model.
-/// </summary>
-/// <remarks>
-/// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-/// </remarks>
 module GitHubTransfer =
 
     [<CLIMutable>]
-    /// <summary>
-    /// Represents transferplan data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     type TransferPlan =
         { RepositoryUrl: string
           Branch: string
           CommitMessage: string
           CreatePullRequest: bool
           Commands: string list }
-
-    /// <summary>
-    /// Calculates or returns plan for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let plan (options: Options.ProjectOptions) =
         let g = options.Github
         let branch = if String.IsNullOrWhiteSpace g.Branch then "main" else g.Branch
@@ -50,13 +30,6 @@ module GitHubTransfer =
               $"git commit -m \"{escapedMessage}\""
               $"git push -u origin {branch}"
               if g.CreatePullRequest then "gh pr create --draft --fill" ] }
-
-    /// <summary>
-    /// Calculates or returns runCommand for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let private runCommand (workingDir: string) (fileName: string) (args: string) =
         let psi = ProcessStartInfo(fileName, args)
         psi.WorkingDirectory <- workingDir
@@ -68,13 +41,6 @@ module GitHubTransfer =
         let output = p.StandardOutput.ReadToEnd()
         let err = p.StandardError.ReadToEnd()
         if p.ExitCode = 0 then Ok output else Error err
-
-    /// <summary>
-    /// Calculates or returns execute for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Keep this documentation synchronized with the implemented WHB calculation behavior and engineering units.
-    /// </remarks>
     let execute workingDir (options: Options.ProjectOptions) =
         let g = options.Github
         if String.IsNullOrWhiteSpace g.RepositoryUrl then
@@ -95,3 +61,5 @@ module GitHubTransfer =
             |> Result.bind (fun _ -> runCommand workingDir "git" "add .")
             |> Result.bind (fun _ -> runCommand workingDir "git" $"commit -m \"{escapedMessage}\"")
             |> Result.bind (fun _ -> runCommand workingDir "git" $"push -u origin {branch}")
+
+

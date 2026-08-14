@@ -56,6 +56,10 @@
     <Compile Include="Loads\Mechanics.fs" />
     <Compile Include="Components\Equipment\Nozzles.fs" />
     <Compile Include="Designers\Design.fs" />
+    <Compile Include="Reports\Report.Common.fs" />
+    <Compile Include="Reports\Report.Text.fs" />
+    <Compile Include="Reports\Report.Synthesis.fs" />
+    <Compile Include="Reports\Report.Csv.fs" />
     <Compile Include="Reports\Report.fs" />
     <Compile Include="Reports\HtmlReport.fs" />
     <Compile Include="Options\Defaults.fs" />
@@ -67,3 +71,4 @@
   </ItemGroup>
 
 </Project>
+

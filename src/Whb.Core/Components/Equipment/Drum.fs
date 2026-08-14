@@ -10,13 +10,6 @@ open Constants
 /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
 /// </remarks>
 module Drum =
-
-    /// <summary>
-    /// Represents internals data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
-    /// </remarks>
     type Internals =
         { Enabled: bool
           ShellId: float
@@ -47,13 +40,6 @@ module Drum =
 
           ExternalSteam: float
           VendorDpCirculation: float option }
-
-    /// <summary>
-    /// Represents item data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
-    /// </remarks>
     type Item =
         { Label: string
           K: float
@@ -62,13 +48,6 @@ module Drum =
           Rho: float
           Dp: float
           Note: string }
-
-    /// <summary>
-    /// Represents result data used by the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
-    /// </remarks>
     type Result =
         { /// Pressure loss along the circulation path [Pa]; included in the balance.
           DpCirculation: float
@@ -86,62 +65,20 @@ module Drum =
           SteamSpaceHeight: float
           Submergence: float
           Notes: string list }
-
-    /// <summary>
-    /// Calculates or returns soudersbrown for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
-    /// </remarks>
     let soudersBrown (kSb: float) (rhoL: float) (rhoV: float) =
         kSb * sqrt ((rhoL - rhoV) / rhoV)
-
-    /// <summary>
-    /// Calculates or returns dplocaltwophase for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
-    /// </remarks>
     let dpLocalTwoPhase (k: float) (g_: float) (rhoH: float) =
         k * g_ * g_ / (2.0 * rhoH)
-
-    /// <summary>
-    /// Calculates or returns chisholmsingularity for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
-    /// </remarks>
     let chisholmSingularity (b: float) (x: float) (rhoL: float) (rhoV: float) =
         1.0 + (rhoL / rhoV - 1.0) * (b * x * (1.0 - x) + x * x)
-
-    /// <summary>
-    /// Calculates or returns surfacearea for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
-    /// </remarks>
     let surfaceArea (id_: float) (length: float) (level: float) =
         let r = 0.5 * id_
         let y = level - r                      // Free-surface elevation relative to the axis
         let halfChord = sqrt (max 0.0 (r * r - y * y))
         2.0 * halfChord * length
-
-    /// <summary>
-    /// Calculates or returns ductFriction for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
-    /// </remarks>
     let private ductFriction (re: float) (l: float) (dh: float) =
         let f = GasSide.darcyFriction (max 2000.0 re) (5e-5 / dh)
         f * l / dh
-
-    /// <summary>
-    /// Calculates or returns solve for the WHB calculation model.
-    /// </summary>
-    /// <remarks>
-    /// Calculates steam-drum internals, circulation losses, separation velocities, and steam-side pressure drops using empirical sizing rules and hydraulic balances. Verify Souders-Brown constants, internals data, liquid level, and vendor limits for final design.
-    /// </remarks>
     let solve (d: Internals) (sat: Steam.SatProps) (wCirc: float) (x: float)
               (wSteam: float) (riserArea: float) (dcArea: float) : Result =
         let rhoH = TwoPhase.homogeneousDensity x sat
@@ -260,5 +197,7 @@ module Drum =
             [ "La perdita del percorso VAPORE non entra nel bilancio di circolazione: si scarica sulla pressione consegnata in rete."
               "Il modello per le singolarita' bifase e' OMOGENEO: dp = K G²/(2 rho_H). E' la pratica raccomandata per accidentalita' brusche."
               "Se il costruttore fornisce la curva dp-portata delle interne, usarla: e' l'unico dato veramente affidabile." ] }
+
+
 
 
