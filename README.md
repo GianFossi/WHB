@@ -376,5 +376,7 @@ The repository includes a GitHub Actions workflow at
 
 ## License
 
-Add the project license before publishing to GitHub or NuGet. NuGet packages
-should include license metadata in the project file or package settings.
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+See <https://polyformproject.org/licenses/noncommercial/1.0.0> for the canonical
+text. Commercial use is not permitted under this license; contact the copyright
+holder to arrange a separate commercial license.
