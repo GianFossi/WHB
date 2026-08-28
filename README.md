@@ -230,7 +230,7 @@ the condenser module. If `false`, the condenser runs on its own
 .\build.ps1 -Task Build             # restore + build
 .\build.ps1 -Task Test              # restore + build + test
 .\build.ps1 -Task Rebuild           # clean + restore + build + test
-.\build.ps1 -Task Clean             # clean bin/obj/publish/TestResults
+.\build.ps1 -Task Clean             # clean build outputs and generated folders
 .\clean.ps1                         # shortcut for clean
 ```
 

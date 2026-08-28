@@ -33,7 +33,7 @@ build tooling.
 .\build.ps1 -Task Build     # restore + build
 .\build.ps1 -Task Test      # restore + build + test
 .\build.ps1 -Task Rebuild   # clean + restore + build + test
-.\build.ps1 -Task Clean     # clean bin/obj/publish/TestResults
+.\build.ps1 -Task Clean     # clean build outputs and generated folders
 ```
 
 Cross-platform equivalent:
@@ -131,6 +131,11 @@ Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
 
+- 2026-08-28 — Expanded `build.ps1` `Clean` to remove root generated
+  outputs too (`results*`, `risultati*`, `tmp`, `logs`,
+  `artifacts/packages`, `tmp_run_*.txt`) and added a repo-root guard
+  around recursive deletes. This keeps stale `net8.0` migration debris
+  and probe outputs from accumulating while making cleanup safer.
 - 2026-08-28 — Added `Process/SulphurCondenser.fs` plus
   `DesignCase.SulphurCondenser` / `DesignResult.SulphurCondenserResult`.
   This is a dedicated 1D Claus sulphur-condenser rating/screening unit with

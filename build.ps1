@@ -9,6 +9,24 @@ param(
 $ErrorActionPreference = "Stop"
 
 $Solution = Join-Path $PSScriptRoot "WhbDesign.sln"
+$RepoRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
+
+function Remove-RepoPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $RelativePath
+    )
+
+    $fullPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $RelativePath))
+    if (-not $fullPath.StartsWith($RepoRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to remove path outside repository root: $RelativePath"
+    }
+
+    if (Test-Path -LiteralPath $fullPath) {
+        Remove-Item -LiteralPath $fullPath -Recurse -Force
+        Write-Host "Removed $RelativePath"
+    }
+}
 
 function Invoke-Clean {
     dotnet clean $Solution --configuration Debug
@@ -22,15 +40,26 @@ function Invoke-Clean {
         "src/Whb.Cli/obj",
         "tests/Whb.Tests/bin",
         "tests/Whb.Tests/obj",
-        "tests/Whb.Tests/TestResults"
+        "tests/Whb.Tests/TestResults",
+        "results",
+        "results_check",
+        "results_pds_check",
+        "results_probe",
+        "results_report_option_probe",
+        "results_precision_probe",
+        "results_summary_probe",
+        "risultati",
+        "risultati_check",
+        "risultati_pds_check",
+        "tmp",
+        "logs",
+        "artifacts/packages",
+        "tmp_run_stdout.txt",
+        "tmp_run_stderr.txt"
     )
 
     foreach ($relativePath in $paths) {
-        $path = Join-Path $PSScriptRoot $relativePath
-        if (Test-Path -LiteralPath $path) {
-            Remove-Item -LiteralPath $path -Recurse -Force
-            Write-Host "Removed $relativePath"
-        }
+        Remove-RepoPath -RelativePath $relativePath
     }
 }
 
