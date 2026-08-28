@@ -1393,13 +1393,6 @@ module Design =
                          bpSpec.PipeMaterial e.TEquivalent bpSpec.PipeOd bpSpec.InsulOd
                          case.UnsupportedSpan mb.SigmaZThermal 0.0 ]
                | None -> [])
-            @ (match bpLinerExp with
-               | Some e ->
-                   [ Mechanics.bucklingCheck "BY-PASS liner - IPOTESI NON APPLICABILE (il liner e' libero)"
-                         bpSpec.LinerMaterial e.TEquivalent bpSpec.LinerOd bpSpec.LinerId
-                         case.UnsupportedSpan
-                         (-(bpSpec.LinerMaterial.E (kToC e.TEquivalent)) * e.DeltaL / t.Length) 0.0 ]
-               | None -> [])
         let stressRes =
             { CommonDelta = commonDelta
               PressureEndLoad = pEnd

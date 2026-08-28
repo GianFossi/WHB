@@ -77,21 +77,85 @@ module PdsComparison =
     /// The text report is intended for direct engineering review next to the main calculation report.
     /// </remarks>
     let text (result: DesignResult) =
+        let rows = rows result
+        let diffTexts =
+            rows
+            |> List.map (fun r ->
+                match r.DifferencePercent with
+                | Some pct -> sprintf "%s (%+.2f%%)" (f3 r.Difference) pct
+                | None -> f3 r.Difference)
+        let quantityWidth =
+            ("Quantity" :: (rows |> List.map (fun r -> r.Quantity)))
+            |> List.maxBy String.length
+            |> String.length
+        let unitWidth =
+            ("Unit" :: (rows |> List.map (fun r -> r.Unit)))
+            |> List.maxBy String.length
+            |> String.length
+        let clientWidth =
+            ("Client PDS" :: (rows |> List.map (fun r -> f3 r.ClientPds)))
+            |> List.maxBy String.length
+            |> String.length
+        let calculatedWidth =
+            ("Calculated" :: (rows |> List.map (fun r -> f3 r.Calculated)))
+            |> List.maxBy String.length
+            |> String.length
+        let differenceWidth =
+            ("Difference" :: diffTexts)
+            |> List.maxBy String.length
+            |> String.length
+        let limitWidth =
+            ("Limit" :: (rows |> List.map (fun r -> r.Limit)))
+            |> List.maxBy String.length
+            |> String.length
+        let statusWidth =
+            ("Status" :: (rows |> List.map (fun r -> r.Status)))
+            |> List.maxBy String.length
+            |> String.length
+        let formatRow
+            (quantity: string)
+            (unit: string)
+            (client: string)
+            (calculated: string)
+            (difference: string)
+            (limit: string)
+            (status: string) =
+            String.concat "  "
+                [ quantity.PadRight(quantityWidth)
+                  unit.PadRight(unitWidth)
+                  client.PadLeft(clientWidth)
+                  calculated.PadLeft(calculatedWidth)
+                  difference.PadLeft(differenceWidth)
+                  limit.PadLeft(limitWidth)
+                  status.PadLeft(statusWidth) ]
+        let separatorLength =
+            formatRow
+                (String.replicate quantityWidth "-")
+                (String.replicate unitWidth "-")
+                (String.replicate clientWidth "-")
+                (String.replicate calculatedWidth "-")
+                (String.replicate differenceWidth "-")
+                (String.replicate limitWidth "-")
+                (String.replicate statusWidth "-")
+            |> String.length
         let sb = Text.StringBuilder()
         sb.AppendLine("CLIENT PDS COMPARISON CHECK") |> ignore
         sb.AppendLine("This check is generated for every WHB run using the available client PDS reference data.") |> ignore
         sb.AppendLine("Review every CHECK row before accepting the calculation output.") |> ignore
-        sb.AppendLine(String('-', 112)) |> ignore
-        sb.AppendLine(sprintf "%-28s %12s %14s %14s %14s %14s %8s" "Quantity" "Unit" "Client PDS" "Calculated" "Difference" "Limit" "Status") |> ignore
-        sb.AppendLine(String('-', 112)) |> ignore
-        for r in rows result do
-            let diffText =
-                match r.DifferencePercent with
-                | Some pct -> sprintf "%s (%+.2f%%)" (f3 r.Difference) pct
-                | None -> f3 r.Difference
-            sb.AppendLine(sprintf "%-28s %12s %14s %14s %14s %14s %8s"
-                              r.Quantity r.Unit (f3 r.ClientPds) (f3 r.Calculated) diffText r.Limit r.Status) |> ignore
-        sb.AppendLine(String('-', 112)) |> ignore
+        sb.AppendLine(String('-', separatorLength)) |> ignore
+        sb.AppendLine(formatRow "Quantity" "Unit" "Client PDS" "Calculated" "Difference" "Limit" "Status") |> ignore
+        sb.AppendLine(String('-', separatorLength)) |> ignore
+        for r, diffText in List.zip rows diffTexts do
+            sb.AppendLine(
+                formatRow
+                    r.Quantity
+                    r.Unit
+                    (f3 r.ClientPds)
+                    (f3 r.Calculated)
+                    diffText
+                    r.Limit
+                    r.Status) |> ignore
+        sb.AppendLine(String('-', separatorLength)) |> ignore
         sb.ToString()
 
     /// <summary>

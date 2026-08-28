@@ -1,0 +1,5 @@
+quantity,unit,client_pds,calculated,difference,difference_percent,limit,status
+Exchanged duty,MW,116.614,116.541,-0.073,-0.063,+/- 0.250 MW,OK
+Steam production,kg/h,347743.000,347401.359,-341.641,-0.098,+/- 1500.000 kg/h,OK
+Gas outlet temperature,degC,355.000,354.992,-0.008,-0.002,+/- 8.000 degC,OK
+Gas-side pressure drop,bar,0.300,0.098,-0.202,-67.340,+/- 0.300 bar,OK

@@ -1,0 +1,320 @@
+================================================================================================
+WHB / PGC - SINTESI DELLE CRITICITA'
+Caso: WHB reformer secondario - caso base
+Data: 2026-08-28 14:28
+================================================================================================
+
+  ESITO:  5 criticita' | 6 attenzioni | 7 note
+
+  NUMERI CHIAVE
+    Potenza / vapore                           116.54 MW / 347 t/h
+    T gas uscita (media)                       355.0 °C
+    Flusso termico di picco                    396 kW/m2
+    T metallo massima (interna)                432 °C su limite 550 °C
+    DNBR locale minimo (INDICATORE, vedi 5d)   0.72  - il criterio di riferimento e' 2.0, ma nessun modello di CHF disponibile e' tarato su questa geometria: il valore va usato per confronti relativi, non in assoluto
+    Rapporto di circolazione                   10.9  su minimo 10.0
+    Frazione di vuoto massima                  0.421  su limite 0.70
+    Dilatazione differenziale tubo-mantello    4.21 mm -> 35.0 MPa compr. nei tubi (utilizzo 32% a instabilita')
+    Carico per tubo sulla giunzione tubo-piastra 11.8 kN
+    dP lato gas                                98 mbar su ammesso 300 mbar
+    Ferrula: dP stimata / quota dP gas         8.26 mbar per tubo / 8.4%
+    Ferrula: carta isolante radiale            1.00 mm - OK
+    dP circuito acqua/vapore                   DC 30 | riser 56 | fascio 26 | drum/calm box 35 mbar
+    Inventory acqua / peso metallo             88.6 m3 / 155.7 t
+    VIBRAZIONI - V/Vcrit (istab. fluido-elastica) 4.14  su limite 0.8   [reticolo 60° TRIANGOLARE RUOTATO (lato lungo trasversale al flusso), K = 1.1]
+      campata massima ammessa / campata assunta 0.57 m  contro  1.29 m assunti
+    Tensione equivalente massima (Lame' + assiale) 201 MPa = 107% di Sy  (BY-PASS, z = 0.01 m)
+    Carico di estremita' da pressione (trazione) 28.31 MN, che compensa la compressione termica
+    Pressione esterna: caso peggiore           BY-PASS tubo di contenimento - LC1 esercizio: 83.1 bar su 82 bar di collasso (utilizzo 101%)
+    Farfalla del by-pass in esercizio normale  24.5° di apertura (finestra ammessa 17.4° - 25.1°)
+    By-pass: frazione / dP libero / dP valvola 1.41% / 0.8 mbar / 97.2 mbar
+      sensibilita' della regolazione           0.56 K di T miscelata per grado di stelo
+    Warning validita' correlazioni/proprieta'  1 da verificare
+
+
+  DEFINIZIONI ESSENZIALI
+  --------------------------------------------------------------------------------------------
+  CR - RAPPORTO DI CIRCOLAZIONE
+     CR = portata d'acqua che circola nel mantello / portata di vapore prodotta.
+     Adimensionale. Equivale al reciproco del titolo in uscita dal fascio: CR = 10
+     significa che di ogni 10 kg di miscela che escono dal mantello 1 kg e' vapore e
+     9 kg sono acqua che torna al corpo cilindrico. NON e' un dato di progetto: e' il
+     risultato dell'equilibrio fra il battente motore, generato dalla differenza di
+     peso fra la colonna che scende e quelle che salgono, e le perdite di carico del
+     giro. Serve che sia alto perche' l'acqua in eccesso e' quella che LAVA i tubi e
+     impedisce che la parete si scopra. Criterio pratico: CR >= 10, cioe' titolo <= 0.10.
+
+  DNB - DEPARTURE FROM NUCLEATE BOILING (crisi di ebollizione)
+     E' il FENOMENO, non un numero. In ebollizione nucleata le bolle si staccano dalla
+     parete e l'acqua le rimpiazza subito: lo scambio e' ottimo e il metallo resta
+     freddo. Se il flusso termico cresce oltre un valore critico, le bolle si generano
+     piu' in fretta di quanto l'acqua riesca a rimpiazzarle e si saldano in un FILM DI
+     VAPORE continuo che isola la parete. Il vapore conduce male, quindi lo scambio
+     crolla e la temperatura del metallo sale di centinaia di gradi in pochi secondi.
+     Nei fasci il fenomeno si chiama anche STEAM BLANKETING. Non e' progressivo: e'
+     un salto, e il tubo si rompe per cedimento a caldo prima che ce ne si accorga.
+
+  CHF - CRITICAL HEAT FLUX (flusso termico critico)
+     E' il valore di flusso termico al quale si innesca il DNB. Dipende dalla
+     pressione, dalla geometria del fascio e soprattutto dal TITOLO locale: piu'
+     vapore c'e' gia' nella miscela che lava il tubo, meno flusso serve per scoprire
+     la parete.
+
+  DNBR - DEPARTURE FROM NUCLEATE BOILING RATIO
+     DNBR = flusso termico critico locale / flusso termico effettivo locale.
+     E' un MARGINE, adimensionale: DNBR = 3 vuol dire che si lavora a un terzo del
+     limite, DNBR = 1 esattamente al limite, DNBR < 1 oltre il limite. La pratica di
+     progetto chiede almeno 2. Si calcola CELLA PER CELLA, perche' sia il flusso sia
+     il valore critico cambiano lungo il tubo e da banda a banda: il minimo non cade
+     dove il flusso e' massimo, ma dove il rapporto fra i due e' peggiore.
+     AVVERTENZA: nessuno dei modelli di CHF disponibili in letteratura e' tarato su
+     questa geometria a questa pressione, e fra loro divergono di un ordine di
+     grandezza. Il DNBR va quindi usato per confronti RELATIVI - fra zone dello stesso
+     apparecchio o fra varianti dello stesso progetto - non come numero assoluto.
+  --------------------------------------------------------------------------------------------
+
+================================================================================================
+[CRITICO]   EBOLLIZIONE / Margine su DNB insufficiente
+------------------------------------------------------------------------------------------------
+  valore .... DNBR = 0.72 (campo fascio (DNBR richiesto 1.43))
+  criterio .. DNBR >= 1.43
+  DOVE ...... z = 0.21 m, y = +0.78 m (banda 11, ferrula 200 mm)
+  perche' ...
+              Il flusso locale (396 kW/m2) supera il CHF di fascio corretto per il titolo locale x =
+              0.092. E' il punto in cui il film di vapore puo' staccare l'acqua dalla parete (steam
+              blanketing).
+  AZIONE ....
+              Allungare la ferrula, aumentare la circolazione, o ridurre il titolo locale nella banda
+              alta.
+
+================================================================================================
+[CRITICO]   EBOLLIZIONE / Surriscaldamento di parete oltre il dT critico
+------------------------------------------------------------------------------------------------
+  valore .... 13.4 K
+  criterio .. dT critico = 6.1 K
+  DOVE ...... z = 0.21 m, y = -0.21 m (banda 4, ferrula 200 mm)
+  perche' ...
+              Oltre il ginocchio della curva di ebollizione le bolle si fondono in un film continuo: h
+              crolla e il metallo si scalda di centinaia di gradi in minuti.
+  AZIONE ....
+              Ridurre il flusso di picco (ferrula) e aumentare la circolazione.
+
+================================================================================================
+[CRITICO]   MECCANICO / Tensione equivalente oltre lo snervamento
+------------------------------------------------------------------------------------------------
+  valore .... sigma_VM = 201 MPa (107 % di Sy)
+  criterio .. Sy(T) = 187 MPa
+  DOVE ...... BY-PASS, z = 0.01 m
+  perche' ...
+              Combinazione di Lame' (pressione esterna prevalente), gradiente termico radiale e carico
+              assiale da dilatazione impedita.
+  AZIONE ....
+              Rivedere spessore del tubo o temperatura di parete.
+
+================================================================================================
+[CRITICO]   MECCANICO / Pressione esterna: collasso NON verificato su BY-PASS tubo di contenimento - LC1 esercizio
+------------------------------------------------------------------------------------------------
+  valore .... p_ext netta = 83.1 bar contro 82 bar di collasso stimato
+  criterio .. ASME VIII-1 UG-28 con fattore di sicurezza 3 sul collasso
+  DOVE ...... BY-PASS tubo di contenimento - LC1 esercizio
+  perche' ...
+              collasso governato dallo SNERVAMENTO circonferenziale (tubo tozzo); irrigidito dai
+              diaframmi ogni 1.20 m (senza, il collasso scenderebbe a 86 bar). Il cilindro e' premuto
+              dall'esterno dall'acqua a pressione di corpo cilindrico mentre dentro ha gas a pressione
+              di processo: la differenza e' la pressione di collasso di progetto.
+  AZIONE ....
+              Aumentare lo spessore, ridurre la spaziatura degli irrigidimenti, oppure verificare sul
+              disegno lo spessore reale (qui assunto).
+
+================================================================================================
+[CRITICO]   VIBRAZIONI / Instabilita' fluido-elastica: velocita' critica SUPERATA
+------------------------------------------------------------------------------------------------
+  valore .... V/Vcrit = 4.14 nella banda 11 (y = +0.78 m): 5.99 m/s contro 1.45 m/s critici
+  criterio .. V/Vcrit <= 0.8 (criterio di progetto); K = 1.1, delta = 0.030
+  DOVE ...... banda superiore del fascio, campata 1.29 m
+  perche' ...
+              Reticolo 60° TRIANGOLARE RUOTATO (lato lungo trasversale al flusso). E' la
+              configurazione MENO stabile: la costante di Connors in bifase vale 1.1 contro 4.0 del
+              triangolare normale, cioe' la velocita' critica e' quasi quattro volte piu' bassa a
+              parita' di tutto il resto. L'ampiezza diverge senza preavviso: non c'e' un ginocchio
+              graduale. La banda superiore e' la stessa in cui cade il DNBR minimo, perche' e' il
+              collo di bottiglia del percorso lato mantello.
+  AZIONE ....
+              Ridurre la campata a 0.57 m (per V/Vcrit = 0.8) oppure 0.63 m (per 1.0). Prima di
+              intervenire: procurarsi il calcolo di vibrazione del costruttore e il passo REALE dei
+              diaframmi nella zona alta.
+
+================================================================================================
+[ATTENZIONE] CIRCOLAZIONE / Margine ridotto sul rapporto di circolazione
+------------------------------------------------------------------------------------------------
+  valore .... CR = 10.9
+  criterio .. CR >= 10
+  DOVE ...... intero apparecchio
+  perche' ...
+              A carico parziale il battente cala piu' delle perdite.
+  AZIONE ....
+              Verificare il CR al 50% del carico.
+
+================================================================================================
+[ATTENZIONE] GAS / By-pass da strozzare per la regolazione
+------------------------------------------------------------------------------------------------
+  valore .... frazione richiesta 1.41%
+  criterio .. dP del by-pass libero 0.3 mbar contro 98.0 mbar del fascio
+  DOVE ...... organo di regolazione del by-pass
+  perche' ...
+              By-pass e fascio sono in parallelo fra gli stessi due punti: senza strozzamento la
+              resistenza del tubo centrale e' troppo bassa.
+  AZIONE ....
+              L'organo di regolazione deve dissipare 98 mbar. A valvola completamente aperta il
+              by-pass prenderebbe circa il 25% della portata e la temperatura d'uscita salirebbe ben
+              oltre il target.
+
+================================================================================================
+[ATTENZIONE] MATERIALI / Deposito lato acqua determinante sulla T metallo
+------------------------------------------------------------------------------------------------
+  valore .... 59 K di salto sul deposito
+  criterio .. Rf assunto = 1.5e-004 m2K/W
+  DOVE ...... z = 0.21 m, y = +0.78 m (banda 11, ferrula 200 mm)
+  perche' ...
+              Il metallo si scalda per il deposito, non per l'ebollizione. Il meccanismo e'
+              autoacceleratore: piu' caldo -> piu' deposito -> piu' caldo.
+  AZIONE ....
+              Controllo chimico dell'acqua (fosfati/AVT, silice, conducibilita') e pulizia chimica
+              programmata.
+
+================================================================================================
+[ATTENZIONE] MATERIALI / Finestra di metal dusting
+------------------------------------------------------------------------------------------------
+  valore .... 1% delle celle
+  criterio .. finestra 430-820 °C con CO/CH4
+  DOVE ...... fra z = 0.21 e z = 0.21 m
+  perche' ...
+              La carburizzazione catastrofica attacca gli acciai in gas ad alta attivita' di carbonio.
+  AZIONE ....
+              Valutare alligazione, alluminizzazione o dosaggio di S; tenere la parete fuori finestra.
+
+================================================================================================
+[ATTENZIONE] TERMICO / Flusso termico di picco elevato
+------------------------------------------------------------------------------------------------
+  valore .... 396 kW/m2
+  criterio .. 250-350 kW/m2 (pratica per WHB a tubi da fumo)
+  DOVE ...... z = 0.21 m, y = +0.78 m (banda 11, ferrula 200 mm)
+  perche' ...
+              Sopra 300 kW/m2 la sensibilita' a depositi, maldistribuzione e qualita' dell'acqua
+              cresce rapidamente. E' il criterio pratico dominante, piu' del CHF teorico.
+  AZIONE ....
+              Allungare la ferrula: da 200 a 500 mm il picco cala di circa il 9%.
+
+================================================================================================
+[ATTENZIONE] VALIDITA' CORRELAZIONI / Prandtl gas fuori dal range tipico
+------------------------------------------------------------------------------------------------
+  valore .... Pr = 0.485 .. 0.497
+  criterio .. range indicativo 0.5 .. 2.0 per screening gas-side
+  DOVE ...... lato gas
+  perche' ...
+              Il limite e' pratico: non blocca il calcolo ma richiede review.
+  AZIONE ....
+              Verificare proprieta' di trasporto e correlazione scelta.
+
+================================================================================================
+[NOTA]      EBOLLIZIONE / Regime NBD al punto critico
+------------------------------------------------------------------------------------------------
+  valore .... Bo = 1.48e-004, Co = 2.01
+  criterio .. Bo > 1.5e-4 o Co > 0.65
+  DOVE ...... z = 0.21 m, y = +0.78 m (banda 11, ferrula 200 mm)
+  perche' ...
+              Nelle condizioni tipiche WHB a bassa portata di massa e basso titolo il rischio di steam
+              blanketing e' governato dal margine su DNB. L'opzione vapore.ebollizione_flusso =
+              kandlikar permette di rivalutare l'HTC locale senza il fattore di soppressione di Chen.
+  AZIONE ....
+              Il vincolo di progetto e' il CHF locale, non l'HTC.
+
+================================================================================================
+[NOTA]      MATERIALI / Liner del by-pass in finestra di metal dusting
+------------------------------------------------------------------------------------------------
+  valore .... 763 °C
+  criterio .. finestra 450-900 °C
+  DOVE ...... tubo di by-pass centrale, tutta la lunghezza
+  perche' ...
+              Il liner lavora per definizione in piena finestra: e' il motivo per cui si specifica una
+              lega alto Cr-Al invece di un acciaio comune.
+  AZIONE ....
+              Confermare la scelta di lega alto Cr-Al (601/602 CA) e il controllo del rapporto S/CO.
+
+================================================================================================
+[NOTA]      MECCANICA / Dilatazione impedita entro margine
+------------------------------------------------------------------------------------------------
+  valore .... sigma tubi 35 MPa (compr.), mantello 26 MPa (traz.)
+  criterio .. ammissibile buckling 109 MPa
+  DOVE ...... fascio e mantello
+  perche' ...
+              Dilatazione differenziale libera 4.21 mm; forza assiale interna 9.97 MN, pari a 11.8 kN
+              per tubo sulla giunzione tubo-piastra.
+  AZIONE ....
+              Confermare con il calcolo di codice, che aggiunge i termini di pressione.
+
+================================================================================================
+[NOTA]      MECCANICO / Liner del by-pass: dilatazione LIBERA (confermato)
+------------------------------------------------------------------------------------------------
+  valore .... allungamento libero 160.1 mm alla T media equivalente di 703 °C
+  criterio .. il liner non e' vincolato a entrambe le estremita'
+  DOVE ...... by-pass centrale
+  perche' ...
+              Costruttivamente il liner e' libero di dilatare, quindi NON sviluppa carico assiale e
+              non entra nel bilancio a piastre fisse: nel sistema strutturale figura il solo tubo di
+              contenimento. A titolo di documentazione, se fosse vincolato a entrambe le estremita'
+              svilupperebbe 5.03 MN, cioe' 1919 MPa: un ordine di grandezza oltre qualunque
+              ammissibile. E' la ragione costruttiva del giunto scorrevole.
+
+================================================================================================
+[NOTA]      REGOLAZIONE / Farfalla del by-pass entro la finestra utile
+------------------------------------------------------------------------------------------------
+  valore .... 24.5° di apertura in esercizio normale (zeta = 288)
+  criterio .. finestra 17.4° - 25.1°
+  DOVE ...... valvola del by-pass
+  perche' ...
+              Guadagno inerente d(ln zeta)/d(theta) = 0.22 1/°: un grado di stelo sposta la
+              temperatura miscelata di circa 0.6 K.
+
+================================================================================================
+[NOTA]      REGOLAZIONE / Posizione di sicurezza della farfalla
+------------------------------------------------------------------------------------------------
+  valore .... CHIUSA in mancanza di aria/segnale
+  criterio .. fail-safe
+  DOVE ...... valvola del by-pass
+  perche' ...
+              Chiudendo, la portata va tutta al fascio: la temperatura miscelata scende a 349 °C (piu'
+              freddo = piu' sicuro per il fascio e per l'apparecchiatura a valle) e il vapore prodotto
+              sale. Aprendo del tutto si arriverebbe a 356 °C con il 1.5 % di portata deviata.
+
+================================================================================================
+[NOTA]      TERMICO / By-pass interno: isolamento verificato
+------------------------------------------------------------------------------------------------
+  valore .... liner 763 °C, tubo di contenimento 332 °C (Tsat 323 °C)
+  criterio .. salto sull'isolante 425 K
+  DOVE ...... tubo di by-pass centrale
+  perche' ...
+              Il tubo di contenimento resta a 9 K sopra la temperatura dell'acqua: la carta ceramica
+              assorbe tutto il salto. Attraverso l'isolante passano 419 kW, cioe' il 100.00% della
+              potenza.
+
+================================================================================================
+
+  MAPPA DELLE ZONE CRITICHE (dove guardare sull'apparecchio)
+------------------------------------------------------------------------------------------------
+  1) IMBOCCO GAS, subito a valle della ferrula (z = 0.21 m su 13.00 m totali, cioe' i
+  primi 21 cm): e' dove cade il picco di flusso termico (396 kW/m2) e la temperatura
+  metallica massima. Ispezione boroscopica dei primi 500 mm di tubo e verifica
+  dell'integrita' delle ferrule.
+  2) BANDA SUPERIORE DEL FASCIO (y = +0.78 m rispetto all'asse, cioe' i ranghi piu' alti):
+  e' dove il titolo e la frazione di vuoto sono massimi (x = 0.092, alpha = 0.42) e dove
+  cade il DNBR minimo (0.72 a z = 0.21 m). E' la zona esposta allo steam blanketing.
+  3) GIUNZIONE TUBO-PIASTRA: carico assiale di 11.8 kN per tubo dalla dilatazione
+  impedita, piu' i termini di pressione non inclusi in questo screening. Da verificare con
+  TEMA RCB-7.16 / ASME UHX-13.
+  4) CIRCUITO DI CIRCOLAZIONE: CR = 10.9 contro il minimo di 10. Le perdite si
+  ripartiscono in 56 mbar sui riser, 30 sui downcomer, 26 sul fascio e 35 sulle interne
+  del corpo cilindrico (quest'ultimo dato e' un'assunzione da confermare col costruttore).
+------------------------------------------------------------------------------------------------
+
+  Il dettaglio completo, con le spiegazioni di ogni grandezza, e' nel report esteso.

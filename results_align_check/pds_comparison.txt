@@ -1,0 +1,11 @@
+CLIENT PDS COMPARISON CHECK
+This check is generated for every WHB run using the available client PDS reference data.
+Review every CHECK row before accepting the calculation output.
+--------------------------------------------------------------------------------------------------
+Quantity                Unit  Client PDS  Calculated         Difference              Limit  Status
+--------------------------------------------------------------------------------------------------
+Exchanged duty          MW       116.614     116.541    -0.073 (-0.06%)       +/- 0.250 MW      OK
+Steam production        kg/h  347743.000  347401.359  -341.641 (-0.10%)  +/- 1500.000 kg/h      OK
+Gas outlet temperature  degC     355.000     354.992    -0.008 (-0.00%)     +/- 8.000 degC      OK
+Gas-side pressure drop  bar        0.300       0.098   -0.202 (-67.34%)      +/- 0.300 bar      OK
+--------------------------------------------------------------------------------------------------

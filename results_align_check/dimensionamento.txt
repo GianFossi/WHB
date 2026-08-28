@@ -1,0 +1,97 @@
+================================================================================================
+WHB / PGC - DIMENSIONAMENTO AUTOMATICO
+Caso: WHB reformer secondario - caso base
+Data: 2026-08-28 14:25
+================================================================================================
+
+================================================================================================
+12. DIMENSIONAMENTO AUTOMATICO
+================================================================================================
+  Questa sezione usa il risultato del calcolo completo per proporre il dimensionamento
+  automatico. L'ordine e' intenzionale: prima vincoli PDS, poi margini
+  termici/idraulici/vibrazionali, poi minimizzazione di peso WHB e lunghezza tubi.
+
+  VINCOLI E VERIFICHE
+------------------------------------------------------------------------------------------------
+  voce                               attuale            target             esito    nota
+------------------------------------------------------------------------------------------------
+  PDS: thermal duty                  116.54 MW          116.54 MW +/- 0.5% OK       Must match the process heat balance.
+  PDS: generated steam               347.4 t/h          347.4 t/h +/- 0.5% OK       Steam production follows duty and drum pressure.
+  PDS: gas outlet temperature        355.0 degC         355.0 degC +/- 2.0 K OK       For bypass cases this is the mixed outlet temperature target.
+  PDS: gas-side pressure drop        98 mbar            <= 300 mbar        OK       Pressure drop is usually the active sizing constraint for fire-tube WHBs.
+  Peak heat flux                     396 kW/m2          <= 300 kW/m2       NO       Default limit is 300 kW/m2.
+  DNBR                               0.72               >= 2.00            NO       Default minimum is 2.0.
+  Circulation ratio                  10.9               >= 10.0            OK       Default minimum is 10.
+  Vibration FEI                      4.14               <= 0.80            NO       Default screening limit is V/Vcrit <= 0.8.
+  Drum centerline elevation          6.00 m             minimize, >= 3.33 m OK       Lower steam-drum centerline reduces riser/downcomer length and weight, but must keep WHB OD, drum OD, nozzles, and riser spool clearance.
+  Minimum riser spool                nozzle 200 mm      spool >= 500 mm    OK       Default nozzle height is 200 mm; automatic nozzle sizing can replace this later.
+  WHB ID x L                         26.32 m2           minimize after PDS and margins OK       Compact WHB envelope objective: shell ID multiplied by tube length.
+  Steam drum ID x L                  39.00 m2           minimize after separation/circulation checks OK       Compact drum envelope objective: drum ID multiplied by drum tangent length.
+------------------------------------------------------------------------------------------------
+
+  OBIETTIVO DI OTTIMIZZAZIONE
+  Peso WHB stimato                                   71.6 t
+  Lunghezza tubi                                     13.00 m
+  Altezza centerline drum-WHB                        6.00 m (min screened 3.33 m)
+  Nozzle / spool raiser minimo                       200 / 500 mm
+  Peso riser + downcomer                             47.35 t (13.5 + 67.4 m sviluppati)
+  WHB ID x L / drum ID x L                           26.32 / 39.00 m2
+  Objective hierarchy: satisfy PDS first, then safety margins, then minimize WHB metal
+  weight, tube length, steam-drum elevation, riser/downcomer weight, and WHB/drum ID x L
+  envelopes. Preferred levers are low-weight/no-length changes before larger bundle
+  geometry.
+  Minimize the steam-drum centerline elevation against the WHB centerline after allowing
+  WHB OD, drum OD, nozzle height, and minimum riser spool. Then minimize external piping
+  weight and the ID x L envelopes of WHB and steam drum.
+
+  AZIONI DI DIMENSIONAMENTO PROPOSTE
+------------------------------------------------------------------------------------------------
+  Heat flux / DNBR
+    Stato attuale                                    q''max 396 kW/m2, DNBR 0.72
+    Richiesto                                        Area factor about 2.78, or extend protected inlet length to about 759 mm.
+    Beneficio                                        Keeps peak flux below the limit and raises DNBR.
+    Impatto peso/lunghezza                           Ferrules add little weight and no tube length; more area adds weight or length.
+    Applicabile all'esistente                        SI
+    The weight/length objective prefers ferrule/protection changes first, then extra tubes,
+    and only last additional tube length.
+
+  Steam-drum elevation
+    Stato attuale                                    centerline difference 6.00 m; minimum screened value 3.33 m
+    Richiesto                                        Lower the steam drum toward 3.33 m while rechecking circulation, nozzle geometry, and riser spool clearance.
+    Beneficio                                        Reduces riser/downcomer developed length, piping weight, support steel, and static elevation.
+    Impatto peso/lunghezza                           Current riser/downcomer metal estimate is 47.35 t over 80.9 m developed length.
+    Applicabile all'esistente                        NO / solo nuovo fascio
+    The lower bound includes WHB OD, steam-drum OD, default 200 mm nozzle height, and the
+    minimum riser spool criterion.
+
+  Envelope compactness
+    Stato attuale                                    WHB ID x L 26.32 m2; drum ID x L 39.00 m2
+    Richiesto                                        Minimize both products only after PDS duty, generated steam, gas outlet temperature, gas dP, DNBR, heat flux, circulation, and vibration checks remain satisfied.
+    Beneficio                                        Keeps WHB and steam-drum envelopes compact.
+    Impatto peso/lunghezza                           Smaller ID x L generally lowers metal weight, external piping length, insulation, platforms, and plot impact.
+    Applicabile all'esistente                        NO / solo nuovo fascio
+    This is an optimization objective, not a standalone pass/fail constraint.
+
+  Vibration
+    Stato attuale                                    V/Vcrit 4.14 at span 1290 mm
+    Richiesto                                        22 baffles, uniform span about 546 mm
+    Beneficio                                        Avoids fluid-elastic instability problems.
+    Impatto peso/lunghezza                           Adds baffle weight but does not increase tube length.
+    Applicabile all'esistente                        NO / solo nuovo fascio
+    For an existing bundle this is usually not practical; for a new unit it is the preferred
+    fix.
+
+------------------------------------------------------------------------------------------------
+
+  PARAMETRI DEFAULT
+  Flusso critico massimo                             300 kW/m2
+  DNBR minimo                                        2.00
+  Rapporto di circolazione minimo                    10.0
+  V/Vcrit massimo                                    0.80
+  dP gas PDS                                         300 mbar
+  Altezza nozzle                                     200 mm
+  WT steam drum usato nello screening                58.0 mm
+  WT piping riser/downcomer usato nello screening    58.0 mm
+
+  I valori sono preliminari: ogni modifica geometrica va verificata rilanciando il calcolo
+  completo, perche' potenza, dP gas, circolazione, DNBR e vibrazioni sono accoppiati.

@@ -1,0 +1,24 @@
+
+================================================================================================
+WATER VOLUME AND METAL WEIGHT SUMMARY
+================================================================================================
+  Water volumes are geometric inventories. Riser volume is total internal volume, not separated into liquid/vapor holdup.
+  Metal weights are estimates. Riser/downcomer pipe OD is inferred from NPS; use vendor MTO values for final weights.
+
+  Water inventory                            m3      % total
+  WHB shell side                         28.376         32.0
+  Risers                                  2.317          2.6
+  Downcomers                              6.149          6.9
+  Steam drum at normal level             51.786         58.4
+  TOTAL WATER                            88.629        100.0
+
+  Metal component                            kg
+  Tubes                                   29059
+  WHB shell                               38727
+  Baffles                                  3838
+  Ferrules                                  201
+  Risers                                   7024
+  Downcomers                              18951
+  Steam drum shell                        56863
+  Bypass liner and pipe                    1023
+  TOTAL METAL                            155685

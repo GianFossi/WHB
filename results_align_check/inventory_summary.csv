@@ -1,0 +1,15 @@
+section,item,unit,value,note
+water,WHB shell side,m3,28.376,Geometric shell-side water volume excluding tubes and bypass pipe
+water,Risers,m3,2.317,Total connected riser internal volume
+water,Downcomers,m3,6.149,Total connected downcomer internal volume
+water,Steam drum at normal level,m3,51.786,Liquid volume up to normal level; internals displacement excluded
+water,TOTAL WATER,m3,88.629,Total geometric water inventory
+metal,Tubes,kg,29059,Exact from tube OD, ID, length, count, and representative density
+metal,WHB shell,kg,38727,Cylindrical shell estimate
+metal,Baffles,kg,3838,Plate estimate excluding tube holes
+metal,Ferrules,kg,201,Sleeve estimate
+metal,Risers,kg,7024,Pipe OD inferred from NPS
+metal,Downcomers,kg,18951,Pipe OD inferred from NPS
+metal,Steam drum shell,kg,56863,Cylindrical shell estimate
+metal,Bypass liner and pipe,kg,1023,Liner plus outer pipe estimate
+metal,TOTAL METAL,kg,155685,Estimated total metal weight

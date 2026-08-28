@@ -1,0 +1,2199 @@
+================================================================================================
+WHB / PGC A TUBI DA FUMO - CALCOLO TERMICO E IDRAULICO 2-D
+Caso: WHB reformer secondario - caso base
+Data: 2026-08-28 14:28
+Discretizzazione: 90 sezioni assiali x 12 bande orizzontali = 1080 celle
+================================================================================================
+
+================================================================================================
+0. IPOTESI PRINCIPALI E STATO DEI DATI
+================================================================================================
+  Questa sezione elenca tutto cio' su cui il calcolo si regge. Ogni voce e' classificata
+  come DATO (verificato su documentazione di impianto), CONFERMATO (comunicato dal
+  committente), ASSUNTO (scelta del calcolo, da confermare) o APERTO (manca il dato, ed e'
+  indicato l'effetto). Tutti i numeri del report discendono da queste voci.
+
+  --- GEOMETRIA E MATERIALI ---
+  [DATO      ] Tubi                                       848 x OD 38.1 x 3.05, L 12.998 m, passo 50.8 triangolare 60°
+  [DATO      ] Mantello / OTL / ITL                       ID 2025 (WT 58) / 1711.1 / 571 mm
+  [CONFERMATO] Materiale tubi                             SA-213 T11 (1.25Cr-0.5Mo)
+               Comunicato dal committente. Determina k (temperatura metallica), alpha (dilatazioni), E
+               e Sy (tensioni).
+  [ASSUNTO   ] Materiale mantello                         SA-516 Gr.70 (lamiera mantello)
+               Coerente con la classe di pressione e temperatura; da confermare sul certificato.
+  [DATO      ] Ferrula                                    bore 26.7, manicotto OD 30.0, sporgenza 200 mm
+               Da disegno di dettaglio. La lunghezza governa il picco di flusso: e' la principale leva
+               di progetto.
+  [CONFERMATO] Gioco foro diaframma / OD tubo             0.40 mm sul diametro
+               0.20 mm radiali, cioe' lo 0.5 % del raggio: il vincolo radiale e' effettivo. Giustifica
+               sia l'incastro nel calcolo di frequenza propria sia il ruolo di anello di irrigidimento
+               contro la pressione esterna.
+  [ASSUNTO   ] Passo diaframmi (campata governante)       1.20 m
+               Il passo reale e' VARIABILE lungo l'apparecchio. Qui si assume il valore governante. E'
+               il parametro piu' sensibile per le vibrazioni: il rapporto V/Vcrit cresce con il
+               QUADRATO della campata.
+
+  --- PROCESSO ---
+  [DATO      ] Portata gas                                85.42 kg/s (datasheet x 1.10)
+               La maggiorazione del 10 % e' quella prescritta dal datasheet.
+  [DATO      ] T / p ingresso gas                         967.5 °C / 34.74 bar a
+  [DATO      ] Pressione corpo cilindrico                 117.84 bar a  (Tsat 323.29 °C)
+  [DATO      ] Sporcamento gas / acqua                    0.00050 / 0.00015 m2K/W
+               CONDIZIONE SPORCA di progetto, confermata. Il confronto con la condizione pulita e'
+               nella sezione 5c e ribalta la lettura del rischio: da pulito il DNBR e' peggiore.
+  [ASSUNTO   ] Reazione di shift                          congelata (nessuna reazione)
+               Congelata: senza catalizzatore la cinetica e' trascurabile sotto i 900 °C. L'accordo con
+               il datasheet allo 0.06 % conferma indirettamente l'ipotesi.
+
+  --- MODELLI ---
+  [ASSUNTO   ] Correlazione lato gas                      Gnielinski (1976)
+               E' la resistenza dominante: la scelta della correlazione vale +/- 23 K sulla temperatura
+               metallica (sezione 5e).
+  [ASSUNTO   ] Miscelazione mu e k                        Wilke (µ) / Wassiljewa-Mason-Saxena (k)
+               Wilke e' la scelta fisicamente corretta per miscele ricche di idrogeno. La media molare,
+               usata da molti datasheet, e' disponibile per confronto.
+  [ASSUNTO   ] Gas reale                                  SI - secondo viriale, B(H2O) da IAPWS-IF97
+               Chiude lo scarto sul datasheet da -0.93 % a -0.06 %. Il termine dominante e' l'acqua,
+               che pesa y^2 = 0.106 nella regola esatta.
+  [ASSUNTO   ] Ebollizione                                Mostinski (1963) - stati corrispondenti
+               con fattore di fascio di Palen Fb = 1.5. La scelta e' poco influente: sposta il flusso
+               dell'1 %.
+  [ASSUNTO   ] Distribuzione lato mantello                rapporto di circolazione locale uniforme
+               Il mantello e' trattato come volume unico con plenum continui. E' la semplificazione
+               strutturale principale del lato acqua.
+  [ASSUNTO   ] Costanti di vibrazione                     K di Connors = 3.0, decremento log. = 0.03
+               Combinazione PIU' CONSERVATIVA del campo sperimentale (K 3.0-10, delta 0.03-0.10). Con K
+               = 4.5 e delta = 0.06 la velocita' critica raddoppia. E' l'incertezza dominante della
+               verifica FIV.
+
+  --- CIRCUITO ---
+  [CONFERMATO] Quota asse drum - asse WHB                 6.00 m
+               Confermata dal committente: e' il termine che genera tutto il battente motore.
+  [DATO      ] Livello normale nel drum                   1650 mm dal fondo (ID 3000)
+               Da datasheet del corpo cilindrico.
+  [CONFERMATO] Bocchelli non collegati                    
+               Esclusi dall'idraulica. Erano alle due estremita' dell'apparecchio, cioe' dove il campo
+               tubi e' meno lavato.
+  [APERTO    ] K del convogliatore del drum               assunto 1.0 -> 35.0 mbar
+               E' l'ultima assunzione aperta sulla circolazione. Campo ragionevole 0.5-3.0, che
+               corrisponde a 0-51 mbar e a un rapporto di circolazione fra 12 e 8. Serve la curva
+               sperimentale del costruttore del corpo cilindrico.
+  [APERTO    ] Posizioni assiali dei bocchelli            di primo tentativo
+               Non incidono sul bilancio globale ma sulla distribuzione assiale del lavaggio.
+  [APERTO    ] Spessore tubo di contenimento by-pass      assunto 8.0 mm da disegno
+               Con questo spessore la verifica a pressione esterna NON passa (sezione 8e). E' l'unico
+               risultato non conforme del calcolo e dipende da un dato da confermare.
+
+  LIMITI DICHIARATI. Il calcolo e' stazionario e monodimensionale nel tubo, bidimensionale
+  sul mantello (assiale x bande). Non contiene: verifica di codice della piastra tubiera
+  (UHX-13), verifica a pressione esterna con carico di punta secondo codice, simulazione
+  dinamica dei transitori, distribuzione tridimensionale del gas nella camera d'ingresso.
+  Le sezioni corrispondenti sono screening dichiarati come tali.
+
+================================================================================================
+1. GEOMETRIA
+================================================================================================
+  Tubi                                               848 x OD 38.1 x 3.05 WT (ID 32.0) x L 12.998 m
+  Passo / layout                                     50.8 mm - triangolare 60°
+  Mantello ID / OTL / ITL                            2025.0 / 1711.11 / 571.0 mm
+  Superficie esterna / interna                       1319.3 / 1108.1 m2
+  Materiale tubi                                     SA-213 T11 (1.25Cr-0.5Mo)
+  Diaframmi di supporto OD                           2015 mm -> corona anulare aperta 0.0119 m2/m
+  Ferrula                                            bore 26.7 / manicotto OD 30.0 / isolante fino a ID tubo 32.0 mm
+    classi di lunghezza (frazione x mm)              100% x 200
+    resistenza ferrula a 500 °C                      0.0718 m·K/W
+    perdita pressione ferrula stimata                8.26 mbar per tubo
+    spessore carta isolante radiale                  1.00 mm - OK
+  Bande: n. tubi (dal basso verso l'alto)            38 / 67 / 82 / 92 / 77 / 68 / 68 / 77 / 92 / 82 / 67 / 38
+    verifica somma tubi                              848.0
+  IN PAROLE SEMPLICI. Questa sezione descrive il pezzo di ferro. I tubi portano il gas
+  caldo dentro; il mantello e' il barile che li contiene ed e' pieno d'acqua che bolle.
+  OTL e' il diametro del cerchio che racchiude tutti i tubi, ITL il foro centrale lasciato
+  senza tubi. I diaframmi sono i dischi forati che sostengono i tubi lungo la lunghezza e
+  ne impediscono la vibrazione: se il loro diametro e' minore di quello del mantello resta
+  una corona anulare libera, che diventa una scorciatoia per l'acqua. La ferrula e' la
+  boccola isolante infilata nella bocca di ogni tubo, che protegge l'imbocco dal gas piu'
+  caldo. La suddivisione in bande serve al calcolo: il fascio viene tagliato in fette
+  orizzontali perche' l'acqua lo attraversa dal basso verso l'alto.
+
+
+================================================================================================
+2. CONDIZIONI DI PROCESSO
+================================================================================================
+  Composizione gas ingresso (%mol)                   H2 37.07  N2 15.77  CO 8.63  CO2 5.46  CH4 0.27  Ar 0.20  H2O 32.60
+  Massa molare miscela                               15.98 kg/kmol
+  Water-gas shift                                    congelata (nessuna reazione)
+  Modello Claus                                      congelata (nessuna conversione Claus)
+  Portata gas                                        85.42 kg/s  (307512 kg/h)
+  Temperatura gas IN                                 967.5 °C
+  Temperatura gas OUT (media / min / max)            355.0 / 348.0 / 348.4 °C
+  Pressione gas IN / dP                              34.74 bar(a) / 0.098 bar
+  Fouling gas / acqua                                0.00050 / 0.00015 m2K/W
+  Pressione vapore (drum)                            117.84 bar(a)  ->  Tsat = 323.29 °C
+  hfg / rho_l / rho_v                                1207.7 kJ/kg | 658.8 | 68.40 kg/m3
+  IN PAROLE SEMPLICI. Qui ci sono i dati di ingresso del processo: che gas passa nei tubi,
+  quanto ne passa, a che temperatura e pressione entra, e a che pressione sta l'acqua nel
+  corpo cilindrico. Tsat e' la temperatura a cui l'acqua bolle a quella pressione: e' un
+  valore fisso, la caldaia lavora tutta a quella temperatura sul lato acqua. hfg e' il
+  calore che serve per trasformare un chilo di acqua in vapore. Il fouling e' lo sporco
+  che si deposita sulle due facce del tubo, ed e' un dato di progetto (piu' e' alto, piu'
+  superficie serve). Water-gas shift indica se si e' tenuto conto della reazione chimica
+  CO + H2O -> CO2 + H2 lungo il tubo: nei WHB senza catalizzatore e' congelata, cioe' non
+  avviene.
+
+
+================================================================================================
+3. PRESTAZIONI GLOBALI
+================================================================================================
+  POTENZA SCAMBIATA                                  116.541 MW
+  PRODUZIONE DI VAPORE                               96.50 kg/s  (347401 kg/h)
+  LMTD                                               203.4 K
+  U medio (rif. sup. esterna)                        432.8 W/m2K
+  h gas convettivo IN / OUT                          2280 / 718 W/m2K
+  h gas radiativo IN / OUT                           41.7 / 8.4 W/m2K
+  Emissivita' gas IN / OUT                           0.116 / 0.175
+  h ebollizione IN / OUT                             22231 / 13493 W/m2K
+  Velocita' gas IN / OUT                             33.1 / 11.6 m/s
+  Reynolds gas IN / OUT                              105336 / 152065
+  Correlazione lato gas                              Gnielinski (1976)
+  Correlazione ebollizione                           Mostinski (1963) - stati corrispondenti
+  Modello ebollizione in flusso                      Chen (superposizione con soppressione)
+
+  IN PAROLE SEMPLICI. Sono i risultati d'insieme. La POTENZA (116.54 MW) e' il calore che
+  il gas cede all'acqua: e' il prodotto che l'apparecchio deve consegnare, e si ritrova
+  tutto nel VAPORE prodotto (347 t/h). LMTD e' la differenza media di temperatura fra i
+  due fluidi lungo tutto l'apparecchio: e' la 'spinta' che fa passare il calore. U e' il
+  coefficiente globale di scambio: quanto calore passa per ogni metro quadrato e per ogni
+  grado di differenza; e' l'inverso della somma di tutte le resistenze in serie. I
+  coefficienti h sono le singole resistenze prese una a una: h del gas (il collo di
+  bottiglia), h di irraggiamento (il calore che il gas emette come luce infrarossa,
+  piccolo ma non nullo a 34 bar), h di ebollizione (enorme, quindi ininfluente). Reynolds
+  dice se il gas e' in moto turbolento: sopra 10000 lo e' senz'altro, ed e' quello che si
+  vuole perche' la turbolenza mescola e migliora lo scambio.
+
+
+================================================================================================
+3B. BY-PASS INTERNO CENTRALE
+================================================================================================
+  FRAZIONE DI PORTATA DEVIATA                        1.41 %  (1.20 kg/s su 85.42)
+  T uscita dai TUBI (non miscelata)                  348.2 °C
+  T uscita dal BY-PASS                               816.9 °C
+  T USCITA MISCELATA                                 355.0 °C  (obiettivo 355.0 °C)
+  Geometria liner / isolante / tubo                  ID 275.0 - OD 281.0 | OD 284.0 | OD 300.0 mm
+  Materiale liner / tubo                             Alloy 601 / 602 CA (liner by-pass) | SA-192 / SA-210 A1 (acciaio al carbonio)
+  Velocita' gas nel by-pass IN / OUT                 3.8 / 3.3 m/s
+  CALORE CEDUTO ATTRAVERSO L'ISOLANTE                419 kW  (0.36 % della potenza totale)
+    vapore generato dal by-pass                      0.35 kg/s
+    raffreddamento del gas deviato                   150.6 K
+  T MAX LINER (faccia gas)                           762.7 °C  su limite 1100 °C
+  T MAX tubo di contenimento (faccia interna)        332.4 °C  su limite 450 °C
+  Salto termico sull'isolante (max)                  424.7 K
+  dP nel by-pass (tubo nudo)                         0.3 mbar
+  dP lato tubi                                       98.0 mbar
+  dP DA STROZZARE sull'organo di regolazione         97.7 mbar
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  Nell'anima centrale del fascio corre un tubo che porta una parte del gas dall'ingresso
+  all'uscita SENZA raffreddarla. Serve a regolare la temperatura di uscita: un WHB si
+  dimensiona sporco, quindi da pulito raffredderebbe troppo, e il by-pass rialza la
+  temperatura rimescolando gas caldo. Qui i tubi da soli porterebbero il gas a 348.2 °C,
+  il by-pass ne tiene 1.41% a 816.9 °C, e mescolando si ottengono i 355.0 °C richiesti.
+  Il tubo e' costruito a tre strati per la stessa ragione della ferrula: dentro un liner
+  in Alloy 601 / 602 CA (liner by-pass) che regge i quasi mille gradi, poi la carta
+  ceramica che isola, poi il tubo di contenimento che porta la pressione e resta freddo.
+  Il calcolo conferma il funzionamento: il liner sta a 763 °C mentre il tubo di
+  contenimento resta a 332 °C, cioe' appena sopra la temperatura dell'acqua. Il salto
+  sull'isolante e' di 425 K: e' lui a fare tutto il lavoro.
+  L'isolamento non e' perfetto: attraverso la carta passano 419 kW, cioe' il 0.36% della
+  potenza totale, che diventano 0.35 kg/s di vapore in piu' e raffreddano il gas deviato
+  di 150.6 K. Non e' una perdita, e' calore comunque recuperato, ma va contato nel
+  bilancio.
+  ATTENZIONE ALLA REGOLAZIONE. Il by-pass e i tubi collegano gli stessi due punti, quindi
+  lavorano in parallelo: se il tubo di by-pass fosse libero, la sua bassa resistenza (0.3
+  mbar contro 98.0 mbar del fascio) gli farebbe passare molto piu' gas del necessario e la
+  temperatura d'uscita salirebbe fuori controllo. Serve quindi un organo di strozzamento
+  che dissipi 97.7 mbar. La frazione qui calcolata (1.41%) e' quella che centra
+  l'obiettivo di temperatura, non quella che si otterrebbe a valvola spalancata.
+  EFFETTI SUL RESTO DEL CALCOLO. (1) Nei tubi passa meno gas, quindi il coefficiente di
+  scambio e il flusso termico di picco calano un poco. (2) La potenza scambiata e la
+  produzione di vapore calano, perche' parte del gas non cede calore. (3) Il tubo di
+  by-pass occupa l'anima centrale del fascio: la sua sezione viene sottratta dall'area
+  libera per l'acqua, e ne tiene conto il calcolo idraulico del mantello. (4) Il calore
+  ceduto dall'isolante e' aggiunto alla produzione di vapore.
+  --------------------------------------------------------------------------------------------
+
+================================================================================================
+3C. VALVOLA A FARFALLA DEL BY-PASS: RIPARTIZIONE DEI FLUSSI
+================================================================================================
+  Posizione della valvola                            sul tratto di USCITA (estremita' fredda) del by-pass, DN interno 275 mm
+
+  POSIZIONE IN ESERCIZIO NORMALE E LIMITI AMMESSI
+------------------------------------------------------------------------------------------------
+  APERTURA MINIMA          17.4° apertura ( 72.6° chiusura)  zeta =   1327.5  by-pass  0.69 %  T misc  351.2 °C
+  ESERCIZIO NORMALE        24.5° apertura ( 65.5° chiusura)  zeta =    288.0  by-pass  1.41 %  T misc  355.0 °C
+  APERTURA MASSIMA         25.1° apertura ( 64.9° chiusura)  zeta =    251.1  by-pass  1.50 %  T misc  355.5 °C
+------------------------------------------------------------------------------------------------
+
+  VINCOLI CHE DETERMINANO L'APERTURA MINIMA (vince il piu' alto)
+    controllabilita' meccanica               15.0°   
+        sotto 15° di apertura il guadagno d(ln zeta)/d(theta) esplode: la farfalla diventa di
+        fatto on-off
+    T miscelata minima di processo           10.8°   
+        sotto questo angolo la miscelata scende sotto 350 °C
+    lavaggio minimo del liner                17.4°   <== VINCOLANTE
+        serve almeno 1.5 m/s nel liner per non avere un ramo morto (stratificazione, deposito,
+        corrosione sotto deposito)
+    erosione/rumore in vena contratta         0.0°   
+        rho v² nella vena contratta = 2 dp_valvola: chiudendo oltre si supera 40000 Pa
+
+  VINCOLI CHE DETERMINANO L'APERTURA MASSIMA (vince il piu' basso)
+    autorita' della valvola                  70.0°   
+        oltre 70° zeta e' quasi costante: aprendo di piu' non cambia nulla
+    T miscelata massima di processo          25.1°   <== VINCOLANTE
+        oltre questo angolo la miscelata supera 360 °C -- ATTENZIONE: BORDO MAPPA - non e' un
+        limite: la mappa del by-pass si ferma prima di raggiungere questo limite, quindi
+        l'angolo mostrato e' il bordo del calcolo, non il vincolo. Rilanciare con
+        calculation.bypassMapMode = full.
+    limite metallurgico del liner            25.1°   <== VINCOLANTE
+        Alloy 601 / 602 CA (liner by-pass): 1100 °C -- ATTENZIONE: BORDO MAPPA - non e' un
+        limite: la mappa del by-pass si ferma prima di raggiungere questo limite, quindi
+        l'angolo mostrato e' il bordo del calcolo, non il vincolo. Rilanciare con
+        calculation.bypassMapMode = full.
+
+  COEFFICIENTE DI EFFLUSSO E CONFRONTO CON LA TEORIA DEL DISCO PIANO
+  apert[°]  zeta tabella  zeta teoria  scarto[%]     Cv      Kv    Kv richiesto   x = dP/p1
+------------------------------------------------------------------------------------------------
+      5.0       18960.1   11465300.6    60370.8      25      22             22      0.0029
+     10.0        6463.1      35132.8      443.6      44      38             38      0.0029
+     15.0        2203.1       4314.2       95.8      75      65             64      0.0029
+     17.4        1328.5       2142.6       61.3      96      83             83      0.0029
+     20.0         751.0       1098.3       46.3     128     111            110      0.0028
+     24.4         288.2        434.1       50.6     206     179            178      0.0028
+     25.0         256.0        391.9       53.1     219     189            189      0.0028
+     25.1         250.9        382.7       52.5     221     191            191      0.0028
+     30.0         118.0        169.9       44.0     323     279            278      0.0013
+     35.0          58.8         83.4       41.9     457     395            394      0.0007
+     40.0          32.6         44.5       36.6     614     531            530      0.0004
+     50.0          10.8         14.7       36.5    1066     923            920      0.0001
+     60.0           3.9          5.3       34.8    1772    1533           1529      0.0000
+     70.0           1.5          1.8       16.0    2824    2443           2437      0.0000
+     90.0           0.2          0.2        3.6    7837    6779           6762      0.0000
+------------------------------------------------------------------------------------------------
+
+  LEGENDA DELLE COLONNE
+    zeta tabella     Valore sperimentale di Idelchik per valvola a disco in condotto circolare,
+                     usato dal calcolo.
+    zeta teoria      Valore ricavato dalla sola geometria del disco piano concentrico: area
+                     libera sigma = 1 - sin(alpha) - 4t/(pi d) cos(alpha), contrazione nella
+                     vena con Cc di Weisbach = 0.62 + 0.38 sigma^3, riespansione di
+                     Borda-Carnot, piu' la resistenza di forma del disco a tutta apertura.
+    Cv               Coefficiente di efflusso americano: portata in gallon/min di acqua a 60 F
+                     con 1 psi di caduta. Si ricava da zeta con Cv = 29.9 d^2 / sqrt(zeta), d
+                     in pollici.
+    Kv               Equivalente metrico: m3/h di acqua con 1 bar di caduta. Kv = Cv / 1.156.
+    Kv richiesto     Kv che il servizio richiede a quella portata e a quella caduta: Kv = w /
+                     sqrt(1000 rho dp[bar]), w in kg/h. Deve coincidere con il Kv geometrico:
+                     e' una verifica incrociata del calcolo.
+    x = dP/p1        Rapporto di caduta. Sotto ~0.7 (limite x_T tipico di una farfalla) il
+                     flusso non e' critico e il gas si puo' trattare come incomprimibile: qui x
+                     vale pochi millesimi, quindi il modello incomprimibile e' abbondantemente
+                     valido.
+
+  PERCHE' DUE COLONNE DI ZETA. La curva del costruttore non e' disponibile, quindi si e'
+  fatto quanto di meglio consente la teoria: si e' costruito zeta dalla sola geometria del
+  disco piano concentrico. Il confronto con i dati sperimentali di Idelchik dice quanto
+  vale quella teoria. A valvola tutta aperta i due valori coincidono (scarto pochi punti
+  percentuali). Nel campo di lavoro, fra 20 e 40 gradi di apertura, la teoria e'
+  CONSERVATIVA del 35-50 %, e lo scarto e' fisico: il passaggio reale attorno a un disco
+  inclinato sono DUE LUCI A MEZZALUNA, con getti che si ricongiungono a valle e recuperano
+  parte della pressione, mentre il modello tratta il passaggio come una contrazione unica
+  seguita da riespansione brusca, senza recupero. Sotto i 10-15 gradi di apertura la
+  teoria diverge del tutto: l'area libera geometrica tende a zero mentre nella valvola
+  reale il passaggio e' governato dal trafilamento sulla battuta, che la geometria ideale
+  non contiene.
+  COSA USARE. Per il dimensionamento si usa la TABELLA sperimentale, che e' il dato. La
+  teoria serve a tre cose: verificare che la tabella sia coerente con la geometria reale
+  del disco (lo e'), fornire una stima conservativa se il disco fosse di forma diversa da
+  quello tabellato, e dare un limite superiore di zeta con cui controllare che la valvola
+  sia comunque capace della caduta richiesta.
+  IL CONFRONTO Cv GEOMETRICO / Cv RICHIESTO e' la verifica piu' utile della sezione: il
+  primo viene dalla forma della valvola, il secondo dal servizio che deve svolgere. Se
+  coincidono, la valvola e' della taglia giusta all'apertura indicata.
+
+  CARATTERISTICA COMPLETA: TEMPERATURE E PORTATE IN FUNZIONE DELL'ANGOLO
+  apert[°] chius[°]     zeta   x[%]  w_bp[kg/s]  v_liner  v_vena  Mach  dPvalv[mbar]  T tubi[C]  T byp[C]  T MISC[C]  Q[MW]  vapore[t/h]  T liner[C]
+------------------------------------------------------------------------------------------------
+      5.0     85.0  18960.1   0.22        0.19      0.3      46  0.06         100.4      348.7       463      349.5  117.5          350         469
+     10.0     80.0   6463.1   0.36        0.31      0.6      48  0.06         100.1      348.6       550      349.9  117.5          350         560
+     15.0     75.0   2203.1   0.56        0.48      1.1      53  0.06          99.6      348.5       675      350.5  117.3          350         690
+     17.4     72.7   1328.5   0.69        0.59      1.5      55  0.07          99.3      348.5       720      351.2  117.2          349         725 <== MIN
+     20.0     70.0    751.0   0.90        0.77      2.0      56  0.07          98.7      348.4       759      352.2  117.0          349         738
+     24.4     65.5    288.2   1.41        1.20      3.3      57  0.06          97.2      348.2       815      355.0  116.5          347         762 <== NORMALE
+     25.0     65.0    256.0   1.49        1.27      3.5      57  0.06          96.9      348.1       822      355.4  116.5          347         766
+     25.1     64.9    250.9   1.50        1.28      3.6      57  0.06          96.8      348.1       824      355.5  116.4          347         766 <== MAX
+     30.0     60.0    118.0   1.50        1.28      3.6      39  0.04          45.5      348.1       824      355.5  116.4          347         766
+     35.0     55.0     58.8   1.50        1.28      3.6      27  0.03          22.7      348.1       824      355.5  116.4          347         766
+     40.0     50.0     32.6   1.50        1.28      3.6      20  0.02          12.6      348.1       824      355.5  116.4          347         766
+     50.0     40.0     10.8   1.50        1.28      3.6      12  0.01           4.2      348.1       824      355.5  116.4          347         766
+     60.0     30.0      3.9   1.50        1.28      3.6       7  0.01           1.5      348.1       824      355.5  116.4          347         766
+     70.0     20.0      1.5   1.50        1.28      3.6       4  0.01           0.6      348.1       824      355.5  116.4          347         766
+     90.0      0.0      0.2   1.50        1.28      3.6       2  0.00           0.1      348.1       824      355.5  116.4          347         766
+------------------------------------------------------------------------------------------------
+
+  LEGENDA DELLE COLONNE
+    apert [°]        Angolo di APERTURA della farfalla: 0° = disco perpendicolare al flusso
+                     (chiusa), 90° = disco parallelo (tutta aperta). E' la posizione dello
+                     stelo che si legge sull'attuatore.
+    chius [°]        Angolo di CHIUSURA = 90° - apertura. E' la variabile usata dalle tabelle
+                     di Idelchik, riportata per poter risalire alla fonte.
+    zeta             Coefficiente di perdita della valvola riferito alla velocita' media nel
+                     tubo: dP = zeta * 0.5 * rho * v^2. Varia di oltre tre ordini di grandezza
+                     fra tutta aperta e quasi chiusa.
+    x [%]            Frazione della portata totale di gas che passa nel by-pass. NON e' un
+                     dato: e' il risultato dell'uguaglianza delle perdite di carico fra i due
+                     rami in parallelo.
+    v_liner          Velocita' media del gas dentro il liner del by-pass.
+    v_vena           Velocita' stimata nella sezione ristretta della valvola (vena contratta),
+                     v = sqrt(2 dP / rho): e' quella che conta per erosione, rumore e
+                     vibrazione.
+    Mach             Rapporto fra la velocita' in vena contratta e la velocita' del suono nella
+                     miscela. Oltre 0.3 il rumore e le forzanti acustiche diventano un tema.
+    dPvalv           Salto di pressione dissipato dalla sola farfalla.
+    T tubi           Temperatura del gas all'uscita del FASCIO (non miscelata).
+    T byp            Temperatura del gas all'uscita del BY-PASS.
+    T MISC           Temperatura del gas DOPO la miscelazione dei due flussi: e' il valore che
+                     il processo richiede e che la valvola regola.
+    Q [MW]           Potenza termica complessivamente scambiata (fascio + perdita attraverso
+                     l'isolante del by-pass).
+    T liner          Temperatura massima della faccia calda del liner: sale aprendo, perche' il
+                     gas attraversa piu' in fretta e si raffredda meno.
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  COME SI RIPARTISCE IL GAS. Il fascio tubiero e il tubo di by-pass collegano gli stessi
+  due punti: la camera d'ingresso e la camera d'uscita. Sono quindi due resistenze in
+  parallelo, e vale la regola dei circuiti: la portata si divide in modo che i due rami
+  dissipino LA STESSA caduta di pressione. Non e' quindi il progettista a decidere quanto
+  gas devia: decide solo la resistenza della valvola, e la fisica decide il resto.
+  PERCHE' SERVE LA VALVOLA. Il ramo di by-pass e' un tubo liscio da 275 mm con dentro
+  pochissima portata: da solo dissipa appena 0.82 mbar, contro i 98.0 mbar del fascio. Se
+  fosse libero prenderebbe una frazione enorme del gas e la temperatura di uscita andrebbe
+  fuori controllo. La farfalla serve proprio a bruciare la differenza: in esercizio
+  normale deve dissipare 97.2 mbar, che corrispondono a un coefficiente di perdita zeta =
+  288, cioe' a un'apertura di 24.5 gradi.
+  COSA SUCCEDE APRENDO. Aprendo la farfalla passa piu' gas caldo nel by-pass: la
+  temperatura miscelata SALE, la potenza scambiata e il vapore CALANO, e il liner si
+  scalda (meno tempo per raffreddarsi). Chiudendo succede il contrario. Fra apertura
+  minima e massima ammesse la temperatura miscelata si muove fra 351.2 e 355.5 °C, cioe'
+  circa 0.56 K per grado di stelo: e' la sensibilita' che il regolatore deve gestire.
+  PERCHE' ESISTE UN'APERTURA MINIMA E UNA MASSIMA. Non e' una questione di sola
+  temperatura. Chiudendo troppo: (a) la miscelata scende sotto il minimo di processo; (b)
+  nel liner resta cosi' poca portata da farne un ramo morto, dove il gas stratifica e si
+  deposita sporco; (c) tutta la caduta si concentra nella fessura del disco, dove la
+  velocita' e il rumore crescono; (d) sotto una quindicina di gradi la valvola diventa di
+  fatto un interruttore, perche' zeta cambia del 30% per ogni grado di stelo. Aprendo
+  troppo: (e) la miscelata supera il massimo di processo; (f) il liner si avvicina al suo
+  limite metallurgico; (g) oltre una settantina di gradi la valvola non ha piu' autorita',
+  perche' zeta e' ormai piatto e muovere lo stelo non cambia nulla.
+  POSIZIONE DI SICUREZZA. La valvola deve essere FAIL-CLOSED: in mancanza di aria
+  strumenti o di segnale si chiude, tutta la portata va al fascio, la temperatura di
+  uscita scende e il vapore aumenta. E' la condizione piu' sicura sia per
+  l'apparecchiatura a valle sia per il liner. Il rischio da evitare e' l'opposto: una
+  valvola che si apre in avaria manderebbe gas a quasi mille gradi direttamente
+  all'uscita.
+  CORRELAZIONI USATE. (1) Coefficiente di perdita della farfalla: tabella di Idelchik per
+  valvola a disco in condotto circolare, in funzione dell'angolo di chiusura, interpolata
+  in scala logaritmica (zeta varia in modo esponenziale con l'angolo). (2) Perdita
+  distribuita nel liner e nei tubi: Darcy-Weisbach con fattore d'attrito di
+  Colebrook/Filonenko. (3) Perdite localizzate di imbocco e sbocco: coefficienti classici
+  0.5 e 1.0. (4) Ripartizione: uguaglianza delle cadute fra rami in parallelo, risolta per
+  bisezione. (5) Miscelazione: bilancio ENTALPICO (non di temperatura), con entalpie
+  assolute che includono i calori di formazione, cosi' che l'eventuale avanzamento della
+  reazione di shift sia contabilizzato correttamente.
+  --------------------------------------------------------------------------------------------
+
+================================================================================================
+4. EFFETTO FASCIO TUBIERO (DISPERSIONE FRA LE BANDE)
+================================================================================================
+  banda    y[m]   n.tubi   T gas out[C]   q''max[kW/m2]  Tmet.int max[C]  x uscita  alpha  DNBR min
+------------------------------------------------------------------------------------------------
+      0  -0.784       38          351.8          394.3            429.9    0.0042  0.017      0.79
+      1  -0.642       67          351.5          392.8            431.6    0.0114  0.058      0.79
+      2  -0.499       82          351.4          392.8            431.6    0.0203  0.110      0.78
+      3  -0.356       92          351.3          393.0            431.4    0.0302  0.163      0.78
+      4  -0.214       77          351.4          392.8            431.6    0.0386  0.212      0.77
+      5  -0.071       68          351.5          392.9            431.5    0.0460  0.250      0.76
+      6   0.071       68          351.5          393.0            431.4    0.0534  0.282      0.76
+      7   0.214       77          351.5          392.9            431.5    0.0618  0.310      0.75
+      8   0.356       92          351.4          392.8            431.6    0.0718  0.339      0.74
+      9   0.499       82          351.5          393.0            431.4    0.0807  0.371      0.73
+     10   0.642       67          351.6          393.7            430.6    0.0879  0.399      0.73
+     11   0.784       38          351.8          396.0            428.0    0.0920  0.421      0.72
+------------------------------------------------------------------------------------------------
+
+  LEGENDA DELLE COLONNE
+    banda            Indice della fascia orizzontale in cui e' stato suddiviso il fascio
+                     tubiero. La banda 0 e' la piu' BASSA, l'ultima e' la piu' ALTA. L'acqua
+                     attraversa il fascio dal basso verso l'alto, quindi le bande sono percorse
+                     in serie: quello che esce dalla banda j entra nella banda j+1.
+    y [m]            Quota del centro della banda misurata dall'asse del mantello: negativa
+                     sotto l'asse, positiva sopra. La banda piu' bassa e quella piu' alta hanno
+                     |y| massimo e contengono pochi tubi (il fascio e' circolare, li' e'
+                     stretto).
+    n. tubi          Numero di tubi contenuti nella banda, ricavato dall'area intubata della
+                     fascia divisa per l'area di competenza di un tubo (passo^2 * sin60). La
+                     somma sulle bande restituisce il numero totale di tubi.
+    T gas out [C]    Temperatura del gas di processo all'USCITA dei tubi di quella banda. I
+                     tubi sono canali in parallelo, quindi ogni banda ha il suo profilo: la
+                     dispersione fra bande e' l'effetto fascio visto dal lato gas.
+    q'' max [kW/m2]  Massimo flusso termico specifico raggiunto lungo la banda, riferito alla
+                     superficie ESTERNA del tubo (quella bagnata dall'acqua). Il tratto
+                     protetto dalla ferrula e' escluso, perche' li' il flusso e'
+                     artificialmente basso e non e' rappresentativo.
+    Tmet.int max [C] Massima temperatura del METALLO sulla superficie INTERNA del tubo (lato
+                     gas), che e' il punto piu' caldo della parete. Va confrontata con il
+                     limite di progetto del materiale.
+    x uscita         TITOLO massico della miscela che esce dalla banda: rapporto fra la portata
+                     di vapore e la portata totale (vapore + acqua). Cresce salendo perche'
+                     ogni banda aggiunge il vapore che ha prodotto. Adimensionale: 0.10 = 10%
+                     in massa e' vapore.
+    alpha            FRAZIONE DI VUOTO: rapporto fra l'area occupata dal vapore e l'area totale
+                     della sezione. E' molto piu' grande del titolo perche' il vapore e' meno
+                     denso: a 118 bar x = 0.10 corrisponde gia' ad alpha = 0.45. E' alpha, non
+                     x, a dire se i ranghi alti restano bagnati (limite pratico 0.7).
+    DNBR min         Minimo rapporto locale fra il flusso termico critico (CHF, quello che
+                     innescherebbe il film di vapore) e il flusso termico effettivo. E' un
+                     margine: 3 = si lavora a un terzo del limite, 1 = si e' al limite, sotto 1
+                     = criterio violato. Peggiora salendo perche' il CHF cala al crescere del
+                     titolo locale.
+
+  COME SI LEGGE: la banda 0 riceve acqua satura (x = 0) e lavora nelle condizioni piu'
+  favorevoli. Salendo, ogni banda riceve la miscela gia' arricchita da tutte quelle
+  sottostanti, quindi titolo e frazione di vuoto crescono e il margine sul DNB cala.
+  La temperatura del gas in uscita cambia invece pochissimo fra le bande: la resistenza
+  lato acqua e' una frazione minima di quella totale, quindi anche dimezzando il
+  coefficiente di ebollizione il bilancio termico si sposta di poco. L'effetto fascio
+  NON si vede sul gas: si vede sul margine di DNB della banda superiore.
+
+================================================================================================
+5. FLUSSO TERMICO E TEMPERATURE METALLICHE
+================================================================================================
+  Flusso termico massimo (est.)                      396.0 kW/m2  @ z = 0.21 m, y = 0.784 m (banda 11)
+  Flusso termico massimo (int.)                      471.5 kW/m2
+  Flusso termico medio                               88.3 kW/m2
+  T metallo max (int / media / est)                  431.6 / 412.8 / 395.6 °C  @ z = 0.21 m, y = -0.214 m
+  Surriscaldamento reale di parete max               13.36 K
+  Salto attraverso il deposito (max)                 59.4 K
+  T metallo esterna - Tsat (max)                     72.3 K
+  CHF tubo singolo (pool)                            3141 kW/m2
+  phi_b di Palen                                     0.100
+  dT critico (ginocchio curva ebollizione)           6.1 K
+  DNBR locale minimo                                 0.72  @ z = 0.21 m, y = 0.784 m, x = 0.0920 (campo fascio)
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  Tutti i numeri di questo riquadro sono presi nel PUNTO DI FLUSSO MASSIMO (z = 0.21 m, y
+  = 0.784 m, banda 11), cosi' la catena torna. Le righe della tabella qui sopra sono
+  invece massimi presi su tutto l'apparecchio, quindi possono cadere in celle leggermente
+  diverse fra loro.
+
+  Il calore deve andare dal gas (961 °C) all'acqua che bolle (323.3 °C) attraversando
+  quattro ostacoli in fila, come una serie di strozzature su un tubo. Ogni ostacolo si
+  'paga' con un salto di temperatura, e la somma dei quattro salti fa la differenza totale
+  di 637 °C:
+
+    1) film di gas + sporco lato gas ......     533 K   (84% del totale)
+    2) spessore del metallo ..............      36 K   (6%)
+    3) deposito lato acqua ...............      59 K   (9%)
+    4) film di ebollizione ...............       9 K   (1%)
+
+  Il primo ostacolo e' di gran lunga il piu' grande: e' il gas a fare da collo di
+  bottiglia, ed e' per questo che la temperatura del metallo resta comunque vicina a
+  quella dell'acqua e non a quella del gas. Se cosi' non fosse, un tubo di acciaio non
+  potrebbe stare in un gas a quasi 1000 gradi.
+
+  FLUSSO TERMICO (i primi tre numeri). E' quanti watt passano attraverso ogni metro
+  quadrato di tubo: la 'densita' di potenza' della parete. Compare due volte perche' la
+  stessa potenza attraversa una superficie interna piu' piccola (diametro 32.0 mm) e una
+  esterna piu' grande (38.1 mm): stesso calore, area diversa, quindi numeri diversi nel
+  rapporto 1.19. Per convenzione il valore di riferimento e' quello ESTERNO, perche' e' la
+  faccia bagnata dall'acqua ed e' li' che si decide se l'ebollizione tiene.
+  Il massimo (396 kW/m2) e' 4.5 volte il valore medio (88 kW/m2). Non e' un difetto: il
+  gas entra caldissimo e si raffredda lungo il tubo, quindi lo scambio e' concentrato nei
+  primi metri. Il picco cade a z = 0.21 m, cioe' subito a valle dell'estremita' della
+  ferrula: sotto la ferrula il tubo e' protetto dall'isolante, appena finisce il metallo
+  si trova esposto al gas ancora quasi alla temperatura d'ingresso. E' il punto piu'
+  sollecitato dell'apparecchio.
+
+  TEMPERATURE DEL METALLO (tre valori). Sono la stessa parete letta in tre punti dello
+  spessore: faccia interna a contatto col gas (428 °C nel punto di flusso massimo, la piu'
+  calda), meta' spessore (409 °C) e faccia esterna a contatto con l'acqua (392 °C). I 36
+  gradi fra le due facce sono il prezzo per far passare il calore attraverso 3.05 mm di
+  acciaio. Il valore da confrontare con il limite del materiale (SA-213 T11
+  (1.25Cr-0.5Mo), 550 °C) e' quello INTERNO; il massimo su tutto l'apparecchio, riportato
+  nella tabella, e' 432 °C.
+
+  SURRISCALDAMENTO DI PARETE (13.4 K) e SALTO NEL DEPOSITO (59.4 K). Sono due cose diverse
+  che spesso vengono confuse. Il surriscaldamento e' di quanto la superficie realmente
+  bagnata dall'acqua e' piu' calda dell'acqua stessa: e' la spinta che fa nascere le
+  bolle, e va tenuta sotto il 'dT critico'. Il salto nel deposito e' invece quanto il velo
+  di ossidi che si forma sul tubo isola il metallo dall'acqua. Nel punto di flusso massimo
+  il deposito vale 59 K contro 9 K di surriscaldamento: cioe' il metallo e' caldo per lo
+  sporco, non per l'ebollizione. E' un punto pratico importante, perche' significa che la
+  qualita' dell'acqua di caldaia pesa piu' del progetto termico, e che il problema
+  peggiora da solo (piu' caldo -> piu' deposito -> piu' caldo).
+
+  dT CRITICO (6.1 K). E' il 'ginocchio' della curva di ebollizione. Fino a li' le bolle si
+  staccano una a una e portano via calore benissimo. Oltre, le bolle si fondono in un velo
+  di vapore continuo che fa da coperta isolante: lo scambio crolla e il metallo si scalda
+  di centinaia di gradi in pochi minuti. Il surriscaldamento calcolato (13.4 K) supera
+  questo valore, ed e' il motivo dell'allarme in diagnostica.
+
+  CHF e phi_b DI PALEN. Il CHF (3141 kW/m2) e' il flusso termico che farebbe scattare quel
+  velo di vapore su un tubo SINGOLO immerso in acqua ferma. In un fascio fitto le cose
+  vanno peggio, perche' il vapore prodotto dai tubi sotto deve passare fra i tubi sopra:
+  il fattore phi_b di Palen tiene conto di questo affollamento e qui vale 0.10, cioe'
+  abbatte il limite a 314 kW/m2. Il criterio e' tarato su ribollitori kettle ed e'
+  conservativo per un fascio attraversato da acqua in movimento come il nostro, ma resta
+  l'indicatore di riferimento.
+
+  DNBR LOCALE MINIMO (0.72). E' il voto finale di questa sezione: quante volte il flusso
+  termico effettivo sta dentro il limite. Sopra 2-3 si e' tranquilli, 1 e' il limite
+  esatto, sotto 1 il criterio e' violato. Il minimo NON cade dove il flusso e' massimo (z
+  = 0.21 m) ma a z = 0.21 m, y = 0.784 m: li' il flusso e' un po' minore, ma l'acqua che
+  lava il tubo ha gia' attraversato tutte le file sottostanti e contiene il 9.2% di vapore
+  in massa, quindi il limite si e' abbassato piu' di quanto sia sceso il flusso. E'
+  esattamente il meccanismo dello steam blanketing: non serve un flusso enorme, basta che
+  l'acqua che arriva sia gia' troppo carica di vapore.
+  --------------------------------------------------------------------------------------------
+
+================================================================================================
+5C. PULITO / SPORCO SUI DUE LATI (CELLA DI FLUSSO MASSIMO)
+================================================================================================
+  condizione                              Rf gas    Rf acqua      U      q''      T met.int  T met.est  dT dep.  DNBR
+                                        [m2K/W]    [m2K/W] [W/m2K] [kW/m2]      [°C]       [°C]     [K]
+------------------------------------------------------------------------------------------------
+  PULITO su entrambi i lati               0.00000    0.00000    1157    737.7      407.6      340.0      0.0  0.39
+  sporco solo lato GAS                    0.00050    0.00000     685    436.8      373.2      333.2      0.0  0.65
+  sporco solo lato ACQUA                  0.00000    0.00015     986    628.6      489.4      431.8     94.3  0.45
+  SPORCO su entrambi i lati (progetto)    0.00050    0.00015     621    396.1      427.9      391.7     59.4  0.72
+------------------------------------------------------------------------------------------------
+  SCARTO pulito -> sporco su U                       -46.3 %
+  SCARTO pulito -> sporco sul flusso di picco        -46.3 %
+  SCARTO pulito -> sporco su T metallo interna       20.4 K
+
+  LEGENDA DELLE COLONNE
+    Rf gas           Resistenza di sporcamento sulla superficie INTERNA dei tubi (lato gas di
+                     processo): fuliggine, carbone da metal dusting, particolato di
+                     catalizzatore.
+    Rf acqua         Resistenza di sporcamento sulla superficie ESTERNA (lato acqua): ossidi di
+                     ferro e magnetite depositati dall'acqua di caldaia.
+    U [W/m2K]        Coefficiente globale riferito alla superficie esterna, U = q''/(T_gas -
+                     Tsat).
+    q'' [kW/m2]      Flusso termico locale sulla superficie esterna in quella condizione.
+    T met. int/est   Temperature del metallo sulle due facce.
+    dT dep. [K]      Salto di temperatura sul solo deposito lato acqua: e' quello che alza la
+                     temperatura del metallo senza dare scambio.
+    DNBR             Margine su crisi di ebollizione con il CHF locale gia' calcolato.
+
+  IN PAROLE SEMPLICI. Il progetto e' fatto in condizione SPORCA, come da datasheet: e' la
+  condizione di fine campagna, quella che garantisce la potenza anche quando l'apparecchio
+  si e' incrostato. Ma le due condizioni vanno guardate insieme, perche' mettono in
+  evidenza due rischi opposti.
+  DA PULITO il coefficiente globale e' piu' alto, quindi il flusso termico di PICCO e'
+  maggiore e il margine su crisi di ebollizione e' PEGGIORE. La condizione critica per il
+  DNB e' quindi l'apparecchio APPENA MESSO IN SERVIZIO, non quello sporco. E' un punto che
+  si perde facilmente, perche' istintivamente si associa il rischio allo sporco.
+  DA SPORCO il flusso cala, ma la temperatura del metallo SALE, perche' il deposito lato
+  acqua e' una coperta termica: il calore deve comunque passare e lo fa con un salto in
+  piu'. Il rischio da sporco non e' la crisi di ebollizione, e' il surriscaldamento e lo
+  scorrimento viscoso del metallo.
+  I DUE LATI NON SONO EQUIVALENTI. Lo sporco lato GAS aggiunge resistenza a MONTE del
+  metallo: riduce il flusso e RAFFREDDA il tubo, quindi e' quasi benefico dal punto di
+  vista metallurgico. Lo sporco lato ACQUA aggiunge resistenza a VALLE: riduce il flusso
+  ma SCALDA il tubo. E' per questo che il condizionamento chimico dell'acqua conta piu'
+  della pulizia lato gas.
+  Attenzione: questo confronto e' LOCALE, a temperatura del gas congelata al valore della
+  cella di picco. Il confronto completo sull'intero apparecchio - dove da pulito il gas si
+  raffredda di piu' e cambia tutto il profilo - si ottiene rilanciando il calcolo con le
+  resistenze azzerate.
+
+================================================================================================
+5D. MODELLI DI FLUSSO TERMICO CRITICO A CONFRONTO
+================================================================================================
+  Cella governante                                   z = 0.21 m, y = +0.78 m (banda 11), titolo locale 0.092, velocita' miscela 5.99 m/s
+  Flusso termico locale                              396.0 kW/m2
+
+  modello                                                              q crit[kW/m2]   DNBR
+------------------------------------------------------------------------------------------------
+  Palen - fattore di fascio (BASE DEL CALCOLO)                                 314   0.79
+  Zuber (idrodinamico su piastra infinita) + derating sul titolo              3205   8.09
+  Lienhard-Dhir (tubo singolo orizzontale) + derating sul titolo              2852   7.20
+  Lienhard-Eichhorn (cilindro in crossflow)                                 153503 387.59
+------------------------------------------------------------------------------------------------
+    Palen - fattore di fascio (BASE DEL CALCOLO): psi = D_fascio L / A = 0.0169 darebbe
+    phi_b = 3.1 psi = 0.052, TRONCATO a 0.10 per pratica HEDH. Il troncamento dice che il
+    criterio e' usato FUORI dal suo campo: e' tarato su ribollitori kettle molto piu'
+    piccoli, dove l'unica circolazione e' quella indotta dalle bolle. Qui l'acqua attraversa
+    il fascio a 6.0 m/s spinta dalla circolazione naturale. E' quindi un LIMITE INFERIORE,
+    non una previsione.
+    Zuber (idrodinamico su piastra infinita) + derating sul titolo: Limite idrodinamico
+    teorico della singola superficie: nessun effetto fascio, nessun effetto di velocita'. E'
+    un LIMITE SUPERIORE di riferimento.
+    Lienhard-Dhir (tubo singolo orizzontale) + derating sul titolo: Zuber corretto per la
+    curvatura del cilindro. Ancora senza effetto fascio: limite superiore piu' realistico.
+    Lienhard-Eichhorn (cilindro in crossflow): FUORI CAMPO DI VALIDITA': il valore NON va
+    usato. La correlazione e' tarata a bassa pressione, dove rho_l/rho_v vale centinaia; qui
+    vale 9.6 con We_D = 10228. Il gruppo rho_v h_fg u su cui e' costruita esplode ad alta
+    pressione e produce un flusso critico privo di significato fisico. E' riportata solo per
+    documentare che e' stata verificata e scartata.
+
+  LEGENDA DELLE COLONNE
+    q crit           Flusso termico critico previsto dal modello nelle condizioni locali
+                     (titolo, velocita', pressione).
+    DNBR             Rapporto fra il flusso critico e il flusso effettivo. E' un margine: 2 =
+                     si lavora a meta' del limite, 1 = al limite.
+
+  IN PAROLE SEMPLICI. Il flusso termico critico e' il valore oltre il quale il vapore
+  forma un film continuo sulla parete e lo scambio crolla: la parete si scalda di colpo di
+  centinaia di gradi. Non esiste UNA formula: esistono correlazioni tarate su geometrie
+  diverse, e la scelta cambia la risposta di un fattore anche superiore a due. Per questo
+  si riportano tutte.
+  IL CRITERIO DI PALEN, che il calcolo usa come riferimento, e' tarato sui RIBOLLITORI
+  KETTLE: fasci immersi in un bagno fermo, dove l'unica circolazione e' quella indotta
+  dalle bolle. Il suo fattore di fascio penalizza pesantemente i fasci grandi, ed e'
+  giusto che lo faccia in quel contesto. Qui pero' l'acqua attraversa il fascio spinta
+  dalla circolazione naturale, con velocita' misurabili: la situazione e' molto meno
+  severa di un kettle.
+  IL CRITERIO DI LIENHARD-EICHHORN e' quello geometricamente corretto per questo
+  apparecchio: cilindro investito da una corrente. Tiene conto esplicitamente della
+  velocita' della miscela, che nei criteri di tipo kettle non compare affatto. Il derating
+  sul titolo tiene conto del fatto che, salendo nel fascio, c'e' sempre meno liquido
+  disponibile a bagnare la parete.
+  LA CONCLUSIONE ONESTA DI QUESTA SEZIONE. I modelli non divergono di poco: divergono di
+  un ORDINE DI GRANDEZZA, e non perche' uno sia sbagliato, ma perche' NESSUNO di essi e'
+  tarato su questa geometria a questa pressione. Palen e' usato con il fattore di fascio
+  troncato al minimo ammesso, cioe' fuori dal suo campo; Zuber e Lienhard-Dhir ignorano
+  del tutto l'effetto fascio; Lienhard-Eichhorn e' fuori campo sul rapporto di densita'.
+  Il DNBR calcolato NON e' quindi un numero affidabile in valore assoluto: e' un
+  indicatore, e come tale va usato solo per confrontare zone diverse dello stesso
+  apparecchio o varianti dello stesso progetto.
+  COSA RESTA AFFIDABILE. Il FLUSSO TERMICO DI PICCO, che il calcolo determina senza
+  bisogno di alcuna correlazione di crisi, e che si confronta con l'esperienza di
+  apparecchi analoghi in servizio. E la POSIZIONE del punto critico, che e' robusta
+  rispetto a tutte le assunzioni: subito a valle della ferrula, nella banda superiore. Se
+  serve una risposta quantitativa sul margine di crisi, la strada e' una sola: dati
+  sperimentali su fascio, oppure la look-up table di Groeneveld con i fattori correttivi
+  per fascio, che richiede l'accesso alla tabella originale.
+
+================================================================================================
+5E. INCERTEZZA DOVUTA ALLA SCELTA DELLE CORRELAZIONI
+================================================================================================
+  Valutata nella cella                               z = 0.21 m, y = +0.78 m (flusso massimo)
+
+  gruppo                     correlazione                                 h gas    h boil       U     q''    T met  scarto
+                                                                        [W/m2K]  [W/m2K] [W/m2K] [kW/m2]   [°C]     [%]
+------------------------------------------------------------------------------------------------
+  correlazione lato gas      Dittus-Boelter (1930)                        2063    44199     696   443.6    441   12.02
+  correlazione lato gas      Colburn (1933)                               2016    44199     690   439.5    439   10.98
+  correlazione lato gas      Sieder-Tate (1936)                           2362    44199     733   467.4    447   18.02
+  correlazione lato gas      Gnielinski (1976)                            1588    44199     621   396.1    428    0.00
+  correlazione lato gas      Petukhov-Kirillov (1958)                     1475    44199     600   382.4    424   -3.46
+  correlazione lato gas      Hausen (1959)                                1925    44199     677   431.2    437    8.88
+  correlazione di ebollizione Mostinski (1963) - stati corrispondenti      1588   181341     628   400.3    422    1.07
+  correlazione di ebollizione Cooper (1984) - stati corrispondenti + r     1588   207531     628   400.5    422    1.12
+  correlazione di ebollizione Rohsenow (1952) - Csf acqua/acciaio          1588   141641     627   399.9    423    0.98
+  correlazione di ebollizione Gorenflo (VDI Heat Atlas)                    1588   223095     628   400.6    422    1.14
+  correlazione di ebollizione Cornwell-Houston (1994) - tubo singolo/f     1588   308079     629   400.9    421    1.22
+  regola di miscelazione     Wilke (µ) / Wassiljewa-Mason-Saxena (k)      1588    44199     621   396.1    428    0.00
+  regola di miscelazione     media molare (per confronto con datashee     1288    44199     561   357.3    418   -9.78
+------------------------------------------------------------------------------------------------
+  BANDA DI INCERTEZZA PER GRUPPO
+    correlazione lato gas        flusso da -3.5 % a 18.0 %   |   T metallo da 424 a 447 °C
+    correlazione di ebollizione  flusso da 1.0 % a 1.2 %   |   T metallo da 421 a 423 °C
+    regola di miscelazione       flusso da -9.8 % a 0.0 %   |   T metallo da 418 a 428 °C
+
+  LEGENDA DELLE COLONNE
+    h gas            Coefficiente di scambio lato gas che quella correlazione produce nelle
+                     condizioni locali, incluso l'irraggiamento e le correzioni di proprieta'
+                     variabili e d'imbocco.
+    h boil           Coefficiente di ebollizione con il fattore di fascio applicato.
+    U                Coefficiente globale risultante, riferito alla superficie esterna.
+    scarto [%]       Differenza percentuale del flusso termico rispetto alla combinazione
+                     scelta come base del calcolo.
+
+  IN PAROLE SEMPLICI. Tutte le correlazioni di scambio termico sono adattamenti di dati
+  sperimentali, e ognuna e' stata ricavata su un campo di prove diverso. Applicate allo
+  stesso caso danno risposte che differiscono, e la differenza NON e' un errore: e'
+  l'incertezza intrinseca del metodo. Questa tabella la misura invece di nasconderla.
+  COSA GUARDARE. Se la banda sul flusso e' stretta, il risultato e' robusto e si puo'
+  procedere. Se e' larga, la grandezza in questione va trattata come incerta, e le
+  decisioni di progetto non devono dipendere da quale correlazione si e' scelta. La banda
+  sulla TEMPERATURA DEL METALLO e' quella che conta di piu', perche' e' il numero che si
+  confronta con i limiti metallurgici.
+  PERCHE' LA RESISTENZA LATO GAS DOMINA. Si nota subito che cambiare la correlazione di
+  ebollizione sposta pochissimo: e' perche' la resistenza lato acqua e' una frazione
+  minima del totale. Il collo di bottiglia e' il film di gas, quindi l'incertezza del
+  risultato e' quasi tutta l'incertezza della correlazione lato gas. E' anche il motivo
+  per cui si e' scelto Gnielinski, che e' la piu' accurata nel campo di transizione e
+  turbolento.
+  LA REGOLA DI MISCELAZIONE non e' un dettaglio: per una miscela ricca di idrogeno la
+  conducibilita' calcolata con la media molare e quella calcolata con
+  Wassiljewa-Mason-Saxena differiscono in modo sensibile, e con esse il coefficiente di
+  scambio. Wilke e' la scelta fisicamente corretta; la media molare e' riportata solo
+  perche' molti datasheet di fornitori la usano.
+
+================================================================================================
+6. CIRCOLAZIONE NATURALE
+================================================================================================
+  Dislivello asse drum - asse WHB                    6.00 m
+  H discesa / H fascio / H salita                    6.86 / 1.71 / 5.14 m
+  Downcomer                                          1 x DC1 18" Sch.120 (ID 387.2 mm) + 1 x DC2 18" Sch.120 (ID 387.2 mm) + 1 x DC3 16" Sch.120 (ID 344.6 mm) + 1 x DC4 16" Sch.120 (ID 344.6 mm) + 1 x DC5 16" Sch.120 (ID 344.6 mm) + 1 x DC6 16" Sch.120 (ID 344.6 mm) + 1 x DC7 16" Sch.120 (ID 344.6 mm) + 1 x DC8 16" Sch.120 (ID 344.6 mm) + 1 x DC9 4" Sch.120 (ID 92.1 mm)
+  Riser                                              1 x R1 24" Sch.120 (ID 518.0 mm) + 1 x R2 24" Sch.120 (ID 518.0 mm) + 1 x R3 24" Sch.120 (ID 518.0 mm) + 1 x R4 24" Sch.120 (ID 518.0 mm) + 1 x R5 6" Sch.120 (ID 139.7 mm)
+  RAPPORTO DI CIRCOLAZIONE (CR)                      10.9
+  Portata circolante                                 1045.2 kg/s  (3763 t/h)
+  Titolo uscita fascio / riser                       0.0920 / 0.0920
+  Frazione di vuoto fascio / riser                   0.396 / 0.419
+  Battente motore netto                              147.5 mbar
+    - perdite downcomer                              29.7 mbar
+    - perdite riser                                  55.6 mbar
+    - attraversamento fascio (medio)                 25.9 mbar
+    - interne drum                                   35.0 mbar
+  Velocita' downcomer / riser                        1.98 / 3.32 m/s
+  CR EFFICACE VISTO DAI TUBI                         10.9
+  Corona anulare aperta                              0.0000 m2/m (diaframma OD 2015 mm)
+  Frazione by-pass (neg. = discesa interna)          0.0 %
+  Alpha nella corona / titolo di rientro             0.000 / 0.0000
+  Velocita' di risalita bolle (drift)                0.161 m/s
+  Modello vuoto / attrito bifase                     Zuber-Findlay (drift-flux) | Friedel (1979)
+  Battente disponibile positivo                      SI
+
+  IN PAROLE SEMPLICI. L'acqua gira in un anello chiuso e SENZA POMPA: scende dal corpo
+  cilindrico nei tubi di discesa (downcomer), attraversa il fascio dove in parte diventa
+  vapore, e risale nei tubi di salita (riser) perche' la miscela acqua+vapore e' piu'
+  leggera dell'acqua sola. E' lo stesso principio del camino. La 'benzina' del sistema e'
+  il BATTENTE MOTORE (147.5 mbar): la differenza di peso fra la colonna che scende e
+  quelle che salgono. Tutta questa spinta viene consumata dagli attriti del giro, elencati
+  sotto. Il RAPPORTO DI CIRCOLAZIONE dice quante volte l'acqua fa il giro per ogni chilo
+  di vapore prodotto: 10.9 significa che di 100 kg che escono dal mantello, 9.2 sono
+  vapore e il resto torna indietro liquido. Serve che sia almeno 10, perche' l'acqua in
+  eccesso e' quella che lava i tubi e impedisce che si scoprano. Le altezze H sono le tre
+  quote in gioco, misurate dal livello dell'acqua nel corpo cilindrico.
+
+
+================================================================================================
+6B. VERIFICA DEI RISER: REGIME DI MOTO BIFASE (TAITEL-DUKLER)
+================================================================================================
+  riser                    ID[mm]   jl[m/s]  jv[m/s]  Vmix[m/s]  alpha   rho*v2   regime
+------------------------------------------------------------------------------------------------
+  R1 24" Sch.120             518.0      1.68     1.64       3.32  0.419     4043   anulare
+  R2 24" Sch.120             518.0      1.68     1.64       3.32  0.419     4043   anulare
+  R3 24" Sch.120             518.0      1.68     1.64       3.32  0.419     4043   anulare
+  R4 24" Sch.120             518.0      1.68     1.64       3.32  0.419     4043   anulare
+  R5 6" Sch.120              139.7      1.62     1.58       3.21  0.418     3776   anulare
+------------------------------------------------------------------------------------------------
+
+  LEGENDA DELLE COLONNE
+    ID [mm]          Diametro interno del singolo riser.
+    jl [m/s]         Velocita' SUPERFICIALE del liquido: portata volumetrica di liquido divisa
+                     per l'intera sezione del tubo, come se il liquido la occupasse da solo.
+                     Non e' la velocita' reale del liquido.
+    jv [m/s]         Velocita' superficiale del vapore, definita allo stesso modo. La coppia
+                     (jl, jv) e' quella che individua il punto sulla mappa dei regimi di moto.
+    Vmix [m/s]       Velocita' della miscela calcolata con la densita' omogenea: e' la
+                     velocita' che si usa per rho*v2 e per le verifiche di erosione.
+    alpha            Frazione di vuoto nel riser (area di vapore / area totale).
+    rho*v2           Quantita' di moto specifica del flusso [kg/(m s2)]: e' il parametro con
+                     cui si giudicano impingement, erosione e forzanti vibrazionali sui
+                     bocchelli.
+    regime           Regime di moto bifase secondo la mappa di Taitel-Dukler per moto verticale
+                     ascendente. Da evitare il regime a TAPPI (slug), che pulsa a 0.5-5 Hz ed
+                     eccita i supporti.
+
+  Diametro minimo perche' possa formarsi la bolla di Taylor (moto a tappi): 21.4 mm.
+  R1 24" Sch.120: regime anulare: flusso continuo, nessuna pulsazione da tappi. Verificare comunque erosione ai gomiti.
+  R2 24" Sch.120: regime anulare: flusso continuo, nessuna pulsazione da tappi. Verificare comunque erosione ai gomiti.
+  R3 24" Sch.120: regime anulare: flusso continuo, nessuna pulsazione da tappi. Verificare comunque erosione ai gomiti.
+  R4 24" Sch.120: regime anulare: flusso continuo, nessuna pulsazione da tappi. Verificare comunque erosione ai gomiti.
+  R5 6" Sch.120: regime anulare: flusso continuo, nessuna pulsazione da tappi. Verificare comunque erosione ai gomiti.
+  Downcomer: sommergenza minima dello stacco dal drum 1.10 m (criterio di Froude anti-vortice).
+
+================================================================================================
+6C. CORPO CILINDRICO: PERDITE DI CARICO E SEPARAZIONE
+================================================================================================
+  Geometria                                          ID 3000 mm x 13000 mm T-T, livello normale 1650 mm dal fondo
+  Interne sul percorso di circolazione               4 calm box, 1 riser(s)/box, canale 0.228 m2, apertura superiore 0.350 m2, caduta acqua 0.30 m, ingresso downcomer auto m2, K vortex breaker 0.50, scarico SOPRA il livello (spazio vapore)
+  Metodo calm-box: la perdita di circolazione include uscita dei riser nella camera,
+  transito nella scatola, apertura superiore con eventuale caduta dell'acqua e imbocco dei
+  downcomer con vortex breaker. I cicloni non sono considerati in questa versione; camini
+  con top-hat direttamente sui riser sono una futura alternativa di modellazione.
+
+  A) PERCORSO DI CIRCOLAZIONE - e' l'unica perdita che entra nel bilancio del battente
+  voce                                                     K      A[m2]   v[m/s]  rho[kg/m3]  dP[mbar]
+------------------------------------------------------------------------------------------------
+  riser discharge into calm box                          0.003    0.2146     3.32       367.2      0.07
+  calm box transit (friction + bend + internals)         1.077    0.2280     3.12       367.2     21.75
+  calm box top opening / outlet window                   0.376    0.3500     2.03       367.2      7.59
+  calm box water fall from top opening                   0.000    0.3500     0.00       658.8     19.38
+  DEDUCTION: riser outlet already counted in riser lin  -1.000    0.2146     3.32       367.2    -20.19
+  downcomer entry with vortex breaker                    0.500    0.8018     1.98       658.8      6.45
+------------------------------------------------------------------------------------------------
+  TOTALE sul percorso di circolazione                                                             35.05
+
+    riser discharge into calm box                        sudden area change from riser nozzle to box; 4 calm boxes, about 1 riser(s) per box; cyclones are not included
+    calm box transit (friction + bend + internals)       box K 1.22 (friction 0.06 + bend 0.16 + extra 1.00), referred to riser-nozzle velocity with (A_noz/A_box)^2 = 0.89
+    calm box top opening / outlet window                 outlet is above normal level; discharged kinetic energy is treated as lost before liquid returns to the drum
+    calm box water fall from top opening                 static head dissipated by liquid falling from the calm-box top opening to the drum water level
+    DEDUCTION: riser outlet already counted in riser line avoids double counting with Piping.totalK
+    downcomer entry with vortex breaker                  minor loss for water entering the downcomer mouth; use vendor geometry where available, lower K assumes an effective vortex breaker
+
+  A2) SENSIBILITA' AL COEFFICIENTE DEL CONVOGLIATORE (e' il parametro dominante)
+  K extra   K totale netto   dP interne[mbar]   quota del battente motore[%]
+------------------------------------------------------------------------------------------------
+     0.00            0.850               17.2                           11.6
+     0.50            1.293               26.1                           17.7
+     1.00            1.736               35.0                           23.8   <== assunto
+     1.50            2.178               44.0                           29.8
+     2.00            2.621               52.9                           35.9
+     3.00            3.507               70.8                           48.0
+     4.00            4.393               88.7                           60.1
+------------------------------------------------------------------------------------------------
+  Il valore assunto (1.00) e' una stima ingegneristica per un canale in lamiera con
+  transizione da tondo a rettangolare, telai interni e curva non ideale. La riga K = 0
+  rappresenta il canale idealmente liscio: si vede che in quel caso il convogliatore costa
+  MENO di uno sbocco nudo, perche' rilascia la miscela piu' lentamente. E' il
+  comportamento per cui i convogliatori esistono. Il valore vero sta fra questi estremi e
+  lo conosce solo il costruttore.
+
+  B) PERCORSO VAPORE - NON entra nel bilancio di circolazione
+  voce                                                     K      A[m2]   v[m/s]  rho[kg/m3]  dP[mbar]
+------------------------------------------------------------------------------------------------
+  demister / separatore secondario                       2.000   20.8000     0.08        68.4      0.00
+  camini di uscita (8 x DN 203 mm)                       2.500    0.2582     6.24        68.4     33.34
+  collettore sul cielo                                   1.000    0.1793     8.99        68.4     27.65
+  bocchello di uscita vapore                             0.500    0.1443    11.17        68.4     21.35
+------------------------------------------------------------------------------------------------
+  TOTALE dal pelo libero all'uscita vapore                                                        82.35
+
+  C) VERIFICHE DI SEPARAZIONE
+  Area del pelo libero                               38.80 m2
+  Velocita' superficiale del vapore al pelo libero   0.0415 m/s su limite 0.1322 m/s (Souders-Brown K = 0.045)  ->  utilizzo 31 %
+  Velocita' frontale sul demister                    0.078 m/s su limite 0.294 m/s (K = 0.10)
+  Altezza dello spazio vapore                        1350 mm
+  Sommergenza degli stacchi dei downcomer            1650 mm
+
+  LEGENDA DELLE COLONNE
+    K                Coefficiente di perdita localizzata. In questa tabella tutti i K del
+                     percorso di circolazione sono RIPORTATI ALLA VELOCITA' NEL BOCCHELLO DEL
+                     RISER, cosi' si sommano direttamente e si confrontano con i valori di
+                     letteratura.
+    A [m2]           Sezione di passaggio a cui si riferisce la velocita' indicata nella riga.
+    v [m/s]          Velocita' effettiva in quella sezione (miscela omogenea sul percorso di
+                     circolazione, vapore saturo secco sul percorso vapore).
+    rho              Densita' usata: omogenea della miscela sul percorso di circolazione, del
+                     vapore saturo su quello vapore.
+    dP [mbar]        Perdita di quella singola voce.
+    DEDUZIONE        Riga negativa: toglie lo sbocco K = 1.0 gia' conteggiato nella linea del
+                     riser (Piping.totalK). Senza questa deduzione la perdita sarebbe contata
+                     due volte.
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  TRE COSE DIVERSE CHE SI CHIAMANO TUTTE 'PERDITA NEL CORPO CILINDRICO'. La prima non e'
+  una perdita: e' il LIVELLO dell'acqua, che stabilisce dove comincia la colonna di
+  discesa ed e' gia' contato nel battente. La seconda e' la perdita che la MISCELA subisce
+  dentro il corpo cilindrico, dal bocchello del riser fino a quando l'acqua separata
+  rientra nella massa: e' l'unica che toglie battente alla circolazione. La terza e' la
+  perdita che il VAPORE subisce dal pelo libero fino al bocchello di uscita, attraverso
+  demister e camini: non c'entra nulla con la circolazione, si scarica sulla pressione
+  consegnata in rete. Confonderle e' l'errore piu' comune in questo calcolo.
+  PERCHE' IL NUMERO PESA TANTO. La miscela arriva ai riser a 3.32 m/s con densita'
+  omogenea 367 kg/m3: una sola altezza cinetica vale gia' 20.2 mbar. Su un battente motore
+  di poche centinaia di millibar, ogni unita' di K nelle interne si mangia una fetta
+  importante della circolazione. E' per questo che il valore va calcolato e non assunto.
+  COME SI CALCOLA. Si scompone il percorso in singolarita' elementari, ognuna con il suo
+  coefficiente K preso da Idelchik: allargamento o restringimento brusco fra bocchello e
+  canale (Borda-Carnot), attrito e curvatura nel canale del convogliatore, perdita
+  dell'energia cinetica allo scarico. Per il bifase si usa il modello OMOGENEO, dp = K G^2
+  / (2 rho_H): in una singolarita' brusca vapore e liquido non hanno tempo di scorrere uno
+  rispetto all'altro, quindi si comportano come un fluido solo. In alternativa si puo'
+  usare il moltiplicatore di Chisholm per singolarita', che da' valori piu' alti quando il
+  titolo e' basso e lo scorrimento conta.
+  CONVOGLIATORI O CICLONI, NON E' LO STESSO. In un corpo cilindrico a CICLONI tutta la
+  miscela attraversa il ciclone, e la perdita del separatore - che e' grande - sta per
+  intero sul percorso di circolazione. In un corpo cilindrico a CONVOGLIATORI, come
+  questo, la miscela passa solo nel canale del convogliatore, che e' progettato per NON
+  strozzare; il demister vede solo il vapore. E' il motivo per cui questa costruzione
+  costa meno battente.
+  LA VERIFICA DI SEPARAZIONE. Il vapore lascia il pelo libero a 0.0415 m/s contro un
+  limite di Souders-Brown di 0.1322 m/s: si e' al 31% del limite. E' il margine che
+  permette di separare per sola gravita' piu' un demister, senza ricorrere ai cicloni. Se
+  il carico salisse oltre il limite, le goccioline non riuscirebbero piu' a ricadere e
+  finirebbero nel vapore (trascinamento).
+  IL DATO CHE VALE PIU' DI TUTTI. Questo calcolo e' una ricostruzione dalla geometria di
+  disegno. Il costruttore del corpo cilindrico ha la CURVA SPERIMENTALE dp-portata delle
+  sue interne: se la si ottiene, la si inserisce come dato e il calcolo di circolazione
+  smette di avere assunzioni aperte. E' l'unica richiesta veramente dirimente rimasta.
+  --------------------------------------------------------------------------------------------
+
+================================================================================================
+6D. VIBRAZIONI INDOTTE DAL FLUSSO (FIV)
+================================================================================================
+  Campate libere (da disegno)                        12 campate: 1290 / 935 / 1100 / 1153 / 1065 / 1065 / 1065 / 1065 / 1065 / 1065 / 930 / 968 mm
+  CAMPATA GOVERNANTE                                 1290 mm, la PRIMA, cioe' fra la piastra tubiera lato gas caldo e il primo diaframma
+  Spessore diaframmi                                 20 mm
+  VINCOLO AI DIAFRAMMI                               NODO SEMPLICE - il foro impedisce lo spostamento laterale ma NON la rotazione (lambda2 = 9.87)
+  VINCOLO ALLE PIASTRE TUBIERE                       saldatura a piena penetrazione -> INCASTRO alla piastra
+  Trattare i diaframmi come incastri sarebbe un errore grave e NON conservativo:
+  porterebbe lambda2 da 9.87 a 22.37, cioe' sovrastimerebbe la frequenza propria del 127 %
+  e con essa la velocita' critica. Il foro del diaframma trattiene il tubo lateralmente ma
+  lo lascia ruotare liberamente.
+  Verifica somma campate                             12766 mm di campate + 11 diaframmi x 20 mm = 12986 mm contro 12.998 m di lunghezza tubi
+  RETICOLO (TEMA RCB-2.4)                            60° TRIANGOLARE RUOTATO (lato lungo trasversale al flusso)
+  Costante di Connors per questo reticolo in bifase  K = 1.1  -  fonte: guide di progetto specifiche per flusso bifase (J. Zhejiang Univ. SCIENCE A). Confronto: K = 3.0 e' l'inviluppo GENERALE di Pettigrew-Taylor su tutte le configurazioni, K = 4.0 il valore del triangolare NORMALE
+  Decremento logaritmico                             delta = 0.030 (estremo basso del campo 0.03-0.10 misurato in crossflow bifase)
+
+  banda   y[m]  campata  f propria  m lin  C massa   V varco  V critica  V/Vcrit   f vortici  f/fn   f buffet  f/fn  esito
+                  [m]       [Hz]  [kg/m]           [m/s]      [m/s]                 [Hz]              [Hz]
+------------------------------------------------------------------------------------------------
+      0  -0.78    1.290       75.1   3.76     1.54      3.43       1.10    3.124        45.7  0.609       42.4 0.565  CRITICO
+      1  -0.64    1.290       75.7   3.69     1.54      2.07       1.13    1.828        27.6  0.364       25.6 0.338  CRITICO
+      2  -0.50    1.290       76.4   3.63     1.54      1.79       1.17    1.528        23.8  0.312       22.1 0.289  CRITICO
+      3  -0.36    1.290       77.1   3.56     1.54      1.71       1.21    1.411        22.8  0.295       21.1 0.274  CRITICO
+      4  -0.21    1.290       77.7   3.51     1.54      2.18       1.25    1.745        29.0  0.373       26.9 0.346  CRITICO
+      5  -0.07    1.290       78.1   3.47     1.54      2.57       1.28    2.016        34.3  0.439       31.8 0.407  CRITICO
+      6   0.07    1.290       78.5   3.43     1.54      2.69       1.31    2.064        35.9  0.457       33.3 0.424  CRITICO
+      7   0.21    1.290       78.9   3.40     1.54      2.51       1.34    1.878        33.4  0.424       31.0 0.393  CRITICO
+      8   0.36    1.290       79.4   3.36     1.54      2.21       1.37    1.611        29.5  0.371       27.3 0.344  CRITICO
+      9   0.50    1.290       79.8   3.32     1.54      2.61       1.41    1.854        34.7  0.435       32.2 0.404  CRITICO
+     10   0.64    1.290       80.1   3.30     1.54      3.35       1.43    2.338        44.6  0.557       41.3 0.516  CRITICO
+     11   0.78    1.290       80.3   3.29     1.54      5.99       1.45    4.140        79.8  0.994       74.0 0.922  CRITICO
+------------------------------------------------------------------------------------------------
+  COMBINAZIONE GOVERNANTE                            banda 11 (y = +0.78 m) sulla campata da 1290 mm: V/Vcrit = 4.140
+  La combinazione peggiore non e' semplicemente la banda piu' veloce ne' la campata piu'
+  lunga: e' il loro incrocio. Qui il disegno le mette nello stesso punto, perche' la
+  campata piu' lunga (1290 mm) e' all'estremita' calda, dove la generazione di vapore e
+  quindi la velocita' di attraversamento sono massime.
+  CAMPATA MASSIMA per V/Vcrit = 0.8                  0.57 m
+  CAMPATA MASSIMA per V/Vcrit = 1.0                  0.63 m
+
+  SENSIBILITA' ALLA CAMPATA (il rapporto cresce con il QUADRATO della campata)
+  campata[m]   f propria[Hz]   V critica[m/s]   V/Vcrit   esito
+------------------------------------------------------------------------------------------------
+        0.60           538.2             9.70     0.617   ok
+        0.80           302.7             5.46     1.097   CRITICO
+        1.00           193.7             3.49     1.715   CRITICO
+        1.20           134.5             2.43     2.469   CRITICO
+        1.50            86.1             1.55     3.858   CRITICO
+        1.80            59.8             1.08     5.556   CRITICO
+        2.20            40.0             0.72     8.300   CRITICO
+------------------------------------------------------------------------------------------------
+
+  MATRICE DI SENSIBILITA' K x delta - E' QUI CHE SI DECIDE
+  Il rapporto V/Vcrit nella banda governante, e fra parentesi la CAMPATA MASSIMA
+  ammessa perche' V/Vcrit resti sotto 1.0, per ogni coppia di costanti.
+
+     K   fonte / reticolo                                delta=0.03      delta=0.06      delta=0.10
+------------------------------------------------------------------------------------------------
+   1.1   60° triang. RUOTATO, bifase (mdp <= 0.54)  <== QUESTO CASO  4.14 (0.63 m)   2.93 (0.75 m)   2.27 (0.86 m) 
+   1.5   60° triang. ruotato, bifase (mdp > 0.54)        3.04 (0.74 m)   2.15 (0.88 m)   1.66 (1.00 m) 
+   3.0   inviluppo generale Pettigrew-Taylor             1.52 (1.05 m)   1.07 (1.25 m)   0.83 (1.41 m) 
+   4.0   30° triangolare NORMALE, bifase                 1.14 (1.21 m)   0.81 (1.44 m)   0.62 (1.63 m) 
+   4.8   media dei dati sperimentali monofase            0.95 (1.32 m)   0.67 (1.58 m)   0.52 (1.79 m) 
+------------------------------------------------------------------------------------------------
+  Il parametro di massa-smorzamento di questo apparecchio vale 0.185, quindi sotto la
+  soglia di 0.54 che separa i due valori del reticolo ruotato.
+
+  LE ALTRE DUE INCERTEZZE, CHE PESANO QUANTO O PIU' DELLA COSTANTE DI CONNORS
+------------------------------------------------------------------------------------------------
+  1) VINCOLO ALLE ESTREMITA' DELLA CAMPATA (la campata governante tocca la piastra)
+     appoggio-appoggio, saldatura crevice-free (lambda2 =  9.87)   V/Vcrit = 6.47
+     incastro-appoggio, piena penetrazione     (lambda2 = 15.42)   V/Vcrit = 4.14
+     [se i diaframmi fossero incastri - IPOTESI ERRATA (lambda2 = 22.37)  V/Vcrit = 2.85]
+     valore usato nel calcolo: saldatura a piena penetrazione -> INCASTRO alla piastra
+
+  2) DISTRIBUZIONE ASSIALE DEL CROSSFLOW - e' l'incertezza PIU' GRANDE
+     velocita' usata (rapporto di circolazione LOCALE uniforme)   5.99 m/s   V/Vcrit = 4.14
+     velocita' MEDIA sulla banda (crossflow uniforme lungo z)     2.53 m/s   V/Vcrit = 1.75
+     rapporto fra le due                                          2.37
+------------------------------------------------------------------------------------------------
+  IL MODELLO ASSUME CHE LA PORTATA CIRCOLANTE LOCALE SEGUA LA PRODUZIONE LOCALE DI VAPORE
+  - rapporto di circolazione locale uniforme. Poiche' la generazione di vapore e'
+  fortemente concentrata all'imbocco del gas, dove il flusso termico e' quattro-cinque
+  volte la media, anche la velocita' di attraversamento risulta concentrata li': 5.99 m/s
+  contro 2.53 m/s di media sulla banda, un fattore 2.37. E' proprio dove cade anche la
+  campata piu' lunga.
+  L'ASSUNZIONE E' DIFENDIBILE ma non e' l'unica possibile, e va dichiarata perche' pesa
+  piu' della costante di Connors. E' giustificata dal fatto che i diaframmi, con gioco di
+  0.4 mm sui tubi e 5 mm sul mantello, bloccano quasi del tutto il flusso ASSIALE nel
+  mantello: ogni compartimento fra due diaframmi e' idraulicamente quasi isolato, quindi
+  l'acqua che evapora in un compartimento deve essere entrata in quel compartimento. Se
+  invece esistesse una redistribuzione assiale apprezzabile, la velocita' di picco si
+  abbasserebbe verso la media e il rapporto V/Vcrit scenderebbe nella stessa proporzione.
+  LA CONSEGUENZA PER LA DECISIONE. Fra costante di Connors (fattore 4), vincolo alle
+  estremita' (fattore 2.3 sulla frequenza) e distribuzione del crossflow (fattore 4-5
+  sulla velocita'), il rapporto V/Vcrit e' incerto di oltre un ordine di grandezza. Questo
+  NON significa che il risultato sia inutile: significa che indica DOVE guardare - banda
+  alta, prima campata, estremita' calda - e che la risposta quantitativa deve venire dal
+  calcolo di vibrazione del costruttore e, se esiste, dalla storia di esercizio. Un
+  intervento sui diaframmi basato solo su questi numeri sarebbe prematuro.
+
+  LEGENDA DELLE COLONNE
+    f propria [Hz]   Frequenza del primo modo di flessione del tubo fra due diaframmi, f =
+                     (lambda^2/2pi) sqrt(EI/(m L^4)), con lambda^2 = 22.37 per estremi
+                     incastrati. Il gioco di 0.40 mm sul diametro giustifica l'incastro.
+    m lin [kg/m]     Massa vibrante per metro: metallo, piu' il gas dentro il tubo, piu' la
+                     MASSA AGGIUNTA idrodinamica, cioe' il fluido esterno che il tubo deve
+                     muovere quando oscilla.
+    C massa          Coefficiente di massa aggiunta per un tubo dentro un fascio (TEMA V-6): in
+                     un reticolo fitto vale molto piu' che per un cilindro isolato.
+    V varco [m/s]    Velocita' della miscela nel varco fra due tubi: e' quella che eccita, non
+                     la velocita' media sul mantello.
+    V critica        Velocita' oltre la quale scatta l'INSTABILITA' FLUIDO-ELASTICA (Connors):
+                     V_cr = K f_n D sqrt(m delta/(rho D^2)).
+    V/Vcrit          Criterio principale. Limite di progetto 0.8; sopra 1.0 l'ampiezza diverge.
+    f vortici        Frequenza di distacco dei vortici, f = St V/D. Rischio di aggancio se f/fn
+                     cade fra 0.5 e 2.
+    f buffet         Frequenza caratteristica dell'eccitazione turbolenta a banda larga (Owen).
+                     Non produce collasso ma fatica e usura ai supporti.
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  PERCHE' QUESTA VERIFICA E' A SE'. Un tubo puo' essere perfettamente verificato a
+  temperatura, pressione e dilatazione e rompersi lo stesso in poche migliaia di ore,
+  perche' VIBRA. Nei fasci attraversati da crossflow e' la causa di rottura piu' comune, e
+  non ha nulla a che vedere con la termica: dipende solo da velocita', densita', geometria
+  e campata.
+  L'INSTABILITA' FLUIDO-ELASTICA E' IL MECCANISMO PERICOLOSO, ed e' diverso da una
+  risonanza. Non c'e' una frequenza da evitare: c'e' una VELOCITA' da non superare. Sotto
+  quella velocita' il fluido smorza le oscillazioni del tubo; sopra, il tubo estrae
+  energia dal flusso a ogni ciclo e l'ampiezza cresce senza limite, fino all'urto contro i
+  tubi vicini o alla rottura per fatica proprio in corrispondenza del diaframma. Non c'e'
+  un ginocchio graduale: e' un interruttore.
+  IL RISULTATO DIPENDE DALLA CAMPATA CON IL QUADRATO. La frequenza propria va come 1/L^2,
+  e la velocita' critica e' proporzionale alla frequenza propria: quindi il rapporto
+  V/Vcrit cresce come L^2. Dimezzare la campata lo divide per quattro. Con la campata
+  assunta di 1.20 m il rapporto vale 4.140; la campata massima per restare sotto 0.8 e'
+  0.57 m. Poiche' il passo dei diaframmi e' variabile lungo l'apparecchio, e' la CAMPATA
+  PIU' LUNGA a decidere, e va confrontata con questo valore.
+  LE COSTANTI CONTANO QUANTO LA GEOMETRIA. K di Connors vale 3.0 come inviluppo inferiore
+  dei dati sperimentali, 3.3 nella formulazione classica, e i dati arrivano a 10 per certi
+  reticoli. Il decremento logaritmico in flusso bifase e' misurato fra 0.03 e 0.10. Qui si
+  e' usato K = 3.0 e delta = 0.03, cioe' la combinazione piu' conservativa: con K = 4.5 e
+  delta = 0.06 la velocita' critica raddoppia abbondantemente. Se il rapporto risulta
+  marginale, la prima cosa da fare non e' cambiare il progetto ma procurarsi i valori
+  giusti per questo reticolo.
+  GLI ALTRI TRE MECCANISMI. Il distacco dei vortici da' risonanza solo se la sua frequenza
+  si avvicina a quella propria; in flusso BIFASE e' comunque molto attenuato, perche' le
+  bolle distruggono la coerenza della scia. Il buffeting turbolento e' eccitazione casuale
+  a banda larga: non fa collassare nulla ma consuma i supporti e apre cricche di fatica
+  nel lungo periodo. La risonanza acustica riguarda solo il gas comprimibile a mantello e
+  qui non si applica, perche' a mantello c'e' acqua in ebollizione.
+
+================================================================================================
+6F. MALDISTRIBUZIONE DELLA PORTATA DI GAS FRA I TUBI
+================================================================================================
+  COS'E'. Il calcolo assume che gli 848 tubi ricevano tutti la stessa portata di gas.
+  Nella realta' la camera d'ingresso non distribuisce in modo perfetto: i tubi affacciati
+  al getto del bocchello ne ricevono di piu', quelli in ombra di meno. Questa sezione
+  misura che cosa succede al tubo PIU' CARICATO.
+  COME E' MODELLATA. I tubi sono canali in PARALLELO che non si scambiano calore fra loro:
+  un singolo tubo sbilanciato non altera ne' la circolazione ne' la produzione di vapore
+  dell'apparecchio. Si marcia quindi UN SOLO tubo con la portata maggiorata, tenendo
+  congelato tutto il lato mantello: temperatura di saturazione, coefficiente di
+  ebollizione, sporcamento, flusso critico locale. Cambia solo la resistenza lato gas, che
+  e' quella governata dalla portata. E' il modo corretto di isolare il comportamento del
+  singolo canale.
+
+  eccesso   w tubo    Re ing.   h gas picco   q'' picco   z picco   T met.int   T gas usc.   DNBR   potenza tubo
+      [%]    [g/s]                 [W/m2K]     [kW/m2]       [m]        [°C]         [°C]           [kW]
+------------------------------------------------------------------------------------------------
+        0     99.3     105336          1588       395.9      0.21       427.9        348.5   0.72         136.9
+        5    104.3     110603          1648       403.0      0.21       429.8        350.6   0.71         143.3
+       10    109.2     115870          1707       409.6      0.21       431.6        352.7   0.70         149.6
+       15    114.2     121137          1765       416.0      0.21       433.2        354.9   0.69         155.8
+       20    119.2     126403          1824       422.1      0.21       434.8        357.1   0.68         162.1
+       30    129.1     136937          1938       433.4      0.21       437.8        361.7   0.66         174.3
+------------------------------------------------------------------------------------------------
+  SENSIBILITA' a +10 % di portata                    flusso di picco +3.5 %, T metallo +3.6 K, DNBR -0.024, T gas uscita +4.3 K
+
+  LEGENDA DELLE COLONNE
+    eccesso [%]      Portata in piu' che il tubo considerato riceve rispetto al tubo medio.
+                     Zero e' il tubo medio, cioe' il caso di riferimento del resto del report.
+    w tubo [g/s]     Portata di gas in quel singolo tubo. Il tubo medio porta la portata totale
+                     (al netto del by-pass) divisa per il numero di tubi.
+    Re ing.          Numero di Reynolds all'ingresso del tubo, dentro la ferrula. E' quello che
+                     governa il coefficiente di scambio.
+    h gas picco      Coefficiente di scambio lato gas nel punto di flusso massimo, comprensivo
+                     di irraggiamento e correzioni. Cresce come la portata alla 0.8.
+    q'' picco        Flusso termico massimo lungo QUEL tubo, riferito alla superficie esterna,
+                     escluso il tratto sotto ferrula.
+    z picco          Ascissa del punto di flusso massimo, misurata dalla piastra tubiera lato
+                     gas caldo.
+    T met.int        Temperatura massima del metallo sulla faccia interna di quel tubo: e' il
+                     numero da confrontare con il limite metallurgico.
+    T gas usc.       Temperatura del gas all'uscita di quel tubo. SALE con la portata, perche'
+                     il gas ha meno tempo per raffreddarsi.
+    DNBR             Margine su crisi di ebollizione per quel tubo, con il flusso critico
+                     locale del lato mantello, che non cambia.
+    potenza tubo     Calore scambiato da quel singolo tubo. Cresce con la portata, ma meno che
+                     proporzionalmente.
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  PERCHE' IL TUBO PIU' CARICATO E' DOPPIAMENTE SFAVORITO. Chi riceve piu' gas scambia di
+  piu', e a prima vista sembrerebbe un vantaggio. Non lo e', per due ragioni che si
+  sommano. La prima: il coefficiente di scambio lato gas cresce come la portata elevata a
+  0.8, quindi il flusso termico locale cresce quasi in proporzione alla portata, e con
+  esso la temperatura del metallo e il rischio di crisi di ebollizione. La seconda: quel
+  tubo ha meno tempo di residenza, quindi il suo gas resta piu' caldo lungo tutto il
+  percorso, e a parita' di ascissa la differenza di temperatura che spinge il calore e'
+  maggiore. Il risultato e' che lo stesso tubo e' contemporaneamente quello con il DNBR
+  peggiore, quello con il metallo piu' caldo, e quello che consegna il gas piu' caldo
+  all'apparecchiatura a valle.
+  PERCHE' NON SI VEDE NEL BILANCIO GLOBALE. La maldistribuzione non cambia la potenza
+  totale in modo apprezzabile, perche' quello che un tubo prende in piu' un altro lo
+  prende in meno, e il bilancio si compensa quasi esattamente. E' un problema LOCALE: si
+  manifesta come rottura di alcuni tubi, non come perdita di prestazione. E' per questo
+  che non lo si trova guardando i dati di esercizio, ma solo guardando dove si rompono i
+  tubi.
+  IL LATO MANTELLO NON CAMBIA, ED E' IL PUNTO CHIAVE DEL MODELLO. Gli 848 tubi sono canali
+  in parallelo immersi nella stessa massa d'acqua: non si scambiano calore fra loro. Un
+  tubo che porta il 10 % di gas in piu' non altera la circolazione naturale, ne' la
+  produzione di vapore, ne' il flusso critico locale, perche' tutte queste grandezze
+  dipendono dall'insieme. Sarebbe un errore rifare il calcolo dell'intero apparecchio con
+  la portata maggiorata: si otterrebbe un apparecchio piu' potente, non un tubo
+  sbilanciato. Qui si marcia un solo tubo tenendo congelato tutto il resto.
+  DA DOVE NASCE. La camera d'ingresso deve trasformare il getto di un bocchello nella
+  distribuzione uniforme su un'intera piastra tubiera. Con bocchello assiale centrato e
+  camera profonda il getto ha spazio per aprirsi e la disuniformita' resta entro il 5-10
+  %. Con ingresso laterale, camera corta, o un deflettore mal posizionato, i tubi
+  affacciati al getto ricevono il 20-30 % in piu' degli altri. La forma della camera e'
+  quindi un dato di progetto termico, non solo meccanico.
+  COME SI LEGGE QUESTA TABELLA. Non e' una previsione: e' una scala. Non si sa quanto vale
+  la maldistribuzione reale finche' non si conosce la geometria della camera d'ingresso,
+  quindi la tabella dice quanto costa ogni livello di disuniformita'. Serve a rispondere a
+  due domande: quanto margine occorre lasciare in progetto, e - se in esercizio si
+  rompessero tubi tutti nella stessa zona della piastra - se la maldistribuzione basti a
+  spiegarlo.
+  LIMITE DEL MODELLO. Si tiene congelato il profilo di pressione del gas e il coefficiente
+  di irraggiamento presi dalla soluzione di base. Sono approssimazioni buone perche'
+  entrambi variano poco con la portata del singolo tubo. Non si rappresenta invece la
+  retroazione opposta, cioe' il fatto che un tubo che scambia di piu' diventa piu'
+  resistente idraulicamente e quindi tende a riequilibrarsi: e' un effetto stabilizzante,
+  quindi trascurarlo e' conservativo.
+
+================================================================================================
+6E. TRANSITORI E PROTEZIONE
+================================================================================================
+  Costante di tempo termica del metallo              1.9 s
+  Volume libero a mantello                           28.4 m3 (frazione di vuoto media 0.210)
+  Inventario d'acqua liquida a MANTELLO              14776 kg
+  Inventario d'acqua nel CORPO CILINDRICO (liv. normale) 34115 kg
+  INVENTARIO TOTALE DISPONIBILE                      48891 kg
+
+  SCENARIO 1 - perdita acqua alimento, circolazione attiva 507 s  (8.4 min) - i downcomer scendono per gravita': disponibile tutto l'inventario
+  SCENARIO 2 - blocco della circolazione (CASO SEVERO) 153 s  (2.6 min) - downcomer ostruiti: resta il solo inventario del mantello
+  Portata di reintegro per compensare la potenza     96.5 kg/s (347 t/h)
+  T metallo di equilibrio dopo il dry-out            636 °C  su limite 550 °C
+  Tempo per avvicinarla (3 costanti di tempo)        41 s
+
+  LEGENDA DELLE COLONNE
+    costante di tempo Inerzia termica del metallo verso l'acqua, tau = m c /(h A). Dice in
+                     quanto tempo la temperatura del tubo insegue una variazione del gas.
+    inventario       Massa di acqua LIQUIDA presente a mantello nelle condizioni di esercizio,
+                     cioe' al netto del vapore gia' formato.
+    tempo di evaporazione a secco Tempo per evaporare tutto l'inventario se la circolazione si ferma di
+                     colpo e la potenza resta quella nominale. E' il caso peggiore.
+    T di equilibrio dopo dry-out Temperatura verso cui tende il metallo quando resta il solo vapore a
+                     raffreddare.
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  IL METALLO NON HA INERZIA. La costante di tempo termica e' di 1.9 secondi: il tubo segue
+  la temperatura del gas praticamente in tempo reale. Non c'e' nessun cuscinetto termico
+  che protegga da un transitorio del processo, e non ha senso sperare che 'una punta breve
+  non faccia in tempo a scaldare il metallo'. Fa in tempo.
+  QUELLO CHE PROTEGGE E' L'ACQUA, E QUANTA NE RESTA DIPENDE DA COSA SI E' ROTTO. Sono due
+  scenari diversi e vanno tenuti separati. Se manca l'ACQUA ALIMENTO ma la circolazione
+  continua a funzionare, i downcomer scendono per gravita' e si consuma tutto
+  l'inventario: 14776 kg a mantello piu' 34115 kg nel corpo cilindrico, cioe' 8.4 minuti.
+  E' un margine confortevole, e spiega perche' il basso livello nel corpo cilindrico e'
+  una protezione efficace: se ne accorge con molto anticipo.
+  SE INVECE SI BLOCCA LA CIRCOLAZIONE - downcomer ostruiti, sacca di vapore in un riser -
+  il corpo cilindrico non reintegra piu' e resta la sola acqua gia' presente a mantello:
+  2.6 minuti. E' il caso severo, ed e' anche il piu' insidioso, perche' il livello nel
+  corpo cilindrico NON scende e la protezione di basso livello non interviene. La
+  grandezza che lo rivela e' la differenza di temperatura fra mantello e corpo cilindrico,
+  non il livello.
+  COSA SUCCEDE DOPO. Rimasto il solo vapore a raffreddare, il coefficiente di scambio
+  crolla di oltre un ordine di grandezza e il metallo tende verso 636 °C, molto oltre il
+  limite di 550 °C del materiale, in una manciata di secondi. Non e' un danneggiamento
+  progressivo: e' rottura per scoppio in tempi brevi. E' la ragione per cui la protezione
+  di basso livello nel corpo cilindrico e' un blocco e non un allarme.
+  AVVIAMENTO. Il caso severo per la meccanica non e' l'esercizio ma l'apparecchio CALDO E
+  NON IN PRESSIONE, perche' manca il carico di estremita' che in esercizio annulla la
+  compressione da dilatazione impedita: e' la condizione LC2 della sezione 8e. In pratica:
+  pressurizzare prima di scaldare, e non lasciare l'apparecchio caldo depressurizzato piu'
+  del necessario.
+  AVVERTENZA SUL MODELLO. Questi sono bilanci di primo ordine, non una simulazione
+  dinamica. Servono a dimensionare i tempi di intervento e a dire quali protezioni devono
+  essere blocchi; il transitorio reale, con la portata residua che decade gradualmente
+  invece di annullarsi, richiede un modello dinamico dedicato.
+
+================================================================================================
+7. IDRAULICA LATO MANTELLO
+================================================================================================
+  Area libera crossflow (banda centrale)             0.3882 m2/m
+  Area canali liberi (media)                         0.5090 m2/m
+  Ranghi attraversati (totale)                       38.9
+  Vel. liquido ingresso fascio (max/min)             3.373 / 0.095 m/s
+  Vel. miscela uscita fascio (max)                   6.05 m/s
+  Vel. fase vapore uscita fascio (max)               7.00 m/s
+  Vel. assiale plenum inferiore (max)                2.63 m/s
+  Vel. assiale plenum superiore (max)                5.15 m/s
+  Titolo max in uscita dal fascio                    0.0920
+  Frazione di vuoto max (cella)                      0.421
+  IN PAROLE SEMPLICI. Come si muove l'acqua DENTRO il mantello. Il fascio e' attraversato
+  dal basso verso l'alto: 'area libera di crossflow' e' lo spazio che resta fra un tubo e
+  l'altro per far passare l'acqua, e i 'ranghi attraversati' sono quante file di tubi
+  l'acqua deve scavalcare per arrivare in cima. Le velocita' dicono se il lavaggio dei
+  tubi e' vigoroso o pigro: troppo bassa e i tubi non si raffreddano bene, troppo alta e
+  si rischiano vibrazioni ed erosione. La velocita' della fase vapore e' piu' alta di
+  quella della miscela perche' il vapore, essendo leggero, scivola verso l'alto piu'
+  veloce del liquido. Le velocita' assiali sono quelle nei due corridoi liberi sopra e
+  sotto il fascio, dove l'acqua viaggia in lunghezza per andare dai bocchelli alla zona
+  che deve servire.
+
+
+================================================================================================
+8. BOCCHELLI
+================================================================================================
+  Riser (cielo mantello) - 24" Sch.120
+    numero / diametro ... 4 x 24" Sch.120 (ID 518.0 mm)
+    velocita' / rho*v2 .. 3.32 m/s / 4039 kg/(m s2)
+    posizioni assiali ... 0.90 ; 2.60 ; 5.50 ; 9.30 m
+    Estrazione della miscela; cappello antitrascinamento sopra la bocca.  |  posizioni angolari: R1 a 0°, R2 a 0°, R3 a 0°, R4 a 0°
+
+  Riser (cielo mantello) - 6" Sch.120
+    numero / diametro ... 1 x 6" Sch.120 (ID 139.7 mm)
+    velocita' / rho*v2 .. 3.32 m/s / 4039 kg/(m s2)
+    posizioni assiali ... 12.70 m
+    Estrazione della miscela; cappello antitrascinamento sopra la bocca.  |  posizioni angolari: R5 a 0°
+
+  Downcomer (fondo mantello) - 18" Sch.120
+    numero / diametro ... 2 x 18" Sch.120 (ID 387.2 mm)
+    velocita' / rho*v2 .. 1.98 m/s / 2580 kg/(m s2)
+    posizioni assiali ... 0.80 ; 0.80 m
+    Rientro dell'acqua; deflettore per evitare impingement sul fascio.  |  posizioni angolari: DC1 a 150°, DC2 a 210°
+
+  Downcomer (fondo mantello) - 16" Sch.120
+    numero / diametro ... 6 x 16" Sch.120 (ID 344.6 mm)
+    velocita' / rho*v2 .. 1.98 m/s / 2580 kg/(m s2)
+    posizioni assiali ... 2.50 ; 2.50 ; 4.50 ; 6.80 ; 9.00 ; 11.00 m
+    Rientro dell'acqua; deflettore per evitare impingement sul fascio.  |  posizioni angolari: DC3 a 150°, DC4 a 210°, DC5 a 180°, DC6 a 180°, DC7 a 180°, DC8 a 180°
+
+  Downcomer (fondo mantello) - 4" Sch.120
+    numero / diametro ... 1 x 4" Sch.120 (ID 92.1 mm)
+    velocita' / rho*v2 .. 1.98 m/s / 2580 kg/(m s2)
+    posizioni assiali ... 12.70 m
+    Rientro dell'acqua; deflettore per evitare impingement sul fascio.  |  posizioni angolari: DC9 a 180°
+
+  IN PAROLE SEMPLICI. I bocchelli sono i fori sul mantello a cui si attaccano le tubazioni
+  del circuito. I RISER stanno sul cielo e portano fuori la miscela con il vapore: si
+  mettono dove il vapore viene prodotto, cioe' piu' fitti verso l'estremita' calda, e sono
+  i piu' grandi perche' la miscela e' leggera e occupa molto volume. I DOWNCOMER stanno
+  sul fondo e riportano dentro l'acqua: si mettono sfalsati, a meta' fra due riser, cosi'
+  l'acqua entra dove i riser non stanno gia' estraendo. Il BLOWDOWN e' lo scarico di
+  fondo, all'estremita' fredda e nel punto piu' basso, da cui si spurga in continuo una
+  piccola portata per non far concentrare i sali. rho*v2 e' la 'spinta' del fluido che
+  esce dal bocchello: si limita per non erodere il fascio e per non innescare vibrazioni.
+
+
+================================================================================================
+8B. DILATAZIONI TERMICHE ASSIALI
+================================================================================================
+  Criterio:  dL = alpha(T_eq) * (T_eq - 20 °C) * L,  con T_eq temperatura uniforme
+  equivalente che produce la stessa dilatazione del profilo reale. La temperatura
+  di ogni sezione e' la MEDIA SULLO SPESSORE pesata sull'area (e' quella che governa
+  la dilatazione assiale, non la temperatura di superficie).
+
+  elemento                                          T_eq[C]  alpha[1e-6/C]   L[m]    dL[mm]
+------------------------------------------------------------------------------------------------
+  Tubi - ferrula 200 mm, banda 0 (dL max)             344.3          12.90 12.998     54.36
+  Tubi - banda 3, ferrula 200 mm (dL MINIMO)          343.6          12.89 12.998     54.24
+  Tubi - MEDIA PESATA su tutti i 848 tubi             344.0          12.90 12.998     54.31
+  MANTELLO (metallo a contatto con acqua satura)      323.2          12.71 12.998     50.09
+  DIFFERENZIALE tubo medio - mantello                     -              - 12.998      4.21
+  DIFFERENZIALE tubo piu' caldo - mantello                -              - 12.998      4.27
+  DIFFERENZIALE fra tubi (piu' caldo - piu' freddo)        -              - 12.998      0.12
+------------------------------------------------------------------------------------------------
+
+  LEGENDA DELLE COLONNE
+    elemento         Componente considerato. Per i tubi si riportano le bande con allungamento
+                     MASSIMO (una per classe di ferrula) e quella con allungamento MINIMO,
+                     perche' e' la differenza fra loro a generare tensioni interne al fascio,
+                     piu' la media pesata su tutti i tubi, che e' il valore da usare per il
+                     bilancio globale fascio/mantello.
+    T_eq [C]         Temperatura uniforme EQUIVALENTE: la temperatura costante che produrrebbe
+                     la stessa dilatazione del profilo reale. Si ottiene invertendo
+                     alpha(T_eq)*(T_eq-20)*L = dL.
+    alpha [1e-6/C]   Coefficiente MEDIO di dilatazione fra 20 C e T_eq, valutato sul materiale
+                     del componente.
+    L [m]            Lunghezza dell'elemento (fra le facce interne delle piastre tubiere).
+    dL [mm]          Allungamento assiale rispetto alla condizione di montaggio a 20 C.
+
+  Le righe DIFFERENZIALE sono le grandezze di progetto: quella tubo-mantello e' il
+  carico che si scarica sulla piastra tubiera in costruzione a piastre fisse e decide
+  se serve un giunto di dilatazione sul mantello; quella fra tubi genera invece
+  tensioni interne al fascio ed e' di norma trascurabile perche' tutti i tubi restano
+  vicini alla temperatura di saturazione.
+
+================================================================================================
+8C. DILATAZIONE IMPEDITA FASCIO/MANTELLO (SCREENING A PIASTRE FISSE)
+================================================================================================
+  Temperatura media equiv. FASCIO (pesata)           344.0 °C
+  Temperatura media equiv. tubo piu' caldo           344.3 °C
+  Temperatura media equiv. MANTELLO                  323.2 °C
+  Materiale mantello                                 SA-516 Gr.70 (lamiera mantello)
+  alpha fascio / mantello                            12.90 / 12.71  1e-6/°C
+  E fascio / mantello                                191 / 186 GPa
+  Sezione metallica tubi / mantello                  0.2848 / 0.3795 m2
+  DILATAZIONE DIFFERENZIALE LIBERA                   4.21 mm
+  FORZA ASSIALE INTERNA                              9.97 MN
+    tensione nei TUBI (compressione)                 35.0 MPa
+    tensione nel MANTELLO (trazione)                 26.3 MPa
+    CARICO PER TUBO sulla giunzione tubo-piastra     11.8 kN
+  Campata non supportata (passo diaframmi)           1.20 m
+  Raggio d'inerzia / snellezza (k = 0.5)             12.44 mm / 48.2
+  Tensione ammissibile a instabilita'                109 MPa
+  UTILIZZO a instabilita'                            32 %
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  In una costruzione a PIASTRE FISSE i tubi e il mantello sono saldati alle stesse due
+  piastre: non possono allungarsi ognuno per conto suo. Qui i tubi vorrebbero allungarsi
+  di 54.31 mm e il mantello di 50.09 mm, perche' i tubi stanno mediamente a 344.0 °C e il
+  mantello a 323.2 °C (il mantello e' bagnato dall'acqua che bolle, quindi sta
+  praticamente a Tsat). La differenza, 4.21 mm, non puo' realizzarsi: si trasforma in una
+  forza interna.
+  Tubi e mantello lavorano come due molle in parallelo: la forza si ripartisce in
+  proporzione alle rigidezze (sezione x modulo elastico). Risultato: 9.97 MN di forza
+  assiale, che mette i TUBI IN COMPRESSIONE a 35.0 MPa e il MANTELLO IN TRAZIONE a 26.3
+  MPa. La stessa forza divisa per gli 848 tubi da' 11.8 kN che tirano su ogni singola
+  giunzione tubo-piastra: e' il carico da confrontare con la tenuta della mandrinatura (o
+  della saldatura) secondo ASME UW-20.
+  I tubi in compressione possono INSTABILIZZARSI (buckling), cioe' incurvarsi fra due
+  diaframmi come una colonna troppo snella. Con una campata di 1.20 m la snellezza vale
+  48.2 e la tensione ammissibile 109 MPa: l'utilizzo e' del 32%. Margine ampio: i
+  diaframmi sono abbastanza fitti.
+  QUALI TEMPERATURE USARE. Per il fascio si usa la temperatura media equivalente PESATA
+  SUL NUMERO DI TUBI (tutti i tubi condividono le stesse piastre, quindi conta la media),
+  calcolata sulla media dello spessore di ogni sezione. Il tubo piu' caldo serve invece
+  per la verifica locale del singolo giunto. Per il mantello si usa la temperatura del
+  metallo, che qui coincide praticamente con la saturazione perche' la lamiera e' bagnata
+  all'interno e coibentata all'esterno.
+  LIMITI DI QUESTO CALCOLO. E' uno SCREENING: assume piastre infinitamente rigide,
+  trascura i termini di pressione (lato mantello e lato tubi) e l'eventuale giunto di
+  dilatazione. Il calcolo di codice e' TEMA RCB-7.16 oppure ASME VIII-1 UHX-13, che vanno
+  usati per la verifica formale. I valori di E, Sy e alpha sono indicativi: per il calcolo
+  di codice servono quelli di ASME II-D.
+  --------------------------------------------------------------------------------------------
+
+================================================================================================
+8E. STATO DI SOLLECITAZIONE COMBINATO (LAME' + CARICO ASSIALE)
+================================================================================================
+  Pressione lato mantello (esterna ai tubi)          117.84 bar
+  Pressione media lato gas (interna ai tubi)         34.70 bar
+  PRESSIONE ESTERNA NETTA sui tubi                   83.14 bar
+  Area fluida lato mantello / lato tubi              2.1831 / 0.7453 m2
+  CARICO DI ESTREMITA' DA PRESSIONE (trazione)       28.31 MN
+  Allungamento comune imposto dalle piastre          54.83 mm
+
+  RIPARTIZIONE DELLA FORZA ASSIALE FRA I MEMBRI (molle in parallelo fra le due piastre)
+  membro                                              n     A[m2]   E[GPa]  Teq[C]  dL lib[mm]   F[MN]  sZ tot  sZ term  sZ press [MPa]
+------------------------------------------------------------------------------------------------
+  Tubi banda 0 (y = -0.78 m), ferrula 200 mm            38    0.0128      191   344.3       54.36    0.09     6.8    -36.0     42.8
+  Tubi banda 3 (y = -0.36 m), ferrula 200 mm            92    0.0309      191   343.6       54.24    0.26     8.6    -34.2     42.8
+  MANTELLO                                               1    0.3795      186   323.2       50.09   25.73    67.8     26.1     41.7
+  BY-PASS - tubo di contenimento                         1    0.0073      190   327.9       50.95    0.42    56.7     14.2     42.5
+------------------------------------------------------------------------------------------------
+  (mostrati gli estremi dei 12 gruppi banda x classe; il dettaglio completo e' in tensioni.csv)
+
+  LEGENDA DELLE COLONNE
+    n                Numero di tubi rappresentati dal gruppo (il mantello e il tubo di by-pass
+                     valgono 1).
+    A [m2]           Sezione METALLICA totale del membro: e' quella che porta la forza assiale.
+    E [GPa]          Modulo elastico alla temperatura media equivalente del membro.
+    Teq [C]          Temperatura media equivalente: quella uniforme che darebbe la stessa
+                     dilatazione assiale del profilo reale.
+    dL lib [mm]      Allungamento che il membro avrebbe se fosse LIBERO di dilatarsi.
+    F [MN]           Forza assiale effettiva. POSITIVA = trazione, NEGATIVA = compressione.
+    sZ tot           Tensione assiale membranale = F/A.
+    sZ term          Quota dovuta al solo vincolo di dilatazione (i membri piu' caldi vanno in
+                     compressione, i piu' freddi in trazione).
+    sZ press         Quota dovuta al carico di estremita' di pressione, che e' di TRAZIONE per
+                     tutti e si ripartisce in proporzione alla rigidezza.
+
+  STATO TENSIONALE NELLE VARIE ZONE E ALTEZZE - punti peggiori
+  comp.    z[m]    y[m]  banda  Tint[C] Test[C] dT[K]  pos.   sR    sTh    sZ   sVM  Tresca   Sy   uso[%]
+------------------------------------------------------------------------------------------------
+  BY-PASS   0.01    0.00     -      332     325    7.8 interna  -3.5 -177.2   43.0 201.1  220.3    187    107
+  TUBI      0.21   -0.36     3      431     395   36.1 interna  -3.5 -127.1  -58.6 107.3  123.7    197     55
+  TUBI      0.21   -0.50     2      432     396   36.1 interna  -3.5 -127.1  -59.0 107.2  123.6    197     55
+  TUBI      0.21   -0.21     4      432     396   36.1 interna  -3.5 -127.1  -59.3 107.2  123.6    196     55
+  TUBI      0.21    0.36     8      432     396   36.1 interna  -3.5 -127.1  -59.5 107.2  123.6    196     55
+  TUBI      0.21   -0.64     1      432     396   36.1 interna  -3.5 -127.1  -59.7 107.2  123.6    197     55
+  TUBI      0.21    0.21     7      431     395   36.1 interna  -3.5 -127.1  -59.8 107.2  123.6    197     55
+  TUBI      0.21   -0.07     5      431     395   36.1 interna  -3.5 -127.1  -59.8 107.2  123.6    197     55
+  TUBI      0.21    0.50     9      431     395   36.1 interna  -3.5 -127.1  -59.9 107.2  123.7    197     55
+  TUBI      0.21    0.07     6      431     395   36.1 interna  -3.5 -127.1  -60.0 107.2  123.7    197     55
+  TUBI      0.21    0.78    11      428     392   36.3 interna  -3.5 -127.6  -60.2 107.6  124.1    197     55
+  TUBI      0.21    0.64    10      431     394   36.1 interna  -3.5 -127.2  -60.3 107.3  123.8    197     55
+  TUBI      0.21   -0.78     0      430     394   36.2 interna  -3.5 -127.3  -60.6 107.4  123.8    197     55
+------------------------------------------------------------------------------------------------
+
+  LEGENDA DELLE COLONNE
+    comp.            Componente: TUBI = tubo scambiatore; BY-PASS = tubo di contenimento del
+                     by-pass centrale.
+    z [m]            Posizione lungo l'asse dell'apparecchio, dalla piastra tubiera lato gas
+                     caldo.
+    y [m]            Altezza della banda rispetto all'asse del mantello (positiva verso
+                     l'alto).
+    dT [K]           Salto di temperatura NELLO SPESSORE del tubo: e' quello che genera le
+                     tensioni secondarie di gradiente termico.
+    pos.             Punto radiale in cui si verifica la tensione equivalente massima: faccia
+                     interna, media o esterna.
+    sR [MPa]         Tensione RADIALE (Lame' + gradiente termico). Alla faccia interna vale
+                     -p_interna, all'esterna -p_esterna.
+    sTh [MPa]        Tensione CIRCONFERENZIALE (di cerchio). Con pressione esterna prevalente
+                     e' di COMPRESSIONE (negativa).
+    sZ [MPa]         Tensione ASSIALE totale: membranale (vincolo termico + carico di
+                     estremita' di pressione) piu' il termine di gradiente termico.
+    sVM [MPa]        Tensione equivalente di VON MISES,
+                     sqrt(0.5[(s1-s2)^2+(s2-s3)^2+(s3-s1)^2]): il criterio usato per
+                     confrontare uno stato triassiale con una prova di trazione.
+    Tresca           Tensione equivalente di TRESCA = tensione principale massima meno minima.
+                     E' il criterio usato da ASME; e' sempre >= von Mises.
+    Sy [MPa]         Snervamento del materiale ALLA TEMPERATURA LOCALE del metallo.
+    uso [%]          sVM / Sy: percentuale dello snervamento utilizzata.
+
+  VERIFICHE DI INSTABILITA' (compressione assiale e pressione esterna)
+  elemento                                        s comp[MPa] campata[m] snellez.  ammiss[MPa] uso[%]  p_ext[bar] p_coll[bar] uso[%]
+------------------------------------------------------------------------------------------------
+  TUBI - LC1 esercizio (termico + pressione): Tu         0.0       1.20     48.2          109      0        83.1         334     25
+  TUBI - LC2 caldo NON in pressione: Tubi banda         36.0       1.20     48.2          109     33         0.0         334      0
+  BY-PASS tubo di contenimento - LC1 esercizio           0.0       1.20      5.8          111      0        83.1          82    101
+  BY-PASS tubo di contenimento - LC2 caldo non i         0.0       1.20      5.8          111      0         0.0          82      0
+------------------------------------------------------------------------------------------------
+    TUBI - LC1 esercizio (termico + pressione): Tubi banda 0 (y = -0.78 m), ferrula 200 mm collasso governato dallo SNERVAMENTO circonferenziale (tubo tozzo)
+    TUBI - LC2 caldo NON in pressione: Tubi banda 0 (y = -0.78 m), ferrula 200 mm collasso governato dallo SNERVAMENTO circonferenziale (tubo tozzo)
+    BY-PASS tubo di contenimento - LC1 esercizio   collasso governato dallo SNERVAMENTO circonferenziale (tubo tozzo); irrigidito dai diaframmi ogni 1.20 m (senza, il collasso scenderebbe a 86 bar)
+    BY-PASS tubo di contenimento - LC2 caldo non in pressione collasso governato dallo SNERVAMENTO circonferenziale (tubo tozzo); irrigidito dai diaframmi ogni 1.20 m (senza, il collasso scenderebbe a 86 bar)
+
+  LEGENDA DELLE COLONNE
+    s comp           Tensione assiale di COMPRESSIONE effettiva (zero se l'elemento e' in
+                     trazione).
+    campata          Distanza fra due supporti consecutivi (diaframmi): e' la lunghezza libera
+                     di inflessione.
+    snellez.         Snellezza = 0.5 * campata / raggio d'inerzia. Il fattore 0.5 vale per
+                     estremi incastrati, come sono i tubi nei diaframmi.
+    ammiss           Tensione ammissibile a instabilita' di colonna, metodo tipo AISC/TEMA.
+    p_ext            Pressione esterna NETTA sul cilindro = pressione a mantello meno pressione
+                     interna.
+    p_coll           Pressione di collasso stimata: combinazione del collasso elastico
+                     dell'anello lungo, 2E/(1-nu^2)(t/Dm)^3, e dello snervamento
+                     circonferenziale, 2 Sy t/Do.
+
+  LINER DEL BY-PASS: T media equivalente             703.2 °C
+    allungamento LIBERO del liner                    160.1 mm
+    vincolo                                          LIBERO di dilatare (dato costruttivo confermato): nessun carico assiale
+    forza nell'IPOTESI CONTRARIA (non applicabile)   5.03 MN, cioe' l'ordine di grandezza che il giunto scorrevole evita
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  CHE COSA SOMMA QUESTA SEZIONE. Un tubo di questo apparecchio e' contemporaneamente: (1)
+  schiacciato dall'esterno, perche' l'acqua a mantello sta a pressione molto piu' alta del
+  gas che ha dentro; (2) compresso o tirato in direzione assiale, perche' le due piastre
+  gli impediscono di allungarsi come vorrebbe; (3) attraversato da un salto di temperatura
+  nello spessore, che fa litigare la faccia calda con quella fredda. Le tre cose si
+  sommano nello stesso punto di metallo, e solo la somma dice se il tubo e' verificato.
+  LE FORMULE DI LAME'. Sono la soluzione esatta di un cilindro di parete spessa premuto da
+  dentro e da fuori. Danno due tensioni: la RADIALE, che alle due facce vale semplicemente
+  meno la pressione che agisce li'; e la CIRCONFERENZIALE, quella che tende ad aprire o
+  chiudere il cerchio. Nel caso classico della caldaia a tubi d'acqua la pressione e'
+  dentro e la circonferenziale e' di trazione. Qui e' il contrario: la pressione grande e'
+  FUORI, quindi il cerchio e' COMPRESSO. Non e' un dettaglio, perche' cambia il modo in
+  cui il tubo puo' rompersi: non si apre, si schiaccia.
+  IL CARICO ASSIALE, E PERCHE' NON E' SOLO TERMICO. La dilatazione impedita da'
+  compressione ai tubi (sono piu' caldi del mantello). Ma la pressione, spingendo sulle
+  piastre e sui fondi, TIRA tutto l'apparecchio: e' un carico di estremita' di 28.31 MN
+  che si ripartisce fra tubi e mantello in proporzione alle rigidezze, e che in gran parte
+  CANCELLA la compressione termica. E' il motivo per cui la tensione assiale finale nei
+  tubi e' molto piu' bassa di quella che si otterrebbe guardando solo la dilatazione.
+  Trascurarlo, come fa lo screening della sezione 8c, e' conservativo per il buckling ma
+  non per la giunzione tubo-piastra.
+  IL GRADIENTE TERMICO NELLO SPESSORE. La faccia interna e' piu' calda: vorrebbe
+  allungarsi di piu', ma il resto del metallo glielo impedisce. Risultato: la faccia calda
+  va in COMPRESSIONE, quella fredda in trazione, con valore limite alpha*E*dT/(2(1-nu)).
+  Sono tensioni SECONDARIE, cioe' autoequilibrate: non fanno collassare il tubo, ma sono
+  quelle che contano per la FATICA TERMICA agli avviamenti e ai transitori, e per il
+  rilassamento a caldo. Per questo vanno riportate separatamente e non semplicemente
+  sommate ai limiti di membrana.
+  PERCHE' VON MISES E TRESCA. Uno stato di tensione a tre componenti non si confronta
+  direttamente con lo snervamento, che si misura tirando una provetta in una direzione
+  sola. Servono criteri di equivalenza: von Mises pesa le differenze fra le tre tensioni
+  principali, Tresca guarda solo la differenza fra la massima e la minima. Tresca e'
+  sempre piu' severo (al massimo del 15%), ed e' quello adottato dal codice ASME. Sono
+  riportati entrambi.
+  ZONE E ALTEZZE. La tensione assiale membranale e' costante lungo il tubo (lo impone
+  l'equilibrio) ma cambia da banda a banda, perche' i tubi delle bande piu' calde sono
+  piu' compressi. Le tensioni di pressione e di gradiente termico cambiano invece lungo z,
+  perche' cambiano la pressione del gas e il salto nello spessore. Il punto peggiore e'
+  quindi l'incrocio fra una banda calda e la zona di picco del flusso termico, subito a
+  valle della ferrula.
+  IL LINER DEL BY-PASS E' UN CASO A PARTE, ED E' RISOLTO. Lavora a temperatura molto piu'
+  alta di tutto il resto e non porta pressione, perche' dentro e fuori ha lo stesso gas.
+  Costruttivamente e' LIBERO DI DILATARE: non sviluppa quindi alcun carico assiale e non
+  compare fra i membri del sistema a piastre fisse, dove figura il solo tubo di
+  contenimento. La forza riportata sopra e' l'ipotesi contraria - liner vincolato a
+  entrambe le estremita' - ed e' riportata solo per documentare l'ordine di grandezza di
+  cio' che il giunto scorrevole evita: un valore che nessuna costruzione reggerebbe. E' la
+  ragione costruttiva per cui quel giunto esiste.
+  --------------------------------------------------------------------------------------------
+
+================================================================================================
+8F. RIPARTIZIONE DELLE SPINTE ASSIALI DI PRESSIONE
+================================================================================================
+  DA DOVE NASCE LA SPINTA. Si taglia l'apparecchio con un piano in mezzeria e si isola
+  tutto quello che sta a monte: fondo, piastra tubiera, meta' mantello, meta' tubi e il
+  fluido contenuto. Sull'esterno agisce l'atmosfera, cioe' zero in pressione relativa. Al
+  taglio agiscono le forze del metallo e le pressioni dei fluidi sulle rispettive sezioni
+  fluide. L'equilibrio da':
+
+      F_metallo = p_mantello x A_fluido,mantello  +  p_tubi x A_fluido,tubi
+
+  E' una TRAZIONE: la pressione tende ad allungare l'apparecchio, sempre,
+  indipendentemente da quale dei due lati sia il piu' spinto. Non e' una differenza di
+  pressioni, e' una somma di due contributi.
+
+  p a mantello / area fluida a mantello              117.84 bar  x  2.1831 m2
+  p nei tubi / area fluida nei tubi                  34.70 bar  x  0.7453 m2
+    contributo del lato mantello                     25.73 MN
+    contributo del lato tubi                         2.59 MN
+  SPINTA ASSIALE TOTALE DI PRESSIONE                 28.31 MN in TRAZIONE
+
+  COME SI RIPARTISCE FRA I TRE ELEMENTI (in proporzione alla rigidezza assiale A*E/L)
+  elemento                          A [m2]   E[GPa]   rigidezza    quota    F press.   sigma press.
+                                                       [MN/mm]      [%]        [MN]        [MPa]
+------------------------------------------------------------------------------------------------
+  FASCIO TUBIERO (848 tubi)          0.2848      191       4.189     43.0      12.184         42.8
+  VIROLA DI MANTELLO                 0.3795      186       5.438     55.9      15.816         41.7
+  TUBO DI CONTENIMENTO BY-PASS       0.0073      190       0.107      1.1       0.312         42.5
+------------------------------------------------------------------------------------------------
+  SPINTA DI PRESSIONE SUL SINGOLO TUBO               14.37 kN in TRAZIONE
+
+  CONFRONTO CON LA DILATAZIONE IMPEDITA: SI ANNULLANO O SI SOMMANO?
+  elemento                        da PRESSIONE   da DILATAZIONE   RISULTANTE   effetto
+                                        [MPa]            [MPa]        [MPa]
+------------------------------------------------------------------------------------------------
+  FASCIO TUBIERO (media 848 tubi)           42.8            -35.2          7.6   SI ANNULLANO in parte  (trazione)
+  VIROLA DI MANTELLO                        41.7             26.1         67.8   SI SOMMANO  (trazione)
+  TUBO DI CONTENIMENTO BY-PASS              42.5             14.2         56.7   SI SOMMANO  (trazione)
+------------------------------------------------------------------------------------------------
+  CARICO NETTO SUL SINGOLO TUBO                      2.56 kN  (TRAZIONE - il giunto tubo-piastra e' TIRATO)
+    di cui da pressione                              14.37 kN in trazione
+    di cui da dilatazione impedita                   11.81 kN in compressione
+
+  LEGENDA DELLE COLONNE
+    A [m2]           Sezione METALLICA dell'elemento: 848 volte la corona circolare per il
+                     fascio, la corona della virola per il mantello.
+    rigidezza        A*E/L: quanto l'elemento si oppone all'allungamento. La spinta si
+                     ripartisce in questa proporzione perche' le piastre impongono a tutti lo
+                     STESSO allungamento.
+    quota [%]        Frazione della spinta totale che quell'elemento si prende.
+    F press.         Forza di trazione che la pressione mette in quell'elemento.
+    da PRESSIONE     Tensione assiale dovuta alla spinta di pressione: sempre di TRAZIONE,
+                     positiva.
+    da DILATAZIONE   Tensione assiale dovuta al vincolo delle piastre: negativa (compressione)
+                     per gli elementi PIU' CALDI della media, positiva per i piu' freddi.
+    RISULTANTE       Somma algebrica: e' quello che il metallo sente davvero.
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  LA DOMANDA GIUSTA E' SE SI SOMMANO O SI ANNULLANO, E LA RISPOSTA E' DIVERSA PER OGNI
+  ELEMENTO. La pressione mette in TRAZIONE tutto quanto, senza eccezioni. La dilatazione
+  impedita invece ridistribuisce: comprime chi e' piu' caldo della media pesata e tira chi
+  e' piu' freddo. I tubi sono i piu' caldi, quindi la dilatazione li COMPRIME e la
+  pressione li TIRA: i due effetti hanno segno opposto e si elidono in buona parte. Il
+  mantello e' il piu' freddo, quindi la dilatazione lo TIRA e la pressione pure: li' i due
+  effetti SI SOMMANO.
+  LA CONSEGUENZA PRATICA PIU' IMPORTANTE riguarda l'instabilita' dei tubi. Se si guardasse
+  la sola dilatazione impedita si concluderebbe che i tubi sono compressi e vanno
+  verificati a carico di punta. Aggiungendo la pressione la compressione si riduce
+  fortemente o si annulla del tutto. Ma attenzione: la pressione c'e' solo quando
+  l'apparecchio E' IN PRESSIONE. Nella condizione CALDO E NON IN PRESSIONE - avviamento,
+  depressurizzazione a caldo - resta la sola compressione termica, senza contrasto. E'
+  quella la condizione severa per il buckling, ed e' la LC2 riportata nella sezione 8e.
+  IL TIRANTAGGIO DEL GIUNTO TUBO-PIASTRA e' l'altra faccia. La forza netta per tubo
+  indicata sopra e' quella che il giunto deve trasmettere: se e' di trazione, tende a
+  SFILARE il tubo dalla piastra, ed e' il carico da confrontare con la tenuta della
+  mandrinatura o della saldatura secondo ASME VIII-1 UW-20. Se e' di compressione, il tubo
+  spinge contro la piastra e il giunto non e' sollecitato a sfilamento, ma il tubo puo'
+  instabilizzarsi.
+  PERCHE' LA RIPARTIZIONE SEGUE LA RIGIDEZZA E NON L'AREA. Le due piastre sono rigide e
+  impongono a tutti gli elementi lo stesso allungamento. Un elemento rigido, per
+  allungarsi di quel tanto, richiede piu' forza: quindi si prende una quota maggiore della
+  spinta. La quota e' proporzionale ad A*E/L, non alla sola area, ed e' per questo che il
+  mantello - piu' rigido del fascio - si prende la fetta maggiore anche se la sua sezione
+  metallica non e' molto diversa.
+
+================================================================================================
+8G. VERIFICA DEL LINER DEL BY-PASS A PRESSIONE DIFFERENZIALE
+================================================================================================
+  IL LINER NON E' UN COMPONENTE IN PRESSIONE. Separa due volumi di gas che stanno quasi
+  alla stessa pressione: dentro c'e' il gas deviato, fuori l'intercapedine con la carta
+  refrattaria, che comunica direttamente con il lato A VALLE del fascio. Il salto che il
+  liner puo' vedere non e' quindi la differenza fra acqua e gas, che sarebbe di decine di
+  bar, ma soltanto la PERDITA DI CARICO DEI TUBI, che e' di poche centinaia di millibar.
+
+  Perdita di carico lato tubi (salto disponibile)    98.0 mbar
+  Fattore di maggiorazione adottato                  x 2.0
+  SALTO DI PROGETTO                                  196.0 mbar = 0.196 bar
+  Geometria del liner                                ID 275 - OD 281 mm, spessore 3.0 mm (D/t = 94)
+  Materiale / temperatura media equivalente          Alloy 601 / 602 CA (liner by-pass) a 703 °C
+  E / Sy a quella temperatura                        156 GPa / 165 MPa
+
+  VERIFICA A PRESSIONE ESTERNA (verso piu' severo)
+    collasso elastico, cilindro lungo                4.30 bar
+    cedimento plastico circonferenziale              35.20 bar
+    COLLASSO DI PROGETTO (minimo con interazione)    4.27 bar
+    UTILIZZO diretto                                 4.6 %
+    UTILIZZO con fattore di sicurezza 3 (ASME UG-28) 13.8 %
+  Tensione circonferenziale nel verso interno        0.91 MPa su Sy 165 MPa
+
+  ESITO SPESSORE 3 mm                                VERIFICATO - utilizzo 14 % anche con il fattore di sicurezza di codice
+    - Il liner e' LIBERO di dilatare e NON e' un componente in pressione: separa due volumi di
+    - gas che stanno quasi alla stessa pressione.
+    - Il salto lo genera solo la perdita di carico del fascio, perche' l'intercapedine esterna
+    - e' in comunicazione con il lato a valle dei tubi.
+    - Il verso puo' invertirsi secondo la posizione della valvola e i transitori, quindi si
+    - verifica il caso PIU' severo, cioe' la pressione esterna.
+    - Cilindro lungo non irrigidito: la carta refrattaria riempie l'intercapedine ma e'
+    - cedevole e non viene conteggiata come supporto.
+
+  LEGENDA DELLE COLONNE
+    salto disponibile Perdita di carico del gas fra ingresso e uscita dei tubi scambiatori: e'
+                     l'unico salto che puo' stabilirsi ai capi della parete del liner.
+    fattore x2       Maggiorazione sul salto per coprire transitori, posizione della valvola e
+                     scostamenti d'esercizio, e per assorbire l'incertezza sul verso.
+    D/t              Rapporto diametro/spessore: misura la snellezza della parete. Sopra 50 la
+                     parete e' sottile e il collasso elastico governa sul cedimento plastico.
+    collasso elastico 2E/(1-nu^2)(t/Dm)^3: e' l'instabilita' della parete sottile, che si
+                     accartoccia. Non dipende dal materiale se non tramite E.
+    cedimento plastico 2 Sy t/Do: e' il cerchio che snerva in compressione.
+    utilizzo con FS 3 ASME UG-28 richiede un fattore 3 sulla pressione di collasso: e' il
+                     criterio da confrontare con 100 %.
+
+  IN PAROLE SEMPLICI. Un tubo sottile di 275 mm di diametro con 3 mm di parete e' molto
+  snello, quindi verrebbe da preoccuparsi. Ma quello che conta non e' la snellezza in
+  assoluto: e' il rapporto fra il carico e la capacita'. Qui il carico e' minuscolo,
+  perche' il liner non separa l'acqua dal gas ma il gas dal gas, e fra i due lati c'e'
+  solo la perdita di carico del fascio. Il risultato e' che 3 mm bastano con un margine
+  molto ampio anche raddoppiando il salto e applicando il fattore di sicurezza del codice.
+  QUELLO CHE DAVVERO DIMENSIONA IL LINER NON E' LA PRESSIONE. A quella temperatura il
+  liner e' governato da altro: la resistenza alla carburazione e al metal dusting, che
+  decide il materiale; la deformazione per scorrimento viscoso sotto il proprio peso e i
+  gradienti termici nel lungo periodo; e la libera dilatazione, che decide il vincolo. Lo
+  spessore di 3 mm e' quello che serve per fabbricarlo, saldarlo e farlo durare, non per
+  reggere una pressione.
+
+================================================================================================
+8D. TUBAZIONI DEL CIRCUITO: DISTINTA E PERDITE DI CARICO
+================================================================================================
+  linea    DN                 ID[mm]  z[m]  ang[°]  L svil[m]  curve  K tot  W[kg/s]  v[m/s]  rho*v2  regime
+------------------------------------------------------------------------------------------------
+  R1       24" Sch.120         518.0  0.90       0       2.70      0   1.56    256.8    3.32    4043  anulare
+  R2       24" Sch.120         518.0  2.60       0       2.70      0   1.56    256.8    3.32    4043  anulare
+  R3       24" Sch.120         518.0  5.50       0       2.70      0   1.56    256.8    3.32    4043  anulare
+  R4       24" Sch.120         518.0  9.30       0       2.70      0   1.56    256.8    3.32    4043  anulare
+  R5       6" Sch.120          139.7 12.70       0       2.70      0   1.80     18.1    3.21    3776  anulare
+  DC1      18" Sch.120         387.2  0.80     150       6.77      3   2.09    160.8    2.07    2832  liquido
+  DC2      18" Sch.120         387.2  0.80     210       6.77      3   2.09    160.8    2.07    2832  liquido
+  DC3      16" Sch.120         344.6  2.50     150       7.53      3   2.22    123.6    2.01    2668  liquido
+  DC4      16" Sch.120         344.6  2.50     210       7.53      3   2.22    123.6    2.01    2668  liquido
+  DC5      16" Sch.120         344.6  4.50     180       8.34      5   2.48    117.1    1.91    2395  liquido
+  DC6      16" Sch.120         344.6  6.80     180       8.34      5   2.48    117.1    1.91    2395  liquido
+  DC7      16" Sch.120         344.6  9.00     180       8.34      5   2.48    117.1    1.91    2395  liquido
+  DC8      16" Sch.120         344.6 11.00     180       8.34      5   2.48    117.1    1.91    2395  liquido
+  DC9      4" Sch.120           92.1 12.70     180       5.43      2   2.93      7.7    1.75    2028  liquido
+------------------------------------------------------------------------------------------------
+  DISTINTA DI OGNI LINEA (tratti diritti e curve)
+    R1     diritti 2700 mm | curve: nessuna
+    R2     diritti 2700 mm | curve: nessuna
+    R3     diritti 2700 mm | curve: nessuna
+    R4     diritti 2700 mm | curve: nessuna
+    R5     diritti 2700 mm | curve: nessuna  [estremita' fredda]
+    DC1    diritti 250 + 2623 + 2376 mm | curve: 1 x 90° R/D 1.5 ; 2 x 30° R/D 1.5
+    DC2    diritti 250 + 2623 + 2376 mm | curve: 1 x 90° R/D 1.5 ; 2 x 30° R/D 1.5
+    DC3    diritti 250 + 3040 + 2621 mm | curve: 1 x 60° R/D 1.5 ; 1 x 90° R/D 1.5 ; 1 x 30° R/D 1.5
+    DC4    diritti 250 + 3040 + 2621 mm | curve: 1 x 60° R/D 1.5 ; 1 x 90° R/D 1.5 ; 1 x 30° R/D 1.5
+    DC5    diritti 500 + 2873 + 1159 + 1377 mm | curve: 2 x 90° R/D 1.5 ; 3 x 30° R/D 1.5
+    DC6    diritti 500 + 2873 + 1159 + 1377 mm | curve: 2 x 90° R/D 1.5 ; 3 x 30° R/D 1.5
+    DC7    diritti 500 + 2873 + 1159 + 1377 mm | curve: 2 x 90° R/D 1.5 ; 3 x 30° R/D 1.5
+    DC8    diritti 500 + 2873 + 1159 + 1377 mm | curve: 2 x 90° R/D 1.5 ; 3 x 30° R/D 1.5
+    DC9    diritti 500 + 3000 + 1500 mm | curve: 2 x 90° R/D 1.5  [estremita' fredda]
+
+  LEGENDA DELLE COLONNE
+    linea            Sigla del bocchello e della sua tubazione (R = riser, DC = downcomer).
+    z [m]            Posizione assiale del bocchello sul mantello, misurata dalla piastra
+                     tubiera lato gas caldo.
+    ang [°]          Posizione angolare sulla circonferenza del mantello: 0° = cielo (riser),
+                     180° = fondo, 150° e 210° = fianchi bassi.
+    L svil [m]       Lunghezza SVILUPPATA della tubazione: somma dei tratti diritti piu' gli
+                     archi delle curve. E' la lunghezza che conta per l'attrito distribuito,
+                     non la distanza in linea d'aria.
+    curve            Numero totale di curve nella linea (di qualsiasi angolo).
+    K tot            Coefficiente di resistenza complessivo riferito alla velocita' nella
+                     linea: attrito distribuito (f*L/D) piu' le curve (metodo di Idelchik:
+                     contributo d'angolo, di raggio e di attrito sull'arco) piu' imbocco e
+                     sbocco.
+    W [kg/s]         Portata che passa in QUELLA linea. Non e' la stessa per tutte: le linee
+                     sono in parallelo fra gli stessi due punti, quindi la portata si
+                     ripartisce in modo che ognuna dissipi la stessa Δp. Le linee corte e
+                     larghe ne prendono di piu'.
+    v [m/s]          Velocita' del fluido nella linea (miscela omogenea per i riser, liquido
+                     per i downcomer).
+    rho*v2           Quantita' di moto specifica [kg/(m s2)]: parametro per erosione e forzanti
+                     vibrazionali.
+    regime           Regime di moto bifase nei riser (mappa di Taitel-Dukler). I downcomer sono
+                     liquido monofase.
+
+  IN PAROLE SEMPLICI. Questa sezione traduce il disegno delle tubazioni in numeri
+  idraulici. Ogni linea del circuito viene descritta come nella distinta del disegno:
+  tanti spezzoni diritti di lunghezza nota piu' tante curve di angolo e raggio noti. Da
+  qui il programma ricava la lunghezza sviluppata reale (i tratti diritti piu' gli archi
+  delle curve) e il coefficiente di resistenza totale, invece di usare una lunghezza
+  equivalente stimata. Le curve non contano tutte uguale: una curva a 90° pesa circa il
+  doppio di una a 30°, e a parita' di angolo una curva a raggio stretto pesa piu' di una a
+  raggio largo. Poi, poiche' tutte le linee collegano gli stessi due punti (il mantello e
+  il corpo cilindrico), la portata si distribuisce fra loro in modo che ciascuna dissipi
+  la stessa caduta di pressione: le linee piu' corte e larghe ne prendono di piu'. E' il
+  motivo per cui non basta sommare le sezioni per sapere quanto circola.
+
+
+================================================================================================
+8H. DATI PER IL CALCOLO FEA DELLA PIASTRA TUBIERA E DEL GIUNTO TUBO-PIASTRA
+================================================================================================
+  ****************************************************************************
+  *  IL CALCOLO FEA E' OBBLIGATORIO. Tutto quanto precede e' uno SCREENING  *
+  *  di dimensionamento, non una verifica di codice. La piastra tubiera e   *
+  *  il giunto tubo-piastra vanno verificati con analisi agli elementi      *
+  *  finiti secondo ASME VIII Div.2 Parte 5, con i carichi qui riassunti.   *
+  ****************************************************************************
+
+  Perche' non basta lo screening: il calcolo di questo report assume piastre INFINITAMENTE
+  RIGIDE. La piastra reale e' una piastra forata che si INFLETTE, e la sua flessibilita'
+  cambia la ripartizione dei carichi, genera flessione nei tubi vicino all'incastro e
+  concentra le tensioni sul legamento fra foro e foro. Nessuna formula chiusa cattura
+  questi effetti su una piastra con 848 fori e un foro centrale grande per il by-pass.
+
+
+  1. GEOMETRIA
+  --------------------------------------------------------------------------
+    Numero di tubi                               848
+    Tubo: OD x spessore x lunghezza              38.1 x 3.05 x 12998 mm
+    Passo / reticolo                             50.8 mm - 60° TRIANGOLARE RUOTATO (lato lungo trasversale al flusso)
+    Legamento fra fori (pitch - Do)              12.70 mm
+    Coefficiente di foratura mu* = (p-d)/p       0.2500
+    OTL / ITL (anima non intubata)               1711.1 / 571 mm
+    Mantello: ID x spessore                      2025 x 58 mm
+    Foro centrale per il by-pass (OD tubo)       300 mm
+    Campate fra i diaframmi                      1290 / 935 / 1100 / 1153 / 1065 / 1065 / 1065 / 1065 / 1065 / 1065 / 930 / 968 mm
+    Spessore diaframmi / gioco foro-tubo         20 mm / 0.40 mm sul diametro
+
+  2. MATERIALI (valori alle temperature di esercizio calcolate)
+  --------------------------------------------------------------------------
+    Tubi                                         SA-213 T11 (1.25Cr-0.5Mo)
+      T media equivalente / E / Sy / alpha       344.0 °C  /  191 GPa  /  210 MPa  /  12.90 e-6 1/°C
+    Mantello e piastre tubiere                   SA-516 Gr.70 (lamiera mantello)
+      T media equivalente / E / Sy / alpha       323.2 °C  /  186 GPa  /  190 MPa  /  12.71 e-6 1/°C
+    Tubo di contenimento by-pass                 SA-192 / SA-210 A1 (acciaio al carbonio)
+    Liner by-pass (NON strutturale, libero)      Alloy 601 / 602 CA (liner by-pass)
+
+  3. PRESSIONI
+  --------------------------------------------------------------------------
+    Lato mantello (acqua/vapore saturi)          117.84 bar a
+    Lato tubi, ingresso / media                  34.74 / 34.70 bar a
+    Perdita di carico lato tubi                  98.0 mbar
+    Pressione esterna netta sui tubi             83.14 bar
+
+  4. TEMPERATURE DA IMPORRE
+  --------------------------------------------------------------------------
+    Gas ingresso / uscita miscelata              967.5 / 355.0 °C
+    Saturazione a mantello                       323.29 °C
+    Piastra lato GAS CALDO: faccia gas           344 °C (con ferrula in opera)
+    Piastra: faccia lato acqua                   328 °C circa (Tsat + qualche K)
+    Tubo: T media equivalente per la dilatazione 344.0 °C
+    Tubo: T metallica massima (interna)          432 °C a z = 0.21 m
+    Mantello: T media equivalente                323.2 °C
+    T di montaggio (riferimento dilatazioni)     20 °C
+
+  5. CARICHI ASSIALI GIA' RIPARTITI (da imporre o da verificare)
+  --------------------------------------------------------------------------
+    SPINTA DI PRESSIONE TOTALE                   28.31 MN in trazione
+      sul fascio tubiero                         12.184 MN = 42.8 MPa
+      sulla virola di mantello                   15.816 MN = 41.7 MPa
+    DILATAZIONE IMPEDITA: differenziale libero   4.21 mm
+      sul fascio tubiero                         -10.017 MN = -35.2 MPa
+      sulla virola di mantello                   9.913 MN = 26.1 MPa
+    CARICO NETTO PER TUBO (LC1 esercizio)        2.56 kN in TRAZIONE (sfilamento)
+    CARICO PER TUBO in LC2 (caldo non in press.) 11.81 kN in COMPRESSIONE (buckling)
+    Allungamento comune imposto dalle piastre    54.83 mm
+
+  6. CONDIZIONI DI CARICO DA ANALIZZARE
+  --------------------------------------------------------------------------
+    LC1 - esercizio                              pressione + temperature di regime: i due effetti in parte si elidono sui tubi
+    LC2 - caldo NON in pressione                 solo dilatazione impedita: caso severo per l'instabilita' dei tubi
+    LC3 - prova idraulica a freddo               solo pressione di prova, temperature uniformi
+    LC4 - avviamento / transitorio               gradiente fra piastra lato gas e piastra lato acqua
+    LC5 - condizione PULITA                      flusso di picco maggiore, temperature metalliche diverse (sez. 5c)
+
+  7. CHE COSA VERIFICARE
+  --------------------------------------------------------------------------
+    Piastra tubiera                              flessione, tensioni sul legamento fra fori, effetto del foro centrale del by-pass
+    Giunto tubo-piastra                          sfilamento secondo ASME VIII-1 UW-20; tenuta della mandrinatura o della saldatura
+    Zona di transizione piastra-virola           e' dove si concentra la discontinuita' geometrica e termica
+    Tubi in prossimita' dell'incastro            flessione indotta dalla rotazione della piastra, non catturata dallo screening
+    Fatica                                       cicli di avviamento e fermata, con i gradienti della LC4
+    Classificazione delle tensioni               Pm / Pm+Pb / Pm+Pb+Q secondo ASME VIII Div.2 Parte 5
+
+  NOTA SULLA CLASSIFICAZIONE. Le tensioni di pressione sono PRIMARIE: il loro superamento
+  porta al collasso e i limiti sono stringenti. Quelle da dilatazione impedita e da
+  gradiente termico sono SECONDARIE: si rilassano e i limiti sono piu' larghi, ma
+  governano la fatica. Nella modellazione FEA vanno tenute separate, perche' sommarle e
+  confrontarle con un unico limite porta a sovradimensionare la piastra senza motivo,
+  oppure a sottovalutare la fatica.
+
+
+================================================================================================
+9. DIAGNOSTICA DI PROGETTO
+================================================================================================
+  [1] ATTENZIONE - Prandtl gas fuori dal range tipico: Pr = 0.485 .. 0.497 (criterio: range indicativo 0.5 .. 2.0 per screening gas-side) @ lato gas | Il limite e' pratico: non blocca il calcolo ma richiede review. | AZIONE: Verificare proprieta' di trasporto e correlazione scelta.
+
+  [2] CRITICO - Margine su DNB insufficiente: DNBR = 0.72 (campo fascio (DNBR richiesto 1.43)) (criterio: DNBR >= 1.43) @ z = 0.21 m, y = +0.78 m (banda 11, ferrula 200 mm) | Il flusso locale (396 kW/m2) supera il CHF di fascio corretto per il titolo locale x = 0.092. E' il punto in cui il film di vapore puo' staccare l'acqua dalla parete (steam blanketing). | AZIONE: Allungare la ferrula, aumentare la circolazione, o ridurre il titolo locale nella banda alta.
+
+  [3] NOTA - Regime NBD al punto critico: Bo = 1.48e-004, Co = 2.01 (criterio: Bo > 1.5e-4 o Co > 0.65) @ z = 0.21 m, y = +0.78 m (banda 11, ferrula 200 mm) | Nelle condizioni tipiche WHB a bassa portata di massa e basso titolo il rischio di steam blanketing e' governato dal margine su DNB. L'opzione vapore.ebollizione_flusso = kandlikar permette di rivalutare l'HTC locale senza il fattore di soppressione di Chen. | AZIONE: Il vincolo di progetto e' il CHF locale, non l'HTC.
+
+  [4] ATTENZIONE - Flusso termico di picco elevato: 396 kW/m2 (criterio: 250-350 kW/m2 (pratica per WHB a tubi da fumo)) @ z = 0.21 m, y = +0.78 m (banda 11, ferrula 200 mm) | Sopra 300 kW/m2 la sensibilita' a depositi, maldistribuzione e qualita' dell'acqua cresce rapidamente. E' il criterio pratico dominante, piu' del CHF teorico. | AZIONE: Allungare la ferrula: da 200 a 500 mm il picco cala di circa il 9%.
+
+  [5] CRITICO - Surriscaldamento di parete oltre il dT critico: 13.4 K (criterio: dT critico = 6.1 K) @ z = 0.21 m, y = -0.21 m (banda 4, ferrula 200 mm) | Oltre il ginocchio della curva di ebollizione le bolle si fondono in un film continuo: h crolla e il metallo si scalda di centinaia di gradi in minuti. | AZIONE: Ridurre il flusso di picco (ferrula) e aumentare la circolazione.
+
+  [6] ATTENZIONE - Deposito lato acqua determinante sulla T metallo: 59 K di salto sul deposito (criterio: Rf assunto = 1.5e-004 m2K/W) @ z = 0.21 m, y = +0.78 m (banda 11, ferrula 200 mm) | Il metallo si scalda per il deposito, non per l'ebollizione. Il meccanismo e' autoacceleratore: piu' caldo -> piu' deposito -> piu' caldo. | AZIONE: Controllo chimico dell'acqua (fosfati/AVT, silice, conducibilita') e pulizia chimica programmata.
+
+  [7] ATTENZIONE - Finestra di metal dusting: 1% delle celle (criterio: finestra 430-820 °C con CO/CH4) @ fra z = 0.21 e z = 0.21 m | La carburizzazione catastrofica attacca gli acciai in gas ad alta attivita' di carbonio. | AZIONE: Valutare alligazione, alluminizzazione o dosaggio di S; tenere la parete fuori finestra.
+
+  [8] ATTENZIONE - Margine ridotto sul rapporto di circolazione: CR = 10.9 (criterio: CR >= 10) @ intero apparecchio | A carico parziale il battente cala piu' delle perdite. | AZIONE: Verificare il CR al 50% del carico.
+
+  [9] NOTA - Dilatazione impedita entro margine: sigma tubi 35 MPa (compr.), mantello 26 MPa (traz.) (criterio: ammissibile buckling 109 MPa) @ fascio e mantello | Dilatazione differenziale libera 4.21 mm; forza assiale interna 9.97 MN, pari a 11.8 kN per tubo sulla giunzione tubo-piastra. | AZIONE: Confermare con il calcolo di codice, che aggiunge i termini di pressione.
+
+  [10] NOTA - Liner del by-pass in finestra di metal dusting: 763 °C (criterio: finestra 450-900 °C) @ tubo di by-pass centrale, tutta la lunghezza | Il liner lavora per definizione in piena finestra: e' il motivo per cui si specifica una lega alto Cr-Al invece di un acciaio comune. | AZIONE: Confermare la scelta di lega alto Cr-Al (601/602 CA) e il controllo del rapporto S/CO.
+
+  [11] NOTA - By-pass interno: isolamento verificato: liner 763 °C, tubo di contenimento 332 °C (Tsat 323 °C) (criterio: salto sull'isolante 425 K) @ tubo di by-pass centrale | Il tubo di contenimento resta a 9 K sopra la temperatura dell'acqua: la carta ceramica assorbe tutto il salto. Attraverso l'isolante passano 419 kW, cioe' il 100.00% della potenza.
+
+  [12] ATTENZIONE - By-pass da strozzare per la regolazione: frazione richiesta 1.41% (criterio: dP del by-pass libero 0.3 mbar contro 98.0 mbar del fascio) @ organo di regolazione del by-pass | By-pass e fascio sono in parallelo fra gli stessi due punti: senza strozzamento la resistenza del tubo centrale e' troppo bassa. | AZIONE: L'organo di regolazione deve dissipare 98 mbar. A valvola completamente aperta il by-pass prenderebbe circa il 25% della portata e la temperatura d'uscita salirebbe ben oltre il target.
+
+  [13] CRITICO - Instabilita' fluido-elastica: velocita' critica SUPERATA: V/Vcrit = 4.14 nella banda 11 (y = +0.78 m): 5.99 m/s contro 1.45 m/s critici (criterio: V/Vcrit <= 0.8 (criterio di progetto); K = 1.1, delta = 0.030) @ banda superiore del fascio, campata 1.29 m | Reticolo 60° TRIANGOLARE RUOTATO (lato lungo trasversale al flusso). E' la configurazione MENO stabile: la costante di Connors in bifase vale 1.1 contro 4.0 del triangolare normale, cioe' la velocita' critica e' quasi quattro volte piu' bassa a parita' di tutto il resto. L'ampiezza diverge senza preavviso: non c'e' un ginocchio graduale. La banda superiore e' la stessa in cui cade il DNBR minimo, perche' e' il collo di bottiglia del percorso lato mantello. | AZIONE: Ridurre la campata a 0.57 m (per V/Vcrit = 0.8) oppure 0.63 m (per 1.0). Prima di intervenire: procurarsi il calcolo di vibrazione del costruttore e il passo REALE dei diaframmi nella zona alta.
+
+  [14] CRITICO - Tensione equivalente oltre lo snervamento: sigma_VM = 201 MPa (107 % di Sy) (criterio: Sy(T) = 187 MPa) @ BY-PASS, z = 0.01 m | Combinazione di Lame' (pressione esterna prevalente), gradiente termico radiale e carico assiale da dilatazione impedita. | AZIONE: Rivedere spessore del tubo o temperatura di parete.
+
+  [15] CRITICO - Pressione esterna: collasso NON verificato su BY-PASS tubo di contenimento - LC1 esercizio: p_ext netta = 83.1 bar contro 82 bar di collasso stimato (criterio: ASME VIII-1 UG-28 con fattore di sicurezza 3 sul collasso) @ BY-PASS tubo di contenimento - LC1 esercizio | collasso governato dallo SNERVAMENTO circonferenziale (tubo tozzo); irrigidito dai diaframmi ogni 1.20 m (senza, il collasso scenderebbe a 86 bar). Il cilindro e' premuto dall'esterno dall'acqua a pressione di corpo cilindrico mentre dentro ha gas a pressione di processo: la differenza e' la pressione di collasso di progetto. | AZIONE: Aumentare lo spessore, ridurre la spaziatura degli irrigidimenti, oppure verificare sul disegno lo spessore reale (qui assunto).
+
+  [16] NOTA - Liner del by-pass: dilatazione LIBERA (confermato): allungamento libero 160.1 mm alla T media equivalente di 703 °C (criterio: il liner non e' vincolato a entrambe le estremita') @ by-pass centrale | Costruttivamente il liner e' libero di dilatare, quindi NON sviluppa carico assiale e non entra nel bilancio a piastre fisse: nel sistema strutturale figura il solo tubo di contenimento. A titolo di documentazione, se fosse vincolato a entrambe le estremita' svilupperebbe 5.03 MN, cioe' 1919 MPa: un ordine di grandezza oltre qualunque ammissibile. E' la ragione costruttiva del giunto scorrevole.
+
+  [17] NOTA - Farfalla del by-pass entro la finestra utile: 24.5° di apertura in esercizio normale (zeta = 288) (criterio: finestra 17.4° - 25.1°) @ valvola del by-pass | Guadagno inerente d(ln zeta)/d(theta) = 0.22 1/°: un grado di stelo sposta la temperatura miscelata di circa 0.6 K.
+
+  [18] NOTA - Posizione di sicurezza della farfalla: CHIUSA in mancanza di aria/segnale (criterio: fail-safe) @ valvola del by-pass | Chiudendo, la portata va tutta al fascio: la temperatura miscelata scende a 349 °C (piu' freddo = piu' sicuro per il fascio e per l'apparecchiatura a valle) e il vapore prodotto sale. Aprendo del tutto si arriverebbe a 356 °C con il 1.5 % di portata deviata.
+
+
+================================================================================================
+10. PROFILO ASSIALE (MEDIA SULLE BANDE)
+================================================================================================
+   z[m]  Tgas[C]  spread[K]  q''med  q''max  Tmi max  Tmo max  x_top  alpha  DNBR  w_field  w_byp  Vmix
+                             [kW/m2] [kW/m2]   [C]      [C]                        [kg/sm] [kg/sm] [m/s]
+------------------------------------------------------------------------------------------------
+   0.01    967.5        0.0      69      69      344      338 0.0920  0.385  4.14     63.1     0.0   1.06
+   0.05    965.9        0.0      69      69      344      338 0.0920  0.385  4.15     62.9     0.0   1.06
+   0.11    964.1        0.0      67      68      343      337 0.0920  0.384  4.23     61.7     0.0   1.04
+   0.16    962.1        0.0      67      67      343      337 0.0920  0.384  4.29     60.9     0.0   1.03
+   0.23    956.1        0.0     386     389      430      394 0.0920  0.427  0.73    353.1     0.0   5.95
+   0.31    941.7        0.1     368     370      425      391 0.0920  0.426  0.77    336.2     0.0   5.66
+   0.39    926.2        0.3     351     353      420      388 0.0920  0.426  0.81    320.8     0.0   5.41
+   0.49    909.5        0.4     335     337      416      385 0.0920  0.425  0.85    306.1     0.0   5.16
+   0.59    891.4        0.5     319     321      412      383 0.0920  0.425  0.89    291.7     0.0   4.91
+   0.71    871.8        0.6     303     305      408      380 0.0920  0.424  0.94    277.2     0.0   4.67
+   0.85    850.8        0.7     287     288      403      377 0.0920  0.423  0.99    262.5     0.0   4.42
+   1.01    828.3        0.8     271     272      399      374 0.0920  0.423  1.05    247.6     0.0   4.17
+   1.18    804.3        0.9     254     255      394      371 0.0920  0.422  1.12    232.3     0.0   3.91
+   1.38    779.1        0.9     237     238      390      368 0.0920  0.421  1.20    216.9     0.0   3.65
+   1.60    752.2        1.0     220     220      385      365 0.0920  0.419  1.30    201.0     0.0   3.39
+   1.86    723.9        1.0     202     203      380      362 0.0920  0.418  1.41    184.7     0.0   3.11
+   2.14    694.5        1.0     184     185      375      359 0.0920  0.416  1.55    168.4     0.0   2.84
+   2.46    664.2        1.0     166     167      370      356 0.0920  0.414  1.72    152.0     0.0   2.56
+   2.82    633.2        1.0     149     149      366      352 0.0920  0.411  1.93    135.8     0.0   2.29
+   3.23    601.9        0.9     131     131      361      349 0.0920  0.408  2.18    119.9     0.0   2.02
+   3.70    570.7        0.8     114     115      356      346 0.0920  0.404  2.51    104.5     0.0   1.76
+   4.22    540.0        0.8      98      98      352      343 0.0920  0.399  2.92     89.8     0.0   1.51
+   4.81    510.1        0.8      83      83      348      340 0.0920  0.393  3.45     76.0     0.0   1.28
+   5.47    481.7        0.9      69      69      344      338 0.0920  0.386  4.14     63.2     0.0   1.07
+   6.23    455.0        0.9      56      57      340      335 0.0920  0.376  5.07     51.6     0.0   0.87
+   7.07    430.5        0.9      45      45      337      333 0.0920  0.363  6.34     41.3     0.0   0.70
+   8.03    408.4        0.9      35      35      334      331 0.0920  0.346  8.11     32.2     0.0   0.54
+   9.12    389.1        0.8      27      27      332      329 0.0920  0.325 10.63     24.5     0.0   0.41
+  10.34    372.6        0.7      20      20      329      328 0.0920  0.298 14.35     18.1     0.0   0.31
+  11.72    359.0        0.6      14      14      328      327 0.0920  0.264 20.04     12.9     0.0   0.22
+  12.73    351.5        0.5      11      11      327      326 0.0920  0.238 25.58     10.1     0.0   0.17
+------------------------------------------------------------------------------------------------
+
+  LEGENDA DELLE COLONNE
+    z [m]            Ascissa lungo l'asse dell'apparecchio, misurata dalla faccia interna della
+                     piastra tubiera d'ingresso gas. La maglia e' graduata: celle di ~20 mm
+                     all'imbocco, piu' larghe verso l'uscita.
+    Tgas [C]         Temperatura del gas mediata sui tubi (pesata sul numero di tubi di ogni
+                     banda).
+    spread [K]       Differenza fra la temperatura del gas nella banda piu' calda e in quella
+                     piu' fredda, alla stessa ascissa: e' la misura diretta dell'effetto fascio
+                     sul lato gas.
+    q'' med [kW/m2]  Flusso termico medio sulla sezione, riferito alla superficie esterna.
+    q'' max [kW/m2]  Flusso termico della cella peggiore della sezione.
+    Tmi max [C]      Massima temperatura del metallo sulla superficie interna nella sezione.
+    Tmo max [C]      Massima temperatura del metallo sulla superficie esterna nella sezione.
+    x_top            Titolo massico della miscela che esce dalla banda superiore, cioe' quella
+                     che va ai riser.
+    alpha            Frazione di vuoto corrispondente a x_top.
+    DNBR             Minimo margine su DNB fra tutte le celle della sezione.
+    w_field [kg/sm]  Portata d'acqua che attraversa il fascio per METRO di lunghezza
+                     dell'apparecchio. Segue la produzione locale di vapore, quindi decade
+                     lungo z come il flusso termico.
+    w_byp [kg/sm]    Portata nei canali liberi non intubati, sempre per metro. Positiva = sale,
+                     negativa = scende (ricircolo interno). Nulla se i diaframmi chiudono la
+                     corona periferica.
+    Vmix [m/s]       Velocita' della miscela in uscita dal fascio, con densita' omogenea.
+
+
+================================================================================================
+11. NOTE DI LETTURA (DEFINIZIONI)
+================================================================================================
+  UNITA' DELLE TEMPERATURE: K oppure °C?
+    Una DIFFERENZA di temperatura ha lo stesso valore numerico in kelvin e in gradi
+    Celsius, perche' le due scale hanno la stessa ampiezza di grado e differiscono solo
+    per l'origine (0 K = -273.15 °C). Quindi 13.1 K di surriscaldamento = 13.1 °C di
+    surriscaldamento: e' la stessa cosa. Per convenzione tecnica le DIFFERENZE si
+    scrivono in K e i LIVELLI in °C, proprio per non lasciare dubbi. In questo report:
+    tutti i valori etichettati [K] sono differenze, tutti quelli [°C] sono livelli.
+
+  SURRISCALDAMENTO DI PARETE (wall superheat)
+    E' la differenza fra la temperatura della superficie a contatto con l'acqua bollente
+    e la temperatura di saturazione:  dT_sup = T_parete - Tsat = q" / h_ebollizione.
+    E' la variabile che governa l'ebollizione nucleata:
+    - sotto ~1 K non ci sono ancora bolle (serve superare il dT di ONB, onset of
+    nucleate boiling: le cavita' della superficie devono attivarsi);
+    - fra qualche K e il dT critico si e' in ebollizione nucleata pienamente
+    sviluppata: e' la zona di lavoro, h molto alto e stabile;
+    - oltre il dT critico (il ginocchio della curva di Nukiyama) le bolle si
+    fondono in un film continuo di vapore: h crolla di 1-2 ordini di grandezza e
+    la parete si scalda di centinaia di gradi in pochi minuti.
+    ATTENZIONE: il surriscaldamento di parete NON e' la differenza fra metallo e Tsat.
+    Fra il metallo e l'acqua c'e' il deposito (magnetite, ossidi): il report riporta
+    separatamente il salto attraverso il deposito, che nei WHB reali e' spesso il
+    contributo dominante alla temperatura del metallo.
+
+  DNBR LOCALE (Departure from Nucleate Boiling Ratio)
+    DNBR = q"_critico,locale / q"_effettivo,locale  [adimensionale]
+    E' il rapporto fra il flusso termico che farebbe passare l'ebollizione da nucleata
+    a film (il CHF, Critical Heat Flux) e il flusso termico che il tubo sta realmente
+    scambiando in quel punto. E' un MARGINE:
+    DNBR = 3   -> si sta lavorando a un terzo del flusso che innescherebbe il DNB
+    DNBR = 1   -> si e' esattamente al limite
+    DNBR < 1   -> il criterio e' violato in quel punto
+    Perche' 'locale': il CHF non e' un numero unico dell'apparecchio. Dipende dalla
+    pressione (via Mostinski/Zuber), dalla geometria del fascio (fattore phi_b di
+    Palen) e soprattutto dal TITOLO locale: piu' vapore c'e' gia' nella miscela che
+    lava il tubo, meno flusso termico serve per scoprire la parete. Per questo il DNBR
+    minimo di questo apparecchio non cade dove il flusso termico e' massimo, ma nella
+    banda superiore del fascio, dove il titolo e' massimo perche' l'acqua ha gia'
+    attraversato tutte le bande sottostanti.
+    Il CHF di fascio usato qui e' quello di Palen (phi_b), tarato su ribollitori kettle:
+    e' un criterio conservativo per un fascio attraversato da crossflow forzato. Va
+    letto insieme al criterio pratico sul flusso termico massimo (250-350 kW/m2).
+
+  DNB - CRISI DI EBOLLIZIONE (il fenomeno)
+    DNB sta per Departure from Nucleate Boiling: e' il FENOMENO, mentre DNBR e' il numero
+    che ne misura il margine.
+    In ebollizione nucleata le bolle nascono su singoli siti della parete, si staccano e
+    l'acqua le rimpiazza immediatamente. E' il regime piu' efficiente che esista: il
+    coefficiente di scambio e' altissimo e il metallo resta a pochi gradi sopra la
+    temperatura dell'acqua, anche con flussi termici enormi.
+    Se pero' il flusso cresce oltre un valore critico, le bolle si generano piu' in
+    fretta di quanto l'acqua riesca a rimpiazzarle: si toccano, si saldano fra loro e
+    formano un FILM DI VAPORE continuo che avvolge la parete. Il vapore conduce circa
+    venti volte peggio dell'acqua, quindi il coefficiente di scambio crolla di colpo.
+    Il calore continua ad arrivare dal gas ma non riesce piu' a passare, e la
+    temperatura del metallo sale di CENTINAIA di gradi in pochi secondi.
+    Nei fasci tubieri il fenomeno prende anche il nome di STEAM BLANKETING, perche' il
+    film si forma preferenzialmente sui ranghi alti, dove la miscela che arriva e' gia'
+    carica del vapore prodotto sotto.
+    LA COSA IMPORTANTE DA CAPIRE e' che NON e' un peggioramento progressivo: e' un
+    salto. Sotto la soglia non succede nulla, sopra la soglia il tubo si scopre e cede
+    per sfondamento a caldo in tempi brevissimi. Per questo non si progetta al limite
+    ma con un margine, ed e' quello che il DNBR misura.
+
+  RAPPORTO DI CIRCOLAZIONE (CR)
+    CR = portata d'acqua circolante / portata di vapore prodotta   [adimensionale]
+    Equivalentemente il titolo in uscita dal fascio e' x = 1/CR: CR = 10 significa che
+    di ogni 10 kg di miscela che escono dal mantello 1 kg e' vapore e 9 kg sono acqua
+    che torna al corpo cilindrico. La regola pratica e' CR >= 10, cioe' x <= 0.10.
+    COME SI CALCOLA. Non e' un dato, e' il risultato di un bilancio idraulico. In un
+    circuito a termosifone la forza motrice e' la differenza di peso fra la colonna
+    di acqua satura che scende (downcomer) e la colonna di miscela bifase, piu'
+    leggera, che sale (fascio + riser):
+    dp_motore = g * [ rho_liq * H_dc - rho_fascio * H_fascio - rho_riser * H_riser ]
+    dove H_dc e' l'altezza dal livello acqua nel drum al fondo del fascio, H_fascio
+    l'altezza attraversata nel fascio e H_riser il tratto dal cielo del mantello al
+    livello nel drum. Le densita' delle colonne bifase dipendono dalla frazione di
+    vuoto, quindi dal titolo, quindi da CR: e' un problema implicito.
+    A questa forza motrice si oppongono le perdite di carico del giro:
+    dp_perdite(CR) = downcomer + bocchello ingresso + attraversamento fascio
+    + bocchello uscita + riser + interne del corpo cilindrico
+    che crescono con il quadrato della portata, cioe' con CR^2.
+    Il CR di esercizio e' il valore che annulla dp_motore(CR) - dp_perdite(CR); il
+    codice lo trova per bisezione. Aumentare CR si ottiene abbassando le perdite
+    (riser e downcomer piu' grandi) o alzando il dislivello asse drum - asse WHB.
+    Il CR EFFICACE riportato a parte tiene conto anche del ricircolo interno al
+    mantello attraverso la corona anulare lasciata aperta dai diaframmi.
+
+  TITOLO E FRAZIONE DI VUOTO
+    Titolo x = portata di vapore / portata totale (rapporto di MASSE).
+    Frazione di vuoto alpha = area occupata dal vapore / area totale (rapporto di
+    AREE). A 118 bar il vapore e' 10 volte meno denso del liquido, quindi un titolo
+    modesto (x = 0.10) corrisponde gia' a una frazione di vuoto elevata (alpha = 0.45):
+    meta' della sezione e' vapore. E' alpha, non x, a dire se i ranghi alti del fascio
+    restano bagnati.
+
+  CAPPELLO / DEFLETTORE ANTITRASCINAMENTO SUL BOCCHELLO RISER
+    E' una piccola lamiera piegata a cappello, saldata dentro il mantello sopra la bocca
+    del bocchello di uscita, con l'apertura rivolta di lato o verso il basso. Serve a due
+    cose. (1) Impedisce che il bocchello 'aspiri' direttamente dal pelo della miscela il
+    getto piu' ricco di vapore che sale dal fascio sottostante: senza cappello si crea un
+    cammino preferenziale e quel tratto di fascio viene lavato meno degli altri. (2) Rompe
+    il vortice che tenderebbe a formarsi sopra la bocca, che altrimenti trascinerebbe
+    vapore in modo intermittente facendo pulsare il riser. In pratica costringe la miscela
+    a fare una piccola deviazione prima di entrare nel bocchello, uniformando il prelievo
+    lungo il mantello. L'equivalente sul lato discesa e' il rompivortice (vortex breaker)
+    sullo stacco del downcomer dal corpo cilindrico, che ha lo stesso scopo ma per evitare
+    che il liquido si porti dietro vapore verso il basso (carry-under).
+
+  MOTO A TAPPI (SLUG) NEI RISER
+    In un tubo verticale con miscela acqua-vapore le bolle possono coalescere in
+    grandi bolle di Taylor che occupano quasi tutta la sezione, separate da tappi di
+    liquido. Il risultato e' un flusso intermittente: la portata e la pressione
+    pulsano a 0.5-5 Hz e la forzante si scarica sui supporti, sui bocchelli e sulla
+    piastra tubiera. Si evita uscendo dal campo slug della mappa di Taitel-Dukler:
+    o verso il basso (regime a bolle, titoli bassi e diametri piccoli) o verso l'alto
+    (churn/anulare, alte velocita'). Per i riser di una caldaia la strada praticabile
+    e' la seconda: riser piu' numerosi e piu' piccoli, che alzano la velocita'.
+
+  Nota: tutte le portate del caso sono maggiorate del 10% come da datasheet.
+
+================================================================================================
+12. DIMENSIONAMENTO AUTOMATICO
+================================================================================================
+  Questa sezione usa il risultato del calcolo completo per proporre il dimensionamento
+  automatico. L'ordine e' intenzionale: prima vincoli PDS, poi margini
+  termici/idraulici/vibrazionali, poi minimizzazione di peso WHB e lunghezza tubi.
+
+  VINCOLI E VERIFICHE
+------------------------------------------------------------------------------------------------
+  voce                               attuale            target             esito    nota
+------------------------------------------------------------------------------------------------
+  PDS: thermal duty                  116.54 MW          116.54 MW +/- 0.5% OK       Must match the process heat balance.
+  PDS: generated steam               347.4 t/h          347.4 t/h +/- 0.5% OK       Steam production follows duty and drum pressure.
+  PDS: gas outlet temperature        355.0 degC         355.0 degC +/- 2.0 K OK       For bypass cases this is the mixed outlet temperature target.
+  PDS: gas-side pressure drop        98 mbar            <= 300 mbar        OK       Pressure drop is usually the active sizing constraint for fire-tube WHBs.
+  Peak heat flux                     396 kW/m2          <= 300 kW/m2       NO       Default limit is 300 kW/m2.
+  DNBR                               0.72               >= 2.00            NO       Default minimum is 2.0.
+  Circulation ratio                  10.9               >= 10.0            OK       Default minimum is 10.
+  Vibration FEI                      4.14               <= 0.80            NO       Default screening limit is V/Vcrit <= 0.8.
+  Drum centerline elevation          6.00 m             minimize, >= 3.33 m OK       Lower steam-drum centerline reduces riser/downcomer length and weight, but must keep WHB OD, drum OD, nozzles, and riser spool clearance.
+  Minimum riser spool                nozzle 200 mm      spool >= 500 mm    OK       Default nozzle height is 200 mm; automatic nozzle sizing can replace this later.
+  WHB ID x L                         26.32 m2           minimize after PDS and margins OK       Compact WHB envelope objective: shell ID multiplied by tube length.
+  Steam drum ID x L                  39.00 m2           minimize after separation/circulation checks OK       Compact drum envelope objective: drum ID multiplied by drum tangent length.
+------------------------------------------------------------------------------------------------
+
+  OBIETTIVO DI OTTIMIZZAZIONE
+  Peso WHB stimato                                   71.6 t
+  Lunghezza tubi                                     13.00 m
+  Altezza centerline drum-WHB                        6.00 m (min screened 3.33 m)
+  Nozzle / spool raiser minimo                       200 / 500 mm
+  Peso riser + downcomer                             47.35 t (13.5 + 67.4 m sviluppati)
+  WHB ID x L / drum ID x L                           26.32 / 39.00 m2
+  Objective hierarchy: satisfy PDS first, then safety margins, then minimize WHB metal
+  weight, tube length, steam-drum elevation, riser/downcomer weight, and WHB/drum ID x L
+  envelopes. Preferred levers are low-weight/no-length changes before larger bundle
+  geometry.
+  Minimize the steam-drum centerline elevation against the WHB centerline after allowing
+  WHB OD, drum OD, nozzle height, and minimum riser spool. Then minimize external piping
+  weight and the ID x L envelopes of WHB and steam drum.
+
+  AZIONI DI DIMENSIONAMENTO PROPOSTE
+------------------------------------------------------------------------------------------------
+  Heat flux / DNBR
+    Stato attuale                                    q''max 396 kW/m2, DNBR 0.72
+    Richiesto                                        Area factor about 2.78, or extend protected inlet length to about 759 mm.
+    Beneficio                                        Keeps peak flux below the limit and raises DNBR.
+    Impatto peso/lunghezza                           Ferrules add little weight and no tube length; more area adds weight or length.
+    Applicabile all'esistente                        SI
+    The weight/length objective prefers ferrule/protection changes first, then extra tubes,
+    and only last additional tube length.
+
+  Steam-drum elevation
+    Stato attuale                                    centerline difference 6.00 m; minimum screened value 3.33 m
+    Richiesto                                        Lower the steam drum toward 3.33 m while rechecking circulation, nozzle geometry, and riser spool clearance.
+    Beneficio                                        Reduces riser/downcomer developed length, piping weight, support steel, and static elevation.
+    Impatto peso/lunghezza                           Current riser/downcomer metal estimate is 47.35 t over 80.9 m developed length.
+    Applicabile all'esistente                        NO / solo nuovo fascio
+    The lower bound includes WHB OD, steam-drum OD, default 200 mm nozzle height, and the
+    minimum riser spool criterion.
+
+  Envelope compactness
+    Stato attuale                                    WHB ID x L 26.32 m2; drum ID x L 39.00 m2
+    Richiesto                                        Minimize both products only after PDS duty, generated steam, gas outlet temperature, gas dP, DNBR, heat flux, circulation, and vibration checks remain satisfied.
+    Beneficio                                        Keeps WHB and steam-drum envelopes compact.
+    Impatto peso/lunghezza                           Smaller ID x L generally lowers metal weight, external piping length, insulation, platforms, and plot impact.
+    Applicabile all'esistente                        NO / solo nuovo fascio
+    This is an optimization objective, not a standalone pass/fail constraint.
+
+  Vibration
+    Stato attuale                                    V/Vcrit 4.14 at span 1290 mm
+    Richiesto                                        22 baffles, uniform span about 546 mm
+    Beneficio                                        Avoids fluid-elastic instability problems.
+    Impatto peso/lunghezza                           Adds baffle weight but does not increase tube length.
+    Applicabile all'esistente                        NO / solo nuovo fascio
+    For an existing bundle this is usually not practical; for a new unit it is the preferred
+    fix.
+
+------------------------------------------------------------------------------------------------
+
+  PARAMETRI DEFAULT
+  Flusso critico massimo                             300 kW/m2
+  DNBR minimo                                        2.00
+  Rapporto di circolazione minimo                    10.0
+  V/Vcrit massimo                                    0.80
+  dP gas PDS                                         300 mbar
+  Altezza nozzle                                     200 mm
+  WT steam drum usato nello screening                58.0 mm
+  WT piping riser/downcomer usato nello screening    58.0 mm
+
+  I valori sono preliminari: ogni modifica geometrica va verificata rilanciando il calcolo
+  completo, perche' potenza, dP gas, circolazione, DNBR e vibrazioni sono accoppiati.

@@ -1,0 +1,141 @@
+================================================================================================
+WHB / PGC - MALDISTRIBUZIONE DELLA PORTATA DI GAS FRA I TUBI
+Caso: WHB reformer secondario - caso base
+Data: 2026-08-28 14:28
+Estratto dal report esteso: stessi dati, stesso calcolo, nessuna rielaborazione.
+================================================================================================
+
+  DEFINIZIONI ESSENZIALI
+  --------------------------------------------------------------------------------------------
+  CR - RAPPORTO DI CIRCOLAZIONE
+     CR = portata d'acqua che circola nel mantello / portata di vapore prodotta.
+     Adimensionale. Equivale al reciproco del titolo in uscita dal fascio: CR = 10
+     significa che di ogni 10 kg di miscela che escono dal mantello 1 kg e' vapore e
+     9 kg sono acqua che torna al corpo cilindrico. NON e' un dato di progetto: e' il
+     risultato dell'equilibrio fra il battente motore, generato dalla differenza di
+     peso fra la colonna che scende e quelle che salgono, e le perdite di carico del
+     giro. Serve che sia alto perche' l'acqua in eccesso e' quella che LAVA i tubi e
+     impedisce che la parete si scopra. Criterio pratico: CR >= 10, cioe' titolo <= 0.10.
+
+  DNB - DEPARTURE FROM NUCLEATE BOILING (crisi di ebollizione)
+     E' il FENOMENO, non un numero. In ebollizione nucleata le bolle si staccano dalla
+     parete e l'acqua le rimpiazza subito: lo scambio e' ottimo e il metallo resta
+     freddo. Se il flusso termico cresce oltre un valore critico, le bolle si generano
+     piu' in fretta di quanto l'acqua riesca a rimpiazzarle e si saldano in un FILM DI
+     VAPORE continuo che isola la parete. Il vapore conduce male, quindi lo scambio
+     crolla e la temperatura del metallo sale di centinaia di gradi in pochi secondi.
+     Nei fasci il fenomeno si chiama anche STEAM BLANKETING. Non e' progressivo: e'
+     un salto, e il tubo si rompe per cedimento a caldo prima che ce ne si accorga.
+
+  CHF - CRITICAL HEAT FLUX (flusso termico critico)
+     E' il valore di flusso termico al quale si innesca il DNB. Dipende dalla
+     pressione, dalla geometria del fascio e soprattutto dal TITOLO locale: piu'
+     vapore c'e' gia' nella miscela che lava il tubo, meno flusso serve per scoprire
+     la parete.
+
+  DNBR - DEPARTURE FROM NUCLEATE BOILING RATIO
+     DNBR = flusso termico critico locale / flusso termico effettivo locale.
+     E' un MARGINE, adimensionale: DNBR = 3 vuol dire che si lavora a un terzo del
+     limite, DNBR = 1 esattamente al limite, DNBR < 1 oltre il limite. La pratica di
+     progetto chiede almeno 2. Si calcola CELLA PER CELLA, perche' sia il flusso sia
+     il valore critico cambiano lungo il tubo e da banda a banda: il minimo non cade
+     dove il flusso e' massimo, ma dove il rapporto fra i due e' peggiore.
+     AVVERTENZA: nessuno dei modelli di CHF disponibili in letteratura e' tarato su
+     questa geometria a questa pressione, e fra loro divergono di un ordine di
+     grandezza. Il DNBR va quindi usato per confronti RELATIVI - fra zone dello stesso
+     apparecchio o fra varianti dello stesso progetto - non come numero assoluto.
+  --------------------------------------------------------------------------------------------
+
+6F. MALDISTRIBUZIONE DELLA PORTATA DI GAS FRA I TUBI
+================================================================================================
+  COS'E'. Il calcolo assume che gli 848 tubi ricevano tutti la stessa portata di gas.
+  Nella realta' la camera d'ingresso non distribuisce in modo perfetto: i tubi affacciati
+  al getto del bocchello ne ricevono di piu', quelli in ombra di meno. Questa sezione
+  misura che cosa succede al tubo PIU' CARICATO.
+  COME E' MODELLATA. I tubi sono canali in PARALLELO che non si scambiano calore fra loro:
+  un singolo tubo sbilanciato non altera ne' la circolazione ne' la produzione di vapore
+  dell'apparecchio. Si marcia quindi UN SOLO tubo con la portata maggiorata, tenendo
+  congelato tutto il lato mantello: temperatura di saturazione, coefficiente di
+  ebollizione, sporcamento, flusso critico locale. Cambia solo la resistenza lato gas, che
+  e' quella governata dalla portata. E' il modo corretto di isolare il comportamento del
+  singolo canale.
+
+  eccesso   w tubo    Re ing.   h gas picco   q'' picco   z picco   T met.int   T gas usc.   DNBR   potenza tubo
+      [%]    [g/s]                 [W/m2K]     [kW/m2]       [m]        [°C]         [°C]           [kW]
+------------------------------------------------------------------------------------------------
+        0     99.3     105336          1588       395.9      0.21       427.9        348.5   0.72         136.9
+        5    104.3     110603          1648       403.0      0.21       429.8        350.6   0.71         143.3
+       10    109.2     115870          1707       409.6      0.21       431.6        352.7   0.70         149.6
+       15    114.2     121137          1765       416.0      0.21       433.2        354.9   0.69         155.8
+       20    119.2     126403          1824       422.1      0.21       434.8        357.1   0.68         162.1
+       30    129.1     136937          1938       433.4      0.21       437.8        361.7   0.66         174.3
+------------------------------------------------------------------------------------------------
+  SENSIBILITA' a +10 % di portata                    flusso di picco +3.5 %, T metallo +3.6 K, DNBR -0.024, T gas uscita +4.3 K
+
+  LEGENDA DELLE COLONNE
+    eccesso [%]      Portata in piu' che il tubo considerato riceve rispetto al tubo medio.
+                     Zero e' il tubo medio, cioe' il caso di riferimento del resto del report.
+    w tubo [g/s]     Portata di gas in quel singolo tubo. Il tubo medio porta la portata totale
+                     (al netto del by-pass) divisa per il numero di tubi.
+    Re ing.          Numero di Reynolds all'ingresso del tubo, dentro la ferrula. E' quello che
+                     governa il coefficiente di scambio.
+    h gas picco      Coefficiente di scambio lato gas nel punto di flusso massimo, comprensivo
+                     di irraggiamento e correzioni. Cresce come la portata alla 0.8.
+    q'' picco        Flusso termico massimo lungo QUEL tubo, riferito alla superficie esterna,
+                     escluso il tratto sotto ferrula.
+    z picco          Ascissa del punto di flusso massimo, misurata dalla piastra tubiera lato
+                     gas caldo.
+    T met.int        Temperatura massima del metallo sulla faccia interna di quel tubo: e' il
+                     numero da confrontare con il limite metallurgico.
+    T gas usc.       Temperatura del gas all'uscita di quel tubo. SALE con la portata, perche'
+                     il gas ha meno tempo per raffreddarsi.
+    DNBR             Margine su crisi di ebollizione per quel tubo, con il flusso critico
+                     locale del lato mantello, che non cambia.
+    potenza tubo     Calore scambiato da quel singolo tubo. Cresce con la portata, ma meno che
+                     proporzionalmente.
+
+  IN PAROLE SEMPLICI
+  --------------------------------------------------------------------------------------------
+  PERCHE' IL TUBO PIU' CARICATO E' DOPPIAMENTE SFAVORITO. Chi riceve piu' gas scambia di
+  piu', e a prima vista sembrerebbe un vantaggio. Non lo e', per due ragioni che si
+  sommano. La prima: il coefficiente di scambio lato gas cresce come la portata elevata a
+  0.8, quindi il flusso termico locale cresce quasi in proporzione alla portata, e con
+  esso la temperatura del metallo e il rischio di crisi di ebollizione. La seconda: quel
+  tubo ha meno tempo di residenza, quindi il suo gas resta piu' caldo lungo tutto il
+  percorso, e a parita' di ascissa la differenza di temperatura che spinge il calore e'
+  maggiore. Il risultato e' che lo stesso tubo e' contemporaneamente quello con il DNBR
+  peggiore, quello con il metallo piu' caldo, e quello che consegna il gas piu' caldo
+  all'apparecchiatura a valle.
+  PERCHE' NON SI VEDE NEL BILANCIO GLOBALE. La maldistribuzione non cambia la potenza
+  totale in modo apprezzabile, perche' quello che un tubo prende in piu' un altro lo
+  prende in meno, e il bilancio si compensa quasi esattamente. E' un problema LOCALE: si
+  manifesta come rottura di alcuni tubi, non come perdita di prestazione. E' per questo
+  che non lo si trova guardando i dati di esercizio, ma solo guardando dove si rompono i
+  tubi.
+  IL LATO MANTELLO NON CAMBIA, ED E' IL PUNTO CHIAVE DEL MODELLO. Gli 848 tubi sono canali
+  in parallelo immersi nella stessa massa d'acqua: non si scambiano calore fra loro. Un
+  tubo che porta il 10 % di gas in piu' non altera la circolazione naturale, ne' la
+  produzione di vapore, ne' il flusso critico locale, perche' tutte queste grandezze
+  dipendono dall'insieme. Sarebbe un errore rifare il calcolo dell'intero apparecchio con
+  la portata maggiorata: si otterrebbe un apparecchio piu' potente, non un tubo
+  sbilanciato. Qui si marcia un solo tubo tenendo congelato tutto il resto.
+  DA DOVE NASCE. La camera d'ingresso deve trasformare il getto di un bocchello nella
+  distribuzione uniforme su un'intera piastra tubiera. Con bocchello assiale centrato e
+  camera profonda il getto ha spazio per aprirsi e la disuniformita' resta entro il 5-10
+  %. Con ingresso laterale, camera corta, o un deflettore mal posizionato, i tubi
+  affacciati al getto ricevono il 20-30 % in piu' degli altri. La forma della camera e'
+  quindi un dato di progetto termico, non solo meccanico.
+  COME SI LEGGE QUESTA TABELLA. Non e' una previsione: e' una scala. Non si sa quanto vale
+  la maldistribuzione reale finche' non si conosce la geometria della camera d'ingresso,
+  quindi la tabella dice quanto costa ogni livello di disuniformita'. Serve a rispondere a
+  due domande: quanto margine occorre lasciare in progetto, e - se in esercizio si
+  rompessero tubi tutti nella stessa zona della piastra - se la maldistribuzione basti a
+  spiegarlo.
+  LIMITE DEL MODELLO. Si tiene congelato il profilo di pressione del gas e il coefficiente
+  di irraggiamento presi dalla soluzione di base. Sono approssimazioni buone perche'
+  entrambi variano poco con la portata del singolo tubo. Non si rappresenta invece la
+  retroazione opposta, cioe' il fatto che un tubo che scambia di piu' diventa piu'
+  resistente idraulicamente e quindi tende a riequilibrarsi: e' un effetto stabilizzante,
+  quindi trascurarlo e' conservativo.
+
+================================================================================================
