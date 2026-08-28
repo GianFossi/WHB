@@ -17,7 +17,6 @@ tmp/
 tmp_*.txt
 tmp_*.json
 logs/
-.ai/
 .vscode/
 
 *.user
