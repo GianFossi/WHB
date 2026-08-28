@@ -7,7 +7,7 @@ holds the rules; this file holds only what is specific to *this* project.
 delete it. If this project cannot satisfy a rule, do not edit the standard -
 add a row to "Declared exceptions" below.
 
-**Applied standard:** AI Engineering Project Standard **v2.0**.
+**Applied standard:** AI Engineering Project Standard **v2.3**.
 
 ---
 
@@ -118,6 +118,18 @@ tool-discovery pointer or engineering documentation.
 
 ## Changelog
 
+- **2026-08-28** - Profile updated to track AI Engineering Project Standard
+  v2.3. English XML-style documentation comments are now the default for
+  public APIs and important code elements, and concise inline comments are
+  expected for non-obvious calculation steps, assumptions, units and guards.
+- **2026-08-28** - Profile updated to track AI Engineering Project Standard
+  v2.2. The baseline assistant workflow now also requires a structure-first
+  pass on non-trivial tasks: task hierarchy, typed pipeline and boundaries
+  before atomic implementation.
+- **2026-08-28** - Profile updated to track AI Engineering Project Standard
+  v2.1. The new project-independent guidance now makes pure/stateless
+  calculation design, top-down decomposition and an explicit architectural
+  validation checklist part of the baseline assistant workflow.
 - **2026-08-28** - Profile created when the AI Engineering Project Standard v2.0
   was adopted in this repository. Same day: solution retargeted from `net8.0` to
   `net10.0`, SDK pinned in `global.json`, CI moved to `10.0.x`. 66/66 tests pass

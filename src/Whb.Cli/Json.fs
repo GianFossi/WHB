@@ -13,6 +13,11 @@ open Whb.Core.Types
 open Whb.Core.Options
 
 module Json =
+    /// Try to get a property from a JSON object using a dot-separated path.
+    /// If the property is found, return Some(JsonElement), otherwise return None.
+    /// The path is a string of property names separated by dots, e.g. "gas.composizione".
+    /// Example: tryPath root "gas.composizione"
+    /// If the path is invalid or the property is not found, return None.
     let private tryPath (root: JsonElement) (path: string) =
         let parts = path.Split('.')
         let mutable cur = root

@@ -58,6 +58,12 @@
     <Compile Include="Loads\Mechanics.fs" />
     <Compile Include="Components\Equipment\Nozzles.fs" />
     <Compile Include="Designers\Sizing.fs" />
+    <Compile Include="Designers\Findings.fs" />
+    <Compile Include="Designers\DesignBypass.fs" />
+    <Compile Include="Designers\DesignThermalPost.fs" />
+    <Compile Include="Designers\DesignVibration.fs" />
+    <Compile Include="Designers\DesignSensitivity.fs" />
+    <Compile Include="Designers\DesignTransient.fs" />
     <Compile Include="Designers\Design.fs" />
     <Compile Include="Designers\Designer.fs" />
     <Compile Include="Reports\Report.Common.fs" />

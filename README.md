@@ -27,7 +27,7 @@ an elevated steam drum.
 
 ## Prerequisites
 
-- .NET SDK 8.0 or newer.
+- .NET SDK 10.0 or newer.
 - PowerShell 7 or Windows PowerShell for the helper scripts.
 - Windows, Linux or macOS for `dotnet` build/test; the provided scripts are
   PowerShell-oriented.

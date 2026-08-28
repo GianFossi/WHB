@@ -131,6 +131,42 @@ Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
 
+- 2026-08-28 — Adopted AI Engineering Project Standard v2.1 in
+  `.ai/AI_ENGINEERING_PROJECT_STANDARD.md`: purity/statelessness is now
+  explicit by default for calculation work, top-down decomposition has a
+  dedicated architecture rule, and the assistant workflow now ends with a
+  formal validation checklist. Project files only reference that guidance
+  rather than duplicating it.
+- 2026-08-28 — Adopted AI Engineering Project Standard v2.2 in
+  `.ai/AI_ENGINEERING_PROJECT_STANDARD.md`: non-trivial tasks now require a
+  structure-first pass (`DOC-8`) that fixes task hierarchy, typed pipeline,
+  intermediate contracts and pure-vs-I/O boundaries before atomic
+  implementation begins.
+- 2026-08-28 — Adopted AI Engineering Project Standard v2.3 in
+  `.ai/AI_ENGINEERING_PROJECT_STANDARD.md`: English XML-style documentation
+  comments are now the default for public APIs and important code elements,
+  and concise inline comments are expected for non-obvious steps, units,
+  assumptions, invariants and numerical guards. The standard explicitly avoids
+  trivial line-by-line narration.
+- 2026-08-28 — Extracted the post-processing campaign blocks from
+  `Design.fs` into `Designers/DesignVibration.fs`,
+  `Designers/DesignSensitivity.fs` and `Designers/DesignTransient.fs`.
+  This keeps the top-level run focused on orchestration while preserving
+  the existing calculations, thresholds and result assembly verbatim.
+- 2026-08-28 — Extracted bypass-map adaptation, interpolation/inversion
+  and valve-window assembly from `Design.fs` into
+  `Designers/DesignBypass.fs`. `Design.fs` still owns the coupled solve
+  and point evaluation; the new module only organizes how those points
+  are sampled and interpreted, so the numerical path stays unchanged.
+- 2026-08-28 — Extracted the thermal post-processing block
+  (`CHF` comparisons, local correlation sensitivity, fouling cases) from
+  `Design.fs` into `Designers/DesignThermalPost.fs`. This is report-side
+  analysis built on already solved cells, so it reduces the size of the
+  main orchestrator without touching the primary solve.
+- 2026-08-28 — Split `Design.buildFindings` into
+  `Designers/Findings.fs` and left `Design.fs` with a thin wrapper.
+  This is a structural-only extraction to reduce the main orchestration
+  file without changing finding thresholds, wording or result order.
 - 2026-08-28 — Expanded `build.ps1` `Clean` to remove root generated
   outputs too (`results*`, `risultati*`, `tmp`, `logs`,
   `artifacts/packages`, `tmp_run_*.txt`) and added a repo-root guard

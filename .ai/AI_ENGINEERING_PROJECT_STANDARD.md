@@ -1,6 +1,6 @@
 # AI Engineering Project Standard
 
-**Version:** 2.0
+**Version:** 2.3
 **Status:** normative baseline for engineering / scientific software projects.
 **Scope:** project-independent. Every project-specific choice (framework version,
 packages, vendor, repository, current phase) lives in the project profile
@@ -43,8 +43,11 @@ modules: engineering/domain logic, application orchestration, persistence and
 external infrastructure, user interface, reporting, validation and
 qualification, release and reproducibility.
 
-**PRIN-2 (purity).** The calculation core uses pure functions and immutable data
-wherever practical.
+**PRIN-2 (purity and statelessness).** The calculation core is pure by default:
+each operation receives its input explicitly and returns a new output without
+mutating external state, hidden shared state, or the arguments it was passed.
+Any unavoidable side effect stays at an application or infrastructure boundary
+and is never mixed into domain calculations.
 
 **PRIN-3 (calculations stay in the core).** Engineering formulas, normative
 checks and acceptance limits exist only in the domain/calculation modules. UI,
@@ -99,6 +102,13 @@ structural changes require an explicit ADR under `doc/decisions/`, schema
 changes require a migration design (`PERS-2`), normative changes require impact
 analysis (`VER-5`), and public API breaks require a versioning review. The
 baseline exists to prevent accidental drift, not improvement.
+
+**ARCH-6 (top-down decomposition).** Design and implement from macro to atomic
+level. First define the overall pipeline and the typed input/output contracts of
+each stage. Then split each stage into isolated single-responsibility
+subcomponents. Only then implement small, composable, internally consistent
+operations. Domain calculation stages and I/O or orchestration stages remain
+separate even when they live in the same assembly.
 
 ---
 
@@ -375,20 +385,72 @@ standard:
 1. reads `AGENTS.md`, then the project profile, `AI.md`, and the ADRs and
    registries relevant to the change;
 2. respects module boundaries (`PRIN-1`, `PRIN-3`) and does not invent normative
-   content (`PRIN-6`);
+   content (`PRIN-6`), while preserving purity (`PRIN-2`) and top-down
+   decomposition (`ARCH-6`);
 3. adds or updates tests with every calculation change (`VER-1`);
 4. updates `README.md`, `doc/` and the registries the change touches;
 5. appends material changes and pending work to `AI.md`;
 6. records any conflict with this standard as a declared exception in the
    profile rather than silently deviating.
 
-**DOC-5 (API documentation).** Public APIs and important code elements carry
-documentation comments.
+**DOC-5 (code documentation, English, XML doc).** Public APIs and important
+code elements carry English documentation comments using the platform's native
+documentation format (for example XML documentation comments in .NET code).
+The goal is technical clarity, not boilerplate repetition: explain purpose,
+inputs, outputs, units, assumptions, invariants, boundary conditions and any
+non-obvious engineering meaning. Do not generate trivial comments that merely
+restates the code line by line.
 
 **DOC-6 (editor tasks).** Provide reproducible command-line tasks from project
 start: restore, build, clean, run, debug, unit tests, full suite, validation
 tests, benchmarks where relevant, formatting, packaging, release verification.
 Prefer command-line tasks over IDE-only operations.
+
+**DOC-7 (architecture-first task solving).** When an assistant is asked to
+design or implement a technical change, it follows this hierarchy:
+
+1. macro level - define the end-to-end pipeline, data contracts, types and
+   function signatures;
+2. sub-task level - decompose each macro block into isolated,
+   single-responsibility components;
+3. atomic level - implement only simple, composable, self-consistent
+   operations.
+
+The assistant closes with a critical self-review that checks, at minimum:
+
+- absence of hidden mutation or implicit side effects;
+- correct handling of edge cases and error propagation;
+- type conformity across the pipeline;
+- clarity and composability of the atomic functions.
+
+**DOC-8 (structure before implementation).** For any non-trivial design or
+implementation task, first define only the task hierarchy and the typed
+pipeline contracts before writing the internal algorithm.
+
+Required first pass:
+
+- task hierarchy only;
+- pipeline signature and data flow (for example
+  `Input -> StepA -> StepB -> Result`);
+- function signatures and intermediate types;
+- explicit separation between pure/domain stages and orchestration or I/O
+  stages.
+
+Do not implement the internal logic until that structure has been reviewed or
+established.
+
+Required second pass:
+
+- implement the atomic functions;
+- compose them into the approved pipeline;
+- perform the final validation checklist (`DOC-7`).
+
+**DOC-9 (inline explanation of non-obvious code).** Inside functions,
+subroutines and calculation pipelines, add concise English inline comments
+where they materially improve understanding. Use them to explain non-obvious
+steps, engineering intent, unit-sensitive transformations, numerical guards,
+algorithmic choices, invariants and error-propagation decisions. Do not turn
+the source into prose and do not comment every obvious assignment.
 
 ---
 
@@ -512,6 +574,17 @@ run; release manifest and checksums generated; the release reproduces
 
 ## Changelog
 
+- **2.3** - Expanded `DOC-5` to require English documentation comments in the
+  native code documentation format with emphasis on technical meaning rather
+  than boilerplate, and added `DOC-9` to require concise inline comments for
+  non-obvious code paths, assumptions, units, invariants and numerical guards.
+- **2.2** - Added `DOC-8` to require a structure-first pass for non-trivial
+  tasks: task hierarchy, typed pipeline, intermediate contracts and boundary
+  separation before internal algorithm implementation.
+- **2.1** - Strengthened `PRIN-2` from a preference into an explicit
+  pure/stateless default for the calculation core, added `ARCH-6` for top-down
+  decomposition with explicit contracts, and added `DOC-7` to require an
+  architecture-first task-solving flow with a final validation checklist.
 - **2.0** - Restructured into ten numbered parts with stable rule ids. Merged
   the duplicated configuration sections (old 5-7), persistence (8-10), release
   (27-33) and documentation/AI (23, 24, 35, 36). Status enumerations and data
