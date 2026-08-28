@@ -34,6 +34,8 @@ module Types =
           EntranceC: float
           Correlation: GasSide.Correlation
           ShiftMode: Shift.Mode
+          ClausMode: Claus.Mode
+          ClausKinetics: Claus.KineticParameters
           MixingRule: GasProps.MixingRule
           RealGas: bool }
     type WaterSideSpec =
@@ -43,6 +45,9 @@ module Types =
           RoughnessUm: float
           BundleFactor: float
           Correlation: WaterSide.PoolBoilingCorrelation
+          /// Flow-boiling model used on the shell side. `ChenSuperposition` preserves the
+          /// historical behaviour; `KandlikarMax` is available for NBD screening.
+          FlowBoiling: WaterSide.FlowBoilingModel
           Csf: float
           /// Critical-heat-flux model used for the cell-by-cell DNBR field. Palen's bundle
           /// factor is the conservative default; the alternatives exist so the same case can
@@ -88,6 +93,7 @@ module Types =
           AssemblyTemperature: float
           ShellInsulationU: float
           Bypass: Bypass.Spec
+          SulphurCondenser: SulphurCondenser.Spec
           AllowInternalRecirculation: bool
           BypassOpenFraction: float }
     type CellResult =
@@ -530,6 +536,8 @@ module Types =
           FoulingCases: FoulingCase list
           DrumResult: Drum.Result option
           BypassResult: Bypass.Result option
+          SulphurCoupling: Sulphur.CouplingSummary option
+          SulphurCondenserResult: SulphurCondenser.Result option
           Findings: Finding list
           RiserChecks: RiserCheck list
           LineChecks: LineCheck list

@@ -114,6 +114,12 @@ module ReportText =
             (comp |> List.map (fun (s, y) -> sprintf "%A %s" s (f2 (y * 100.0))) |> String.concat "  ")
         kv sb "Massa molare miscela" (sprintf "%s kg/kmol" (f2 (GasProps.mixMolarMass comp * 1000.0)))
         kv sb "Water-gas shift" (Shift.modeName c.Gas.ShiftMode)
+        kv sb "Modello Claus" (Claus.modeName c.Gas.ClausMode)
+        if c.Gas.ClausMode = Claus.Kinetic then
+            let p = Claus.sanitizeKineticParameters c.Gas.ClausKinetics
+            kv sb "Parametri Claus cinetico"
+                (sprintf "severita' %s, tau x %s, sottopassi %d"
+                    (f3 p.SeverityFactor) (f3 p.TauFactor) p.SubSteps)
         kv sb "Portata gas" (sprintf "%s kg/s  (%s kg/h)" (f2 c.Gas.MassFlow) (f0 (c.Gas.MassFlow * 3600.0)))
         kv sb "Temperatura gas IN" (sprintf "%s °C" (f1 (kToC c.Gas.TIn)))
         kv sb "Temperatura gas OUT (media / min / max)"
@@ -124,6 +130,26 @@ module ReportText =
                                              (f2 (paToBar r.Sat.P)) (f2 (kToC r.Sat.Tsat)))
         kv sb "hfg / rho_l / rho_v" (sprintf "%s kJ/kg | %s | %s kg/m3"
                                          (f1 (r.Sat.Hfg / 1000.0)) (f1 r.Sat.RhoL) (f2 r.Sat.RhoV))
+        match r.SulphurCoupling with
+        | Some s ->
+            kv sb "Zolfo elementare nel solve"
+                (sprintf "SI - y ingresso %s %%mol" (f3 (100.0 * s.InletElementalSulphurVapour)))
+            kv sb "  dew point zolfo ingresso"
+                (match s.InletSulphurDewPoint with
+                 | Some t -> sprintf "%s °C" (f1 (kToC t))
+                 | None -> "n.d.")
+            kv sb "  condensa zolfo nel fascio"
+                (if s.CondensingCells > 0 then
+                    sprintf "SI - prima a z = %s m, frazione condensata uscita = %s %%"
+                        (f2 s.FirstCondensationZ) (f2 (100.0 * s.OutletCondensedFraction))
+                 else "NO - il profilo resta sopra il dew point")
+        | None -> ()
+        match r.SulphurCondenserResult with
+        | Some sc ->
+            kv sb "Condensatore zolfo integrato"
+                (sprintf "SI - outlet %s C, zolfo liquido %s kg/h, area richiesta %s m2"
+                    (f1 (kToC sc.OutletState.T)) (f1 (sc.CondensedSulphurMassFlow * 3600.0)) (f1 sc.AreaRequired))
+        | None -> ()
 
         para sb "  " "IN PAROLE SEMPLICI. Qui ci sono i dati di ingresso del processo: che gas passa nei tubi, quanto ne passa, a che temperatura e pressione entra, e a che pressione sta l'acqua nel corpo cilindrico. Tsat e' la temperatura a cui l'acqua bolle a quella pressione: e' un valore fisso, la caldaia lavora tutta a quella temperatura sul lato acqua. hfg e' il calore che serve per trasformare un chilo di acqua in vapore. Il fouling e' lo sporco che si deposita sulle due facce del tubo, ed e' un dato di progetto (piu' e' alto, piu' superficie serve). Water-gas shift indica se si e' tenuto conto della reazione chimica CO + H2O -> CO2 + H2 lungo il tubo: nei WHB senza catalizzatore e' congelata, cioe' non avviene."
         sb.AppendLine() |> ignore
@@ -157,6 +183,7 @@ module ReportText =
                                            (f0 (cl |> List.averageBy (fun x -> x.ReGas))))
         kv sb "Correlazione lato gas" (GasSide.correlationName c.Gas.Correlation)
         kv sb "Correlazione ebollizione" (WaterSide.poolBoilingName c.Water.Correlation)
+        kv sb "Modello ebollizione in flusso" (WaterSide.flowBoilingModelName c.Water.FlowBoiling)
 
         sb.AppendLine() |> ignore
         para sb "  " (sprintf "IN PAROLE SEMPLICI. Sono i risultati d'insieme. La POTENZA (%s MW) e' il calore che il gas cede all'acqua: e' il prodotto che l'apparecchio deve consegnare, e si ritrova tutto nel VAPORE prodotto (%s t/h). LMTD e' la differenza media di temperatura fra i due fluidi lungo tutto l'apparecchio: e' la 'spinta' che fa passare il calore. U e' il coefficiente globale di scambio: quanto calore passa per ogni metro quadrato e per ogni grado di differenza; e' l'inverso della somma di tutte le resistenze in serie. I coefficienti h sono le singole resistenze prese una a una: h del gas (il collo di bottiglia), h di irraggiamento (il calore che il gas emette come luce infrarossa, piccolo ma non nullo a 34 bar), h di ebollizione (enorme, quindi ininfluente). Reynolds dice se il gas e' in moto turbolento: sopra 10000 lo e' senz'altro, ed e' quello che si vuole perche' la turbolenza mescola e migliora lo scambio." (f2 (r.Duty / 1e6)) (f0 (r.SteamProduction * 3.6)))
@@ -336,7 +363,12 @@ module ReportText =
         hdr sb "5. Flusso termico e temperature metalliche"
         let qmax = hot |> List.maxBy (fun x -> x.QFluxOut)
         let tmax = cells |> List.maxBy (fun x -> x.TMetalIn)
-        let dnb = hot |> List.minBy (fun x -> x.DNBR)
+        let dnbReqOf (x: CellResult) = WaterSide.dnbrRequired (x.I = 0) x.InFerrule
+        let dnb = cells |> List.minBy (fun x -> x.DNBR / dnbReqOf x)
+        let dnbZone =
+            if dnb.InFerrule then "zona ferrula"
+            elif dnb.I = 0 then "prima fila"
+            else "campo fascio"
         kv sb "Flusso termico massimo (est.)" (sprintf "%s kW/m2  @ z = %s m, y = %s m (banda %d)"
                                                    (f1 (qmax.QFluxOut / 1000.0)) (f2 qmax.Z) (f3 qmax.Y) qmax.J)
         kv sb "Flusso termico massimo (int.)" (sprintf "%s kW/m2" (f1 (qmax.QFluxIn / 1000.0)))
@@ -353,8 +385,8 @@ module ReportText =
         kv sb "phi_b di Palen" (f3 (WaterSide.palenPhiB c.Tube.Otl c.Tube.Length r.AreaOut))
         kv sb "dT critico (ginocchio curva ebollizione)"
             (sprintf "%s K" (f1 (WaterSide.dTcrit c.Water.Correlation qCritTube c.Tube.Do r.Sat c.Water.RoughnessUm c.Water.Csf)))
-        kv sb "DNBR locale minimo" (sprintf "%s  @ z = %s m, y = %s m, x = %s"
-                                        (f2 dnb.DNBR) (f2 dnb.Z) (f3 dnb.Y) (f4 dnb.XOut))
+        kv sb "DNBR locale minimo" (sprintf "%s  @ z = %s m, y = %s m, x = %s (%s)"
+                                        (f2 dnb.DNBR) (f2 dnb.Z) (f3 dnb.Y) (f4 dnb.XOut) dnbZone)
 
         let tGasPk = kToC qmax.TGas
         let tMiPk = kToC qmax.TMetalIn

@@ -42,22 +42,22 @@ module Json =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.String -> v.GetString()
         | _ -> def
-    let composition (root: JsonElement) (def: GasProps.Composition) =
-        match tryPath root "gas.composizione" with
+    let compositionAt (root: JsonElement) (path: string) (def: GasProps.Composition) =
+        match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.Object ->
-            let map =
-                [ "H2", GasProps.H2; "N2", GasProps.N2; "O2", GasProps.O2
-                  "CO", GasProps.CO; "CO2", GasProps.CO2; "CH4", GasProps.CH4
-                  "H2O", GasProps.H2O; "AR", GasProps.Ar; "NH3", GasProps.NH3 ] |> Map.ofList
             let res =
                 v.EnumerateObject()
                 |> Seq.choose (fun p ->
-                    match map.TryFind(p.Name.ToUpperInvariant()) with
+                    match GasProps.tryParseSpecies p.Name with
                     | Some sp -> Some(sp, p.Value.GetDouble())
-                    | None -> None)
+                    | None ->
+                        eprintfn "ATTENZIONE: specie '%s' non riconosciuta nella composizione: ignorata." p.Name
+                        None)
                 |> List.ofSeq
             if res.IsEmpty then def else res
         | _ -> def
+    let composition (root: JsonElement) (def: GasProps.Composition) =
+        compositionAt root "gas.composizione" def
     let tryArray (root: JsonElement) (path: string) =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.Array ->

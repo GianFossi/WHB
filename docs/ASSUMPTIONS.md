@@ -28,6 +28,21 @@ This document summarizes the main engineering assumptions used by WHB.
 - Methanation and detailed reaction kinetics are not modeled.
 - The CLI supports `gas.modello_gas`: use `ideale` for ideal gas, or `realistico`/`viriale` for the currently implemented real-gas virial correction.
 - The `realistico` option is the most realistic gas model currently implemented, but it remains a limited virial correction and must be validated for high-pressure syngas service.
+- The library also exposes a standalone sulphur-process module for Claus/SRU
+  service. In the standard WHB design solve, explicit elemental sulphur
+  (`S2`/`S6`/`S8`) is coupled into the gas enthalpy balance and can condense in
+  the bundle. Generic Claus species (`H2S`/`SO2`/`COS`/`CS2`) remain
+  screening-only when `gas.modello_claus = frozen`, while
+  `gas.modello_claus = equilibrium|kinetic` closes them through a simplified
+  local Claus/hydrolysis marching model that generates elemental sulphur for the
+  same condensation framework. The `kinetic` branch uses exposed
+  `gas.claus_cinetica.*` parameters so severity can be reduced or matched to a
+  representative Claus case without changing source code.
+- A dedicated `condensatore_zolfo` module can be attached downstream of the WHB
+  or run on its own feed. It is a 1D rating/screening model: target outlet
+  temperature, assumed wall temperature, assumed coolant temperature, total
+  residence time and an assumed overall `U` are used to estimate duty, liquid
+  sulphur production, and required area.
 
 ## Thermal Basis
 

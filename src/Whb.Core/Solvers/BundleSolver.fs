@@ -78,7 +78,10 @@ module BundleSolver =
     type ShellContext =
         { BundleFactor: float
           Suppression: float
-          HConvChen: float }
+          HConvChen: float
+          HLo: float
+          GCross: float
+          X: float }
     let shellContext (case: DesignCase) (sat: Steam.SatProps) (x: float) (gCross: float) =
         let t = case.Tube
         let d = t.Do
@@ -88,13 +91,20 @@ module BundleSolver =
         let fChen = WaterSide.chenF x sat
         { BundleFactor = WaterSide.bundleFactor case.Water.BundleFactor
           Suppression = WaterSide.chenS reMax fChen
-          HConvChen = hLo * fChen }
+          HConvChen = hLo * fChen
+          HLo = hLo
+          GCross = gCross
+          X = x }
     let shellHtcWith (case: DesignCase) (sat: Steam.SatProps) (ctx: ShellContext) (qOut: float) =
         let d = case.Tube.Do
         let wc = case.Water
-        let hnb = WaterSide.hPool wc.Correlation qOut d sat wc.RoughnessUm wc.Csf
-        let hnc = WaterSide.hNaturalConvection d (max 1.0 (qOut / 5000.0)) sat
-        hnb * ctx.BundleFactor * ctx.Suppression + max ctx.HConvChen hnc
+        match wc.FlowBoiling with
+        | WaterSide.ChenSuperposition ->
+            let hnb = WaterSide.hPool wc.Correlation qOut d sat wc.RoughnessUm wc.Csf
+            let hnc = WaterSide.hNaturalConvection d (max 1.0 (qOut / 5000.0)) sat
+            hnb * ctx.BundleFactor * ctx.Suppression + max ctx.HConvChen hnc
+        | WaterSide.KandlikarMax ->
+            (WaterSide.hKandlikar ctx.HLo qOut ctx.GCross ctx.X case.Tube.Do false 1.0 sat).HTp
     let shellHtc (case: DesignCase) (sat: Steam.SatProps) (qOut: float) (x: float) (gCross: float) =
         shellHtcWith case sat (shellContext case sat x gCross) qOut
     let private solveCell
@@ -180,12 +190,41 @@ module BundleSolver =
           /// Cells whose wall-temperature fixed point was still moving at the iteration cap.
           NonConvergedCells: int
           /// Duty raised in each vertical band, integrated over the tube length [W].
-          BandDuty: float[] }
+          BandDuty: float[]
+          OutletCompositionBandClass: GasProps.Composition[,]
+          SulphurCoupling: Sulphur.CouplingSummary option }
     let solve (case: DesignCase) (bands: Bundle.Band list)
               (wLinField: float[]) (xInField: float[]) : SolveOutput =
         let t = case.Tube
         let sat = Steam.sat case.Water.DrumPressure
         let comp0 = GasProps.normalize case.Gas.Composition
+        let processActive =
+            Sulphur.hasElementalSulphur comp0
+            || (case.Gas.ClausMode <> Claus.Frozen && Claus.hasReactiveSpecies comp0)
+        let processStateFromEnthalpyAt pPa comp h =
+            if processActive then
+                Sulphur.processStateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pPa comp h
+            else
+                let (t0, compGas) = Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pPa comp h
+                let st : Sulphur.ProcessState =
+                    { T = t0
+                      VapourComposition = compGas
+                      TotalSpecificEnthalpy = h
+                      CpApprox = (GasProps.mixReal GasProps.Wilke case.Gas.RealGas compGas t0 pPa case.Gas.Z).Cp
+                      PSulphur = 0.0
+                      YElementalSulphurVapour = 0.0
+                      SulphurDewPoint = None
+                      Condensing = false
+                      CondensedAtoms = 0.0
+                      CondensedFraction = 0.0 }
+                st
+        let initSulphurState =
+            let st =
+                if processActive then
+                    Sulphur.processStateAt case.Gas.ShiftMode case.Gas.RealGas case.Gas.PIn comp0 case.Gas.TIn
+                else
+                    processStateFromEnthalpyAt case.Gas.PIn comp0 (GasProps.enthalpyAbsReal case.Gas.RealGas comp0 case.Gas.TIn case.Gas.PIn)
+            if processActive then Some st else None
         let rH2O = GasProps.molFrac comp0 GasProps.H2O
         let rCO2 = GasProps.molFrac comp0 GasProps.CO2
         let wallMuCache = Collections.Generic.Dictionary<struct (float * float), float>()
@@ -219,9 +258,13 @@ module BundleSolver =
         let mdotPerTube = case.Gas.MassFlow / float t.NTubes
 
         let cells = Array3D.zeroCreate<CellResult> nz ny nc
-        let hGas = Array2D.create ny nc (GasProps.enthalpyAbsReal case.Gas.RealGas comp0 case.Gas.TIn case.Gas.PIn)
+        let h0 =
+            match initSulphurState with
+            | Some st -> st.TotalSpecificEnthalpy
+            | None -> GasProps.enthalpyAbsReal case.Gas.RealGas comp0 case.Gas.TIn case.Gas.PIn
+        let hGas = Array2D.create ny nc h0
         let pGas = Array2D.create ny nc case.Gas.PIn
-        let compBand = Array2D.create ny nc comp0
+        let procComp = Array2D.create ny nc comp0
         let twiPrev = Array2D.create ny nc (sat.Tsat + 0.6 * (case.Gas.TIn - sat.Tsat))
 
         let steamLin = Array.zeroCreate nz
@@ -232,6 +275,8 @@ module BundleSolver =
         let mutable qualityClamped = 0
         let mutable qualityClampFirstZ = nan
         let mutable nonConvergedCells = 0
+        let mutable sulphurCondensingCells = 0
+        let mutable sulphurFirstCondensationZ = nan
         // Duty raised per vertical band: the circulation solver needs the real profile, not a
         // flat split, because the bottom bands see the hot gas and raise far more steam.
         let bandDuty = Array.zeroCreate ny
@@ -253,13 +298,18 @@ module BundleSolver =
                     Array.init nc (fun c ->
                         let (frac, fl) = clsArr.[c]
                         let inFerrule = case.Ferrule.Enabled && z < fl
-                        let tG = fst (Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pGas.[j, c] comp0 hGas.[j, c])
+                        let compIn = procComp.[j, c]
+                        let sulphurState = processStateFromEnthalpyAt pGas.[j, c] compIn hGas.[j, c]
+                        let tG = sulphurState.T
+                        let gasComp = sulphurState.VapourComposition
                         let props =
-                            GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas compBand.[j, c] tG pGas.[j, c] case.Gas.Z
-                        let r = solveCell case sat props z mdotPerTube inFerrule rH2O rCO2 x gCross twiPrev.[j, c] wallMu tubeK
-                        (frac, fl, inFerrule, props, r))
+                            GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas gasComp tG pGas.[j, c] case.Gas.Z
+                        let rH2OCell = GasProps.molFrac sulphurState.VapourComposition GasProps.H2O
+                        let rCO2Cell = GasProps.molFrac sulphurState.VapourComposition GasProps.CO2
+                        let r = solveCell case sat props z mdotPerTube inFerrule rH2OCell rCO2Cell x gCross twiPrev.[j, c] wallMu tubeK
+                        (frac, fl, inFerrule, props, sulphurState, r))
                 let dQband =
-                    res |> Array.sumBy (fun (frac, _, _, _, (q, _, _, _, _, _, _, _, _, _)) ->
+                    res |> Array.sumBy (fun (frac, _, _, _, _, (q, _, _, _, _, _, _, _, _, _)) ->
                         q * dz * b.NTubes * frac)
                 let xRaw = x + dQband / (max 1e-6 (wl * dz) * sat.Hfg)
                 if xRaw > 0.95 then
@@ -283,7 +333,7 @@ module BundleSolver =
                         WaterSide.chfLocal model t.Do (gCross / rhoH) xOut 1.0 phiB qCritTube sat
 
                 for c in 0 .. nc - 1 do
-                    let (frac, fl, inFerrule, props, r) = res.[c]
+                    let (frac, fl, inFerrule, props, stIn, r) = res.[c]
                     let (qlin, gr, hb, twi, tmi, tmo, rBoil, rFoulOut, rMetal, cellOk) = r
                     if not cellOk then nonConvergedCells <- nonConvergedCells + 1
                     twiPrev.[j, c] <- twi
@@ -320,9 +370,6 @@ module BundleSolver =
                           QCritLocal = qCritLocal
                           DNBR = (if qOut > 0.0 then qCritLocal / qOut else 999.0)
                           InFerrule = inFerrule }
-                    hGas.[j, c] <- hGas.[j, c] - qlin * dz / mdotPerTube
-                    compBand.[j, c] <-
-                        Shift.compositionFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pGas.[j, c] comp0 hGas.[j, c]
                     let f = GasSide.darcyFriction gr.Re (t.Roughness / bore)
                     let dpF = GasSide.dpFrictionPerM f bore props.Rho gr.Velocity * dz
                     let dpLoc =
@@ -331,7 +378,21 @@ module BundleSolver =
                             GasSide.dpLocal ((1.0 - (case.Ferrule.Bore / t.Di) ** 2.0) ** 2.0) props.Rho gr.Velocity
                         elif i = nz - 1 then GasSide.dpLocal 1.0 props.Rho gr.Velocity
                         else 0.0
-                    pGas.[j, c] <- pGas.[j, c] - dpF - dpLoc
+                    let hOut = hGas.[j, c] - qlin * dz / mdotPerTube
+                    let pOut = pGas.[j, c] - dpF - dpLoc
+                    let areaFlow = Math.PI * bore * bore / 4.0
+                    let tau = dz * areaFlow * props.Rho / max 1e-9 mdotPerTube
+                    let tRef = 0.5 * (stIn.T + tmo)
+                    let compOut =
+                        if case.Gas.ClausMode = Claus.Frozen then procComp.[j, c]
+                        else Claus.advanceWith case.Gas.ClausKinetics case.Gas.ClausMode tRef tau procComp.[j, c]
+                    hGas.[j, c] <- hOut
+                    pGas.[j, c] <- pOut
+                    procComp.[j, c] <- compOut
+                    let stOut = processStateFromEnthalpyAt pOut compOut hOut
+                    if processActive && stOut.Condensing then
+                        sulphurCondensingCells <- sulphurCondensingCells + 1
+                        if Double.IsNaN sulphurFirstCondensationZ then sulphurFirstCondensationZ <- z
 
                 x <- xOut
                 dutySlice <- dutySlice + dQband
@@ -397,8 +458,16 @@ module BundleSolver =
                   SteamCum = steamCum
                   DutyCum = dutyCum }
 
+        let outletStates =
+            if processActive then
+                Some(Array2D.init ny nc (fun j c ->
+                    processStateFromEnthalpyAt pGas.[j, c] procComp.[j, c] hGas.[j, c]))
+            else None
         let tOut =
-            Array2D.init ny nc (fun j c -> fst (Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pGas.[j, c] comp0 hGas.[j, c]))
+            match outletStates with
+            | Some states -> Array2D.init ny nc (fun j c -> states.[j, c].T)
+            | None ->
+                Array2D.init ny nc (fun j c -> fst (Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pGas.[j, c] procComp.[j, c] hGas.[j, c]))
         // Momentum term. The gas is cooled at nearly constant pressure, so it roughly doubles
         // in density and halves in velocity along the tube: decelerating flow recovers
         // pressure. Summed cell by cell the term telescopes to the inlet and outlet states,
@@ -410,7 +479,10 @@ module BundleSolver =
         let dpMomentum =
             Array2D.init ny nc (fun j c ->
                 let rhoOut =
-                    (GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas compBand.[j, c]
+                    (GasProps.mixReal case.Gas.MixingRule case.Gas.RealGas
+                        (match outletStates with
+                         | Some states -> states.[j, c].VapourComposition
+                         | None -> procComp.[j, c])
                         tOut.[j, c] pGas.[j, c] case.Gas.Z).Rho
                 gTube * gTube * (1.0 / rhoOut - 1.0 / rhoIn))
         // Tube-count weighted: bands do not carry the same number of tubes, so a plain mean
@@ -422,6 +494,28 @@ module BundleSolver =
                 let w = bandArr.[j].NTubes * fst clsArr.[c]
                 dpAcc <- dpAcc + w * (case.Gas.PIn - pGas.[j, c] + dpMomentum.[j, c])
                 dpWeight <- dpWeight + w
+        let sulphurCoupling =
+            match outletStates, initSulphurState with
+            | Some states, Some inlet ->
+                let mutable yAcc = 0.0
+                let mutable cfAcc = 0.0
+                let mutable wtAcc = 0.0
+                for j in 0 .. ny - 1 do
+                    for c in 0 .. nc - 1 do
+                        let w = bandArr.[j].NTubes * fst clsArr.[c]
+                        let st = states.[j, c]
+                        yAcc <- yAcc + w * st.YElementalSulphurVapour
+                        cfAcc <- cfAcc + w * st.CondensedFraction
+                        wtAcc <- wtAcc + w
+                let summary : Sulphur.CouplingSummary =
+                    { InletElementalSulphurVapour = inlet.YElementalSulphurVapour
+                      InletSulphurDewPoint = inlet.SulphurDewPoint
+                      CondensingCells = sulphurCondensingCells
+                      FirstCondensationZ = sulphurFirstCondensationZ
+                      OutletCondensedFraction = cfAcc / max 1e-12 wtAcc
+                      OutletElementalSulphurVapour = yAcc / max 1e-12 wtAcc }
+                Some summary
+            | _ -> None
         { Cells = cells
           Axial = List.ofSeq axial
           Duty = dutyCum
@@ -436,8 +530,6 @@ module BundleSolver =
           QualityClamped = qualityClamped
           QualityClampFirstZ = qualityClampFirstZ
           NonConvergedCells = nonConvergedCells
-          BandDuty = bandDuty }
-
-
-
-
+          BandDuty = bandDuty
+          OutletCompositionBandClass = procComp
+          SulphurCoupling = sulphurCoupling }

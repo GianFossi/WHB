@@ -32,6 +32,16 @@ This document lists important limitations and simplifications to keep visible du
 - Water-gas shift behavior is simplified to selected operating modes.
 - Real-gas behavior is limited and should be validated for high-pressure syngas conditions.
 - The `realistico` gas option currently means virial real-gas correction, not a full equation-of-state package.
+- `gas.modello_claus = equilibrium|kinetic` uses a bounded simplified closure
+  for COS/CS2 hydrolysis and Claus conversion. It is intentionally a surrogate
+  process model, not a rigorous reaction-equilibrium package and not a
+  catalyst-specific kinetic model. Exposed `gas.claus_cinetica.*` parameters
+  make the kinetic branch tunable, but tuning remains a calibration exercise on
+  plant/vendor data, not a substitute for a validated Claus reactor model.
+- The dedicated `condensatore_zolfo` module is also a surrogate 1D unit model.
+  It rates duty, condensation and required area from a target outlet
+  temperature plus assumed wall/coolant temperatures and assumed `U`; it is not
+  a detailed exchanger geometry design or liquid-film hydraulics model.
 
 ## Mechanical And Vibration Simplifications
 
@@ -52,6 +62,9 @@ This document lists important limitations and simplifications to keep visible du
   with the same mass flow per tube and ends at a slightly different outlet pressure,
   where physically the tubes share one pressure drop and redistribute. The reported
   gas pressure drop is a tube-count weighted mean over the bands.
+- Elemental sulphur condensation is handled as a 1D equilibrium/enthalpy effect
+  with no explicit liquid-film hydraulics, holdup, re-entrainment or draining
+  model inside the bundle.
 - Feedwater temperature drives the reported net steam flow and the downcomer
   flashing margin, but the bundle evaporation rate is still quoted on the saturated
   basis, which is the basis the reference datasheet uses.

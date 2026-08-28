@@ -12,6 +12,22 @@ open Whb.Core.Constants
 open Whb.Core.Types
 open Whb.Core.Options
 open Whb.Cli
+
+let private tryParseFloat (text: string) =
+    match Double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture) with
+    | true, value -> Some value
+    | _ -> None
+
+let private floatGrid (a: float) (b: float) (step: float) =
+    let dx = abs step
+    if dx <= 0.0 then invalidArg "step" "Step must be positive."
+    let lo = min a b
+    let hi = max a b
+    [ let mutable x = lo
+      while x <= hi + 1e-9 * dx do
+          yield x
+          x <- x + dx ]
+
 let private gasCorrelation (name: string) =
     match name.ToLowerInvariant() with
     | "dittus-boelter" | "dittusboelter" | "db" -> GasSide.DittusBoelter
@@ -27,6 +43,10 @@ let private boilCorrelation (name: string) =
     | "gorenflo" -> WaterSide.Gorenflo
     | "cornwell" | "cornwell-houston" -> WaterSide.CornwellHouston
     | _ -> WaterSide.Mostinski
+let private flowBoilingModel (name: string) =
+    match name.Trim().ToLowerInvariant() with
+    | "kandlikar" -> WaterSide.KandlikarMax
+    | _ -> WaterSide.ChenSuperposition
 /// CHF model used for the cell-by-cell DNBR field. A bare number is read as a practical
 /// design limit in kW/m2, which is how the criterion is usually written on a datasheet.
 let private chfModel (name: string) (fallback: WaterSide.ChfModel) =
@@ -57,6 +77,67 @@ let private gasModelUsesRealGas (name: string) (fallback: bool) =
     | "ideale" | "ideal" | "ideal-gas" | "ideal gas" -> false
     | "viriale" | "virial" | "reale" | "real" | "real-gas" | "real gas" | "realistico" | "realistic" -> true
     | _ -> fallback
+let private clausMode (name: string) =
+    match name.Trim().ToLowerInvariant() with
+    | "equilibrium" | "equilibrio" -> Claus.Equilibrium
+    | "kinetic" | "cinetico" | "cinetica" -> Claus.Kinetic
+    | _ -> Claus.Frozen
+let private clausKineticsAt (r: JsonElement) (prefix: string) (fallback: Claus.KineticParameters) =
+    let d = Claus.sanitizeKineticParameters fallback
+    let path key = prefix + "." + key
+    Claus.sanitizeKineticParameters
+        { SeverityFactor = Json.f r (path "fattore_severita") d.SeverityFactor
+          TauFactor = Json.f r (path "fattore_tau") d.TauFactor
+          SubSteps = Json.i r (path "sottopassi") d.SubSteps
+          Claus =
+            { PreExponential = Json.f r (path "claus_a_1s") d.Claus.PreExponential
+              ActivationEnergy = Json.f r (path "claus_ea_kjmol") (d.Claus.ActivationEnergy / 1000.0) * 1000.0 }
+          CosHydrolysis =
+            { PreExponential = Json.f r (path "cos_a_1s") d.CosHydrolysis.PreExponential
+              ActivationEnergy = Json.f r (path "cos_ea_kjmol") (d.CosHydrolysis.ActivationEnergy / 1000.0) * 1000.0 }
+          Cs2Hydrolysis =
+            { PreExponential = Json.f r (path "cs2_a_1s") d.Cs2Hydrolysis.PreExponential
+              ActivationEnergy = Json.f r (path "cs2_ea_kjmol") (d.Cs2Hydrolysis.ActivationEnergy / 1000.0) * 1000.0 } }
+let private sulphurFeedOfGas (g: GasStream) : SulphurCondenser.Feed =
+    { Composition = g.Composition
+      MassFlow = g.MassFlow
+      TIn = g.TIn
+      PIn = g.PIn
+      Z = g.Z
+      ShiftMode = g.ShiftMode
+      ClausMode = g.ClausMode
+      ClausKinetics = g.ClausKinetics
+      MixingRule = g.MixingRule
+      RealGas = g.RealGas }
+let private loadGasStream (r: JsonElement) (prefix: string) (fallback: GasStream) =
+    let path key = prefix + "." + key
+    { Composition = Json.compositionAt r (path "composizione") fallback.Composition
+      MassFlow = Json.f r (path "portata_kgs") fallback.MassFlow * Json.f r (path "maggiorazione") 1.0
+      TIn = cToK (Json.f r (path "t_ingresso_C") (kToC fallback.TIn))
+      PIn = barToPa (Json.f r (path "p_ingresso_bara") (paToBar fallback.PIn))
+      Z = Json.f r (path "z") fallback.Z
+      FoulingIn = Json.f r (path "fouling_m2KW") fallback.FoulingIn
+      EpsWall = Json.f r (path "emissivita_parete") fallback.EpsWall
+      Radiation = Json.b r (path "irraggiamento") fallback.Radiation
+      EntranceC = Json.f r (path "coeff_imbocco") fallback.EntranceC
+      Correlation = gasCorrelation (Json.s r (path "correlazione") "gnielinski")
+      ShiftMode =
+        match (Json.s r (path "shift") "congelata").ToLowerInvariant() with
+        | "equilibrio" -> Shift.EquilibriumAbove(cToK (Json.f r (path "shift_t_freeze_C") 700.0))
+        | "parziale" ->
+            Shift.FractionalApproach(Json.f r (path "shift_frazione") 0.3,
+                                     cToK (Json.f r (path "shift_t_freeze_C") 700.0))
+        | _ -> Shift.Frozen
+      ClausMode = clausMode (Json.s r (path "modello_claus") "frozen")
+      ClausKinetics = clausKineticsAt r (path "claus_cinetica") fallback.ClausKinetics
+      MixingRule =
+        match (Json.s r (path "miscelazione") "wilke").ToLowerInvariant() with
+        | "molare" | "molar" -> GasProps.MolarAverage
+        | _ -> GasProps.Wilke
+      RealGas =
+        gasModelUsesRealGas
+            (Json.s r (path "modello_gas") "")
+            (Json.b r (path "gas_reale") fallback.RealGas) }
 let private insulK (name: string) =
     match name.ToLowerInvariant() with
     | "fibra" | "ceramic" -> Materials.Refractory.ceramicFibre
@@ -94,33 +175,7 @@ let loadCase (path: string) : DesignCase =
           SleeveK = (Materials.byName (Json.s r "ferrula.manicotto_materiale" "800")).K
           InsulK = insulK (Json.s r "ferrula.isolante" "saffil") }
     let g = d.Gas
-    let margin = Json.f r "gas.maggiorazione" 1.0
-    let gas =
-        { Composition = Json.composition r g.Composition
-          MassFlow = Json.f r "gas.portata_kgs" g.MassFlow * margin
-          TIn = cToK (Json.f r "gas.t_ingresso_C" (kToC g.TIn))
-          PIn = barToPa (Json.f r "gas.p_ingresso_bara" (paToBar g.PIn))
-          Z = Json.f r "gas.z" g.Z
-          FoulingIn = Json.f r "gas.fouling_m2KW" g.FoulingIn
-          EpsWall = Json.f r "gas.emissivita_parete" g.EpsWall
-          Radiation = Json.b r "gas.irraggiamento" g.Radiation
-          EntranceC = Json.f r "gas.coeff_imbocco" g.EntranceC
-          Correlation = gasCorrelation (Json.s r "gas.correlazione" "gnielinski")
-          ShiftMode =
-            match (Json.s r "gas.shift" "congelata").ToLowerInvariant() with
-            | "equilibrio" -> Shift.EquilibriumAbove(cToK (Json.f r "gas.shift_t_freeze_C" 700.0))
-            | "parziale" ->
-                Shift.FractionalApproach(Json.f r "gas.shift_frazione" 0.3,
-                                         cToK (Json.f r "gas.shift_t_freeze_C" 700.0))
-            | _ -> Shift.Frozen
-          MixingRule =
-            match (Json.s r "gas.miscelazione" "wilke").ToLowerInvariant() with
-            | "molare" | "molar" -> GasProps.MolarAverage
-            | _ -> GasProps.Wilke
-          RealGas =
-            gasModelUsesRealGas
-                (Json.s r "gas.modello_gas" "")
-                (Json.b r "gas.gas_reale" g.RealGas) }
+    let gas = loadGasStream r "gas" g
     let wt = d.Water
     let water =
         { DrumPressure = barToPa (Json.f r "vapore.pressione_bara" (paToBar wt.DrumPressure))
@@ -128,6 +183,7 @@ let loadCase (path: string) : DesignCase =
           RoughnessUm = Json.f r "vapore.rugosita_um" wt.RoughnessUm
           BundleFactor = Json.f r "vapore.fattore_fascio" wt.BundleFactor
           Correlation = boilCorrelation (Json.s r "vapore.correlazione" "mostinski")
+          FlowBoiling = flowBoilingModel (Json.s r "vapore.ebollizione_flusso" "chen")
           Csf = Json.f r "vapore.csf" wt.Csf
           ChfModel = chfModel (Json.s r "vapore.modello_chf" "") wt.ChfModel
           TFeed = cToK (Json.f r "vapore.t_alimento_C" (kToC wt.TFeed)) }
@@ -166,6 +222,31 @@ let loadCase (path: string) : DesignCase =
                    if v >= 0.0 then Some(v * 100.0) else None) }
           VoidModel = voidModel (Json.s r "circuito.modello_vuoto" "zuber")
           FrictionModel = frictionModel (Json.s r "circuito.modello_attrito" "friedel") }
+    let sc0 : SulphurCondenser.Spec = d.SulphurCondenser
+    let scGas0 =
+        { gas with
+            Composition = sc0.Feed.Composition
+            MassFlow = sc0.Feed.MassFlow
+            TIn = sc0.Feed.TIn
+            PIn = sc0.Feed.PIn
+            Z = sc0.Feed.Z
+            ShiftMode = sc0.Feed.ShiftMode
+            ClausMode = sc0.Feed.ClausMode
+            ClausKinetics = sc0.Feed.ClausKinetics
+            MixingRule = sc0.Feed.MixingRule
+            RealGas = sc0.Feed.RealGas }
+    let scGas = loadGasStream r "condensatore_zolfo.gas_ingresso" scGas0
+    let sulphurCondenser : SulphurCondenser.Spec =
+        { Enabled = Json.b r "condensatore_zolfo.presente" sc0.Enabled
+          UseWhbOutlet = Json.b r "condensatore_zolfo.usa_uscita_whb" sc0.UseWhbOutlet
+          Sections = Json.i r "condensatore_zolfo.sezioni" sc0.Sections
+          ResidenceTime = Json.f r "condensatore_zolfo.tempo_residenza_s" sc0.ResidenceTime
+          DpTotal = Json.f r "condensatore_zolfo.dp_mbar" (sc0.DpTotal / 100.0) * 100.0
+          TOutTarget = cToK (Json.f r "condensatore_zolfo.t_uscita_target_C" (kToC sc0.TOutTarget))
+          TWall = cToK (Json.f r "condensatore_zolfo.t_parete_C" (kToC sc0.TWall))
+          TCoolant = cToK (Json.f r "condensatore_zolfo.t_refrigerante_C" (kToC sc0.TCoolant))
+          UAssumed = Json.f r "condensatore_zolfo.u_assunto_Wm2K" sc0.UAssumed
+          Feed = sulphurFeedOfGas scGas }
     { Name = Json.s r "nome" d.Name
       Tube = tube
       Ferrule = ferrule
@@ -228,6 +309,7 @@ let loadCase (path: string) : DesignCase =
           TMixMax = cToK (Json.f r "bypass.t_miscelata_max_C" (kToC d.Bypass.TMixMax))
           MinPurgeVel = Json.f r "bypass.v_lavaggio_min_ms" d.Bypass.MinPurgeVel
           MaxRhoV2Valve = Json.f r "bypass.rhov2_max_valvola" d.Bypass.MaxRhoV2Valve }
+      SulphurCondenser = sulphurCondenser
       AllowInternalRecirculation = Json.b r "ricircolo_interno" d.AllowInternalRecirculation
       BypassOpenFraction = Json.f r "bypass_frazione_aperta" d.BypassOpenFraction }
 let template = """{
@@ -301,6 +383,18 @@ let template = """{
     "p_ingresso_bara": 34.74,
     "z": 1.0,
     "modello_gas": "realistico",
+    "modello_claus": "frozen",
+    "claus_cinetica": {
+      "fattore_severita": 0.15,
+      "fattore_tau": 0.35,
+      "sottopassi": 8,
+      "claus_a_1s": 500000.0,
+      "claus_ea_kjmol": 60.0,
+      "cos_a_1s": 200000.0,
+      "cos_ea_kjmol": 70.0,
+      "cs2_a_1s": 300000.0,
+      "cs2_ea_kjmol": 90.0
+    },
     "fouling_m2KW": 0.00050,
     "emissivita_parete": 0.85,
     "irraggiamento": true,
@@ -319,8 +413,48 @@ let template = """{
     "rugosita_um": 1.0,
     "fattore_fascio": 1.5,
     "correlazione": "mostinski",
+    "ebollizione_flusso": "chen",
+    "modello_chf": "palen",
     "csf": 0.013,
     "t_alimento_C": 250.0
+  },
+
+  "condensatore_zolfo": {
+    "presente": false,
+    "usa_uscita_whb": true,
+    "sezioni": 24,
+    "tempo_residenza_s": 1.0,
+    "dp_mbar": 20.0,
+    "t_uscita_target_C": 145.0,
+    "t_parete_C": 140.0,
+    "t_refrigerante_C": 135.0,
+    "u_assunto_Wm2K": 60.0,
+    "gas_ingresso": {
+      "composizione": { "N2": 0.70, "H2O": 0.10, "H2S": 0.12, "SO2": 0.04, "S2": 0.04 },
+      "portata_kgs": 10.0,
+      "maggiorazione": 1.0,
+      "t_ingresso_C": 220.0,
+      "p_ingresso_bara": 1.7,
+      "z": 1.0,
+      "modello_gas": "realistico",
+      "modello_claus": "kinetic",
+      "claus_cinetica": {
+        "fattore_severita": 0.15,
+        "fattore_tau": 0.35,
+        "sottopassi": 8,
+        "claus_a_1s": 500000.0,
+        "claus_ea_kjmol": 60.0,
+        "cos_a_1s": 200000.0,
+        "cos_ea_kjmol": 70.0,
+        "cs2_a_1s": 300000.0,
+        "cs2_ea_kjmol": 90.0
+      },
+      "miscelazione": "wilke",
+      "gas_reale": true,
+      "shift": "congelata",
+      "shift_t_freeze_C": 700.0,
+      "shift_frazione": 0.3
+    }
   },
 
   "circuito": {
@@ -638,6 +772,12 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
     File.WriteAllText(Path.Combine(outDir, "maldistribuzione.txt"), Report.maldistributionText r)
     File.WriteAllText(Path.Combine(outDir, "vibrazioni.txt"), Report.vibrationText r)
     File.WriteAllText(Path.Combine(outDir, "dimensionamento.txt"), Report.sizingText r)
+    match r.SulphurCondenserResult with
+    | Some sc ->
+        File.WriteAllText(Path.Combine(outDir, "sulphur_condenser.txt"), Report.sulphurCondenserText sc)
+        File.WriteAllText(Path.Combine(outDir, "sulphur_condenser_profile.csv"), Report.sulphurCondenserCsv sc)
+        logger "Sulphur-condenser integration reports written"
+    | None -> ()
     if options.Reporting.GenerateHtmlReport then
         File.WriteAllText(Path.Combine(outDir, "report.html"), HtmlReport.build r)
         logger "Full HTML report written"
@@ -648,6 +788,48 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
     printfn "%s" pdsText
     printfn "Calcolo completato in %.1f s. File scritti in: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
     logger (sprintf "Run completed in %.1f s; output folder: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir))
+    0
+
+let runSulphurCondenserCase (options: Options.ProjectOptions) (casePath: string option) (case: DesignCase) (outDir: string) =
+    Directory.CreateDirectory outDir |> ignore
+    Directory.CreateDirectory options.Folders.TempFolder |> ignore
+    let logger = PhaseLogger.create options
+    Preflight.run options casePath outDir logger
+    let sw = Diagnostics.Stopwatch.StartNew()
+    let currentTask = ref "Starting sulphur-condenser run"
+    logger "Sulphur-condenser run started"
+    let scSpec = { case.SulphurCondenser with Enabled = true }
+    let caseWithSc = { case with SulphurCondenser = scSpec }
+    let result =
+        if scSpec.UseWhbOutlet then
+            let runSettings : Design.RunSettings =
+                { BypassMapMode = options.Calculation.BypassMapMode
+                  BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
+                  GasPropertyCache = options.Calculation.GasPropertyCache
+                  CorrelationValidityWarnings = options.Calculation.CorrelationValidityWarnings
+                  Parallelism = max 1 options.Calculation.Parallelism }
+            currentTask.Value <- "Running base WHB calculation for sulphur-condenser inlet"
+            let design =
+                Progress.runWithStatusDynamic
+                    (fun () -> currentTask.Value)
+                    25.0
+                    (fun () -> Design.runWithSettingsAndProgress runSettings (PhaseLogger.phase logger currentTask) caseWithSc)
+            match design.SulphurCondenserResult with
+            | Some sc -> sc
+            | None -> failwith "Sulphur-condenser integration did not produce a result."
+        else
+            currentTask.Value <- "Running dedicated sulphur-condenser calculation"
+            Progress.runWithStatusDynamic
+                (fun () -> currentTask.Value)
+                10.0
+                (fun () -> SulphurCondenser.solve scSpec)
+    File.WriteAllText(Path.Combine(outDir, "sulphur_condenser.txt"), Report.sulphurCondenserText result)
+    File.WriteAllText(Path.Combine(outDir, "sulphur_condenser_profile.csv"), Report.sulphurCondenserCsv result)
+    printfn "%s" (Report.sulphurCondenserText result)
+    printfn "Sulphur-condenser calculation completed in %.1f s. Files written to: %s"
+        sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
+    logger (sprintf "Sulphur-condenser run completed in %.1f s; output folder: %s"
+                sw.Elapsed.TotalSeconds (Path.GetFullPath outDir))
     0
 
 let sizingOnly (options: Options.ProjectOptions) (case: DesignCase) (outDir: string) =
@@ -775,6 +957,44 @@ let githubPush optionsPath =
         eprintfn "GitHub transfer failed: %s" err
         3
 
+let private writeSulphurTable (path: string) (pressureBara: float) (sAtoms: float) (inertMols: float)
+                              (tMinC: float) (tMaxC: float) (stepC: float) =
+    let pPa = barToPa pressureBara
+    let sb = Text.StringBuilder()
+    sb.AppendLine("T[C];p_sat_total[Pa];p_sulphur_dry[Pa];p_sulphur_eq[Pa];y_sulphur_eq[-];mean_atomicity_eq[-];nS2_eq[mol];nS6_eq[mol];nS8_eq[mol];condensing[-];condensed_atoms[mol];condensed_fraction[-];mu_liq[Pa.s]") |> ignore
+    for tC in floatGrid tMinC tMaxC stepC do
+        let tK = cToK tC
+        let dry = Sulphur.speciate tK pPa sAtoms inertMols
+        let cond = Sulphur.condenserState tK pPa sAtoms inertMols
+        let vap = cond.Vapour
+        let values =
+            [ tC
+              Sulphur.pSatTotal tK
+              dry.PS2 + dry.PS6 + dry.PS8
+              cond.PSulphur
+              vap.YSulphur
+              vap.MeanAtomicity
+              vap.NS2
+              vap.NS6
+              vap.NS8
+              (if cond.Condensing then 1.0 else 0.0)
+              cond.NCondensed
+              cond.CondensedFraction
+              Sulphur.muLiquid tK ]
+            |> List.map (fun v -> v.ToString("G6", CultureInfo.InvariantCulture))
+        sb.AppendLine(String.Join(";", values)) |> ignore
+    let dir = Path.GetDirectoryName(Path.GetFullPath path)
+    if not (String.IsNullOrWhiteSpace dir) then Directory.CreateDirectory dir |> ignore
+    File.WriteAllText(path, sb.ToString())
+    let hotT = max tMinC tMaxC
+    let hot = Sulphur.speciate (cToK hotT) pPa sAtoms inertMols
+    let pSulphurHot = hot.PS2 + hot.PS6 + hot.PS8
+    let dewC = kToC (Sulphur.dewPoint pSulphurHot)
+    printfn "Tabella zolfo %g-%g C (passo %g C) scritta in %s" (min tMinC tMaxC) (max tMinC tMaxC) stepC (Path.GetFullPath path)
+    printfn "  p = %.3f bar(a), S-atomi = %.6g mol, inerti = %.6g mol" pressureBara sAtoms inertMols
+    printfn "  Hot-end dry sulphur partial pressure = %.3f Pa, dew point = %.1f C" pSulphurHot dewC
+    0
+
 [<EntryPoint>]
 let main argv =
     let args = List.ofArray argv
@@ -786,6 +1006,10 @@ let main argv =
         printfn "  whb --template [file.json]"
         printfn "  whb --options-template [file.json]"
         printfn "  whb --selftest"
+        printfn "  whb --steamtable [file.csv] [--tmin <C>] [--tmax <C>] [--step <C>]"
+        printfn "  whb --sulphur [file.csv] [--pressure-bara <bar>] [--s-atoms-mols <mol>] [--inert-mols <mol>]"
+        printfn "                 [--tmin <C>] [--tmax <C>] [--step <C>]"
+        printfn "  whb --sulphur-condenser [case.json] [--out <folder>]"
         printfn "  whb --loads [case.json] [--out <folder>]"
         printfn "  whb --sizing [case.json] [--out <folder>]"
         printfn "  whb --optimize [case.json] [--out <folder>]"
@@ -836,6 +1060,27 @@ let main argv =
         printfn "  --selftest              Check the installed correlations and property"
         printfn "                          functions against published reference values."
         printfn "                          Writes nothing; exits non-zero on a mismatch."
+        printfn ""
+        printfn "  --steamtable [file.csv] Write a saturation table from tmin to tmax."
+        printfn "                          Default file name: steam_saturation_table.csv"
+        printfn "                          Default range: 20 to 310 degC every 10 degC."
+        printfn ""
+        printfn "  --sulphur [file.csv]    Write a standalone sulphur-process sweep:"
+        printfn "                          S2/S6/S8 equilibrium, total sulphur saturation"
+        printfn "                          pressure, onset of condensation and condensed"
+        printfn "                          fraction against temperature."
+        printfn "                          Default file name: sulphur_table.csv"
+        printfn "                          Defaults: 1.7 bar(a), 8 mol S-atoms, 100 mol"
+        printfn "                          inerts, 120 to 350 degC every 10 degC."
+        printfn ""
+        printfn "  --sulphur-condenser     Dedicated Claus sulphur-condenser run."
+        printfn "                          Reads the condensatore_zolfo section of the case"
+        printfn "                          file. If usa_uscita_whb = true, it first solves"
+        printfn "                          the base WHB and then feeds the solved mixed"
+        printfn "                          outlet gas into the dedicated condenser module."
+        printfn "                          Otherwise it runs on condensatore_zolfo.gas_ingresso"
+        printfn "                          only. Writes sulphur_condenser.txt and"
+        printfn "                          sulphur_condenser_profile.csv."
         printfn ""
         printfn "  --template [file.json]  Write a commented case template."
         printfn "                          Default file name: case.json"
@@ -931,6 +1176,10 @@ let main argv =
         printfn "  dimensionamento.txt        Sizing sheet (--sizing, and normal runs)."
         printfn "  carichi.txt / carichi.csv  Partial-load curves (--loads)."
         printfn "  ottimizzazione.txt         Constrained search result (--optimize)."
+        printfn "  sulphur_table.csv          Standalone sulphur sweep (--sulphur)."
+        printfn "  sulphur_condenser.txt      Dedicated Claus sulphur-condenser report."
+        printfn "  sulphur_condenser_profile.csv"
+        printfn "                             Axial profile for the dedicated sulphur condenser."
         printfn ""
         printfn "%s" rule
         printfn "EXIT CODES"
@@ -952,6 +1201,8 @@ let main argv =
         printfn "  whb --loads my-case.json               Partial-load curves."
         printfn "  whb --optimize my-case.json            Constrained search."
         printfn "  whb --selftest                         Verify the installation."
+        printfn "  whb --sulphur sulphur.csv --pressure-bara 1.7 --s-atoms-mols 8 --inert-mols 100"
+        printfn "  whb --sulphur-condenser claus-case.json --out results/condenser"
         printfn ""
         printfn "This software is a design aid. It is not a certified pressure-vessel or"
         printfn "boiler-code tool and does not replace code calculations or vendor"
@@ -981,6 +1232,58 @@ let main argv =
             printfn "Template written to %s" (Path.GetFullPath f)
             0
         | "--selftest" :: _ -> selfTest ()
+        | "--steamtable" :: rest ->
+            let f = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "steam_saturation_table.csv"
+            let num name def =
+                match getOpt name "" with
+                | "" -> def
+                | s ->
+                    match tryParseFloat s with
+                    | Some v -> v
+                    | _ -> def
+            let tMin = num "--tmin" 20.0
+            let tMax = num "--tmax" 310.0
+            let step = num "--step" 10.0
+            let table = Steam.saturationTable tMin tMax step
+            let sb = Text.StringBuilder()
+            sb.AppendLine("T[C];Psat[bara];rhoL[kg/m3];rhoV[kg/m3];hL[kJ/kg];hV[kJ/kg];hfg[kJ/kg];cpL[kJ/kgK];cpV[kJ/kgK];muL[uPa.s];muV[uPa.s];kL[W/mK];kV[W/mK];sigma[mN/m];PrL[-];PrV[-]") |> ignore
+            for s in table do
+                sb.AppendLine(
+                    String.Join(";",
+                        [ kToC s.Tsat; paToBar s.P; s.RhoL; s.RhoV
+                          s.HL / 1e3; s.HV / 1e3; s.Hfg / 1e3
+                          s.CpL / 1e3; s.CpV / 1e3
+                          s.MuL * 1e6; s.MuV * 1e6; s.KL; s.KV
+                          s.Sigma * 1e3; s.PrL; s.PrV ]
+                        |> List.map (fun v -> v.ToString("G6", CultureInfo.InvariantCulture)))) |> ignore
+            let dir = Path.GetDirectoryName(Path.GetFullPath f)
+            if not (String.IsNullOrWhiteSpace dir) then Directory.CreateDirectory dir |> ignore
+            File.WriteAllText(f, sb.ToString())
+            printfn "Tabella di saturazione %g-%g C (passo %g C) scritta in %s" tMin tMax step (Path.GetFullPath f)
+            0
+        | "--sulphur" :: rest ->
+            let f = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "sulphur_table.csv"
+            let num name def =
+                match getOpt name "" with
+                | "" -> def
+                | s ->
+                    match tryParseFloat s with
+                    | Some v -> v
+                    | _ -> def
+            let pressureBara = num "--pressure-bara" 1.7
+            let sAtoms = num "--s-atoms-mols" 8.0
+            let inertMols = num "--inert-mols" 100.0
+            let tMin = num "--tmin" 120.0
+            let tMax = num "--tmax" 350.0
+            let step = num "--step" 10.0
+            writeSulphurTable f pressureBara sAtoms inertMols tMin tMax step
+        | "--sulphur-condenser" :: rest ->
+            match rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath) with
+            | f :: _ when File.Exists f -> runSulphurCondenserCase projectOptions (Some f) (loadCase f) outDir
+            | f :: _ when not (f.StartsWith("--")) ->
+                    eprintfn "Case file not found: %s" f
+                    raise (FileNotFoundException("Case file not found", f))
+            | _ -> runSulphurCondenserCase projectOptions None Defaults.referenceCase outDir
         | "--options-template" :: rest ->
             let f = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "whb.options.json"
             writeDefaultOptions f

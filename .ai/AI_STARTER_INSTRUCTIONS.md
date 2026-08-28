@@ -123,3 +123,5 @@ tool-discovery pointer or engineering documentation.
   `net10.0`, SDK pinned in `global.json`, CI moved to `10.0.x`. 66/66 tests pass
   and `--selftest` output is byte-identical to the `net8.0` build of the same
   source.
+- **2026-08-28** - All AI instruction files consolidated under `.ai/`; this
+  file moved from `docs/`. Stale BismarckGame copies removed from `.ai/`.

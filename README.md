@@ -1,7 +1,7 @@
 # whb
 
 Thermal, hydraulic and diagnostic calculations for fire-tube Waste Heat Boilers
-(WHB) / Process Gas Coolers (PGC), written in F# for .NET 8.
+(WHB) / Process Gas Coolers (PGC), written in F# for .NET 10.
 
 The model is intended for engineering study of WHB units where process gas flows
 inside tubes and boiling water/steam circulates naturally on the shell side with
@@ -18,7 +18,7 @@ an elevated steam drum.
 - [Validation and regression benchmarks](docs/VALIDATION.md)
 - [Work list and backlog](TODO.md)
 - [Detailed correlation and issue notes](DOC_correlazioni_e_problematiche.md)
-- [AI assistant memory and modification rules](AGENTS.md)
+- [AI assistant memory and modification rules](.ai/AGENTS.md)
 
 > Warning: this software is an engineering calculation aid, not a certified
 > pressure-vessel, boiler-code or safety-integrity tool. Always review results
@@ -110,6 +110,18 @@ Run internal correlation checks:
 dotnet run --project src/Whb.Cli -- --selftest
 ```
 
+Export a saturation table for quick checks or datasheet work:
+
+```bash
+dotnet run --project src/Whb.Cli -- --steamtable steam.csv --tmin 20 --tmax 310 --step 10
+```
+
+Export a standalone sulphur sweep for Claus/SRU screening:
+
+```bash
+dotnet run --project src/Whb.Cli -- --sulphur sulphur.csv --pressure-bara 1.7 --s-atoms-mols 8 --inert-mols 100 --tmin 120 --tmax 350 --step 10
+```
+
 ## Examples
 
 Generate both input templates:
@@ -149,6 +161,18 @@ Check installed correlations and reference values:
 dotnet run --project src/Whb.Cli -- --selftest
 ```
 
+Write a steam saturation table:
+
+```bash
+dotnet run --project src/Whb.Cli -- --steamtable results/steam.csv --tmin 50 --tmax 300 --step 25
+```
+
+Write a sulphur-process CSV for dew-point and condensation screening:
+
+```bash
+dotnet run --project src/Whb.Cli -- --sulphur results/sulphur.csv --pressure-bara 1.7 --s-atoms-mols 8 --inert-mols 100 --tmin 130 --tmax 300 --step 5
+```
+
 ## CLI Commands
 
 ```text
@@ -156,6 +180,9 @@ whb [case.json] [--out <folder>] [--options <whb.options.json>]
 whb --template [file.json]
 whb --options-template [file.json]
 whb --selftest
+whb --steamtable [file.csv] [--tmin <C>] [--tmax <C>] [--step <C>]
+whb --sulphur [file.csv] [--pressure-bara <bar>] [--s-atoms-mols <mol>] [--inert-mols <mol>] [--tmin <C>] [--tmax <C>] [--step <C>]
+whb --sulphur-condenser [case.json] [--out <folder>]
 whb --loads [case.json] [--out <folder>]
 whb --sizing [case.json] [--out <folder>]
 whb --optimize [case.json] [--out <folder>]
@@ -176,6 +203,25 @@ states not just where the optimum is but **what holds it there**: an active
 constraint, the edge of the search range, a genuine interior stationary point, or
 no feasible point at all. Each evaluation is a full coupled solve, so the search
 takes minutes rather than seconds.
+
+`--sulphur` is a standalone Claus/SRU utility. It writes a temperature sweep with
+S2/S6/S8 equilibrium, sulphur saturation pressure, condensation onset and
+condensed fraction. Normal WHB runs raise sulphur-related findings when the gas
+contains Claus species. If `gas.modello_claus` is left at `frozen`, only
+explicit elemental sulphur (`S2`/`S6`/`S8`) is coupled into the main WHB
+thermal solve. If `gas.modello_claus = equilibrium|kinetic`, the solve also
+closes `H2S`/`SO2`/`COS`/`CS2` to a bounded Claus surrogate, generates
+elemental sulphur, and couples its dew point and condensation into the bundle
+enthalpy balance. The `kinetic` branch now exposes `gas.claus_cinetica.*`
+parameters so aggressiveness can be reduced and later calibrated on a real
+Claus case without editing source constants.
+
+`--sulphur-condenser` is the dedicated Claus sulphur-condenser path. It reads
+the `condensatore_zolfo` section of the case file and writes a dedicated text
+report plus axial CSV. If `condensatore_zolfo.usa_uscita_whb = true`, the WHB
+calculation is run first and the solved mixed outlet stream becomes the inlet of
+the condenser module. If `false`, the condenser runs on its own
+`condensatore_zolfo.gas_ingresso` feed.
 
 ## Local Tasks
 
@@ -218,7 +264,8 @@ to your release process. This repository currently builds the CLI from source.
   bands (`NY`).
 - Gas-side enthalpy march for each tube-band class.
 - Shell-side boiling model with local heat flux, void fraction and circulation
-  diagnostics.
+  diagnostics, with `chen` as the historical default and optional
+  `kandlikar` flow-boiling screening.
 - Natural-circulation loop model with downcomer/riser branch losses.
 - Steam drum and drum-internals pressure-drop representation, including
   preliminary calm-box sizing, top-opening/waterfall losses, and downcomer
@@ -227,8 +274,21 @@ to your release process. This repository currently builds the CLI from source.
 - Water-gas shift modes: frozen, equilibrium above a freeze temperature, and
   fractional approach.
 - Gas mixture properties with Wilke and molar-average options.
+- Extended gas-species set for syngas, Claus/SRU, TLE and flue-gas studies.
 - Gas model selection with ideal-gas or `realistico`/virial real-gas correction.
 - IAPWS-IF97 water/steam helper properties for regions used by the model.
+- Saturation-table export and explicit saturation cross-check correlations for
+  quick screening work.
+- Standalone sulphur-process module for Claus/SRU studies: allotrope
+  equilibrium, sulphur dew point, condensation with non-condensables, lambda
+  transition and wall-window checks, plus CLI CSV export and Claus-aware report
+  screening in normal WHB runs. Explicit `S2`/`S6`/`S8` are also coupled into
+  the main bundle solve, and `gas.modello_claus = equilibrium|kinetic` adds a
+  simplified closed conversion path for `H2S`/`SO2`/`COS`/`CS2`, with exposed
+  `gas.claus_cinetica.*` tuning parameters for the kinetic branch.
+- Dedicated sulphur-condenser module for Claus projects, with its own case
+  section, solver, report and axial CSV, usable either as a standalone unit or
+  as an integrated downstream extension of the base WHB calculation.
 - Metal temperature estimates through fouling, ferrule, wall and water-side
   deposit resistances.
 - Ferrule component checks for pressure drop and insulation paper radial
@@ -284,6 +344,9 @@ Default output is written to `results/` unless `--out` is provided.
 | `dimensionamento.txt` | Sizing sheet; the only file written by `--sizing` |
 | `carichi.txt` / `carichi.csv` | Partial-load curves, written by `--loads` |
 | `ottimizzazione.txt` | Constrained search result, written by `--optimize` |
+| `sulphur_table.csv` | Standalone sulphur temperature sweep, written by `--sulphur` |
+| `sulphur_condenser.txt` | Dedicated sulphur-condenser report, written by `--sulphur-condenser` and by normal runs when `condensatore_zolfo.presente = true` |
+| `sulphur_condenser_profile.csv` | Segment-by-segment sulphur-condenser profile |
 
 ## Validation
 
@@ -294,11 +357,12 @@ The built-in `--selftest` command checks:
 - selected gas-property values for air and the reference syngas mixture;
 - real-gas virial correction traces used by the gas model.
 
-The repository test suite currently covers 42 tests across core numerical
+The repository test suite currently covers 68 tests across core numerical
 utilities and root finders, unit conversions, grid generation, piping geometry
 helpers, material lookup, heat-transfer behavior, two-phase multipliers, the
 enthalpy inversion, the constrained search and its optimum classification,
-validation tables, options-file merging and reporting contracts.
+validation tables, options-file merging, Claus/sulphur behavior, and the
+dedicated sulphur-condenser path.
 
 Run:
 
@@ -396,7 +460,7 @@ tests/Whb.Tests/
 
 The repository includes a GitHub Actions workflow at
 `.github/workflows/ci.yml`. It restores, builds and tests the solution on
-`windows-latest` using .NET 8.
+`windows-latest` using .NET 10.
 
 ## License
 

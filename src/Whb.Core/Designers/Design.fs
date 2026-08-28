@@ -118,11 +118,19 @@ module Design =
                       (stress: StressResult) (valve: ValveResult option)
                       (notConnected: Piping.Line list)
                       (vibration: Vibration.Result list)
-                      (conv: ConvergenceReport) =
+                      (conv: ConvergenceReport)
+                      (sulphur: Sulphur.CouplingSummary option)
+                      (sulphurCondenser: SulphurCondenser.Result option) =
         let fs = ResizeArray<Finding>()
         let hot = cells |> List.filter (fun c -> not c.InFerrule)
         let qmax = hot |> List.maxBy (fun c -> c.QFluxOut)
-        let dnb = hot |> List.minBy (fun c -> c.DNBR)
+        let dnbReqOf (c: CellResult) = WaterSide.dnbrRequired (c.I = 0) c.InFerrule
+        let dnb = cells |> List.minBy (fun c -> c.DNBR / dnbReqOf c)
+        let dnbReq = dnbReqOf dnb
+        let dnbZone =
+            if dnb.InFerrule then "zona ferrula (DNBR richiesto 2.0)"
+            elif dnb.I = 0 then "prima fila al gas d'ingresso (DNBR richiesto 2.0)"
+            else "campo fascio (DNBR richiesto 1.43)"
         let tmax = cells |> List.maxBy (fun c -> c.TMetalIn)
         let alphaC = cells |> List.maxBy (fun c -> c.Alpha)
         let dTdep = hot |> List.maxBy (fun c -> c.DTDeposit)
@@ -134,9 +142,31 @@ module Design =
                 case.Water.RoughnessUm case.Water.Csf
         let loc (c: CellResult) =
             sprintf "z = %.2f m, y = %+.2f m (banda %d, ferrula %.0f mm)" c.Z c.Y c.J (c.FerruleLen * 1000.0)
+        let locSimple (c: CellResult) =
+            sprintf "z = %.2f m, y = %+.2f m" c.Z c.Y
         let add s area title value limit where action detail =
             fs.Add { Severity = s; Area = area; Title = title; Value = value
                      Limit = limit; Where = where; Action = action; Detail = detail }
+        let addSulphurCheck where action (check: Sulphur.Check) =
+            match check.Severity with
+            | Sulphur.Ok -> ()
+            | Sulphur.Watch ->
+                add Warning "ZOLFO" check.Title check.Value check.Limit where action check.Detail
+            | Sulphur.Alarm ->
+                add Critical "ZOLFO" check.Title check.Value check.Limit where action check.Detail
+        let addCondenserCheck (check: Sulphur.Check) =
+            match check.Severity with
+            | Sulphur.Ok -> ()
+            | Sulphur.Watch ->
+                add Warning "CONDENSATORE ZOLFO" check.Title check.Value check.Limit
+                    "tratto dedicato di condensazione Claus"
+                    "Verificare il report dedicato del condensatore zolfo e la finestra termica di esercizio."
+                    check.Detail
+            | Sulphur.Alarm ->
+                add Critical "CONDENSATORE ZOLFO" check.Title check.Value check.Limit
+                    "tratto dedicato di condensazione Claus"
+                    "Rivedere subito parete, livello termico del refrigerante e gestione del condensato."
+                    check.Detail
 
         // --- Numerical health -------------------------------------------------------------
         // A result that did not converge, or that was produced outside the domain the method
@@ -229,17 +259,115 @@ module Design =
                     "Impostare gas.modello_gas = realistico e validare con dati di trasporto."
                     "La densita' ideale puo' alterare velocita', Reynolds, dP e duty."
 
-        if dnb.DNBR < 1.0 then
+        let claus = Sulphur.clausScreening case.Gas.PIn case.Gas.Composition
+        if claus.HasClausSpecies then
+            let coldMetal = cells |> List.minBy (fun c -> c.TMetalIn)
+            let speciesText = String.concat ", " claus.PresentSpecies
+            let clausModeText = Claus.modeName case.Gas.ClausMode
+            let sulphurModelText =
+                match sulphur with
+                | Some s when s.CondensingCells > 0 ->
+                    sprintf "Modello Claus %s: lo solve accoppia la formazione/condensazione di zolfo elementare; condensa in %d celle, prima comparsa a z = %.2f m, frazione condensata in uscita %.1f %%."
+                        clausModeText s.CondensingCells s.FirstCondensationZ (100.0 * s.OutletCondensedFraction)
+                | Some _ ->
+                    sprintf "Modello Claus %s: lo solve accoppia lo zolfo elementare nel bilancio principale, ma lungo questo profilo non raggiunge la saturazione." clausModeText
+                | None ->
+                    match case.Gas.ClausMode with
+                    | Claus.Frozen ->
+                        "Il solve WHB non converte H2S/SO2/COS/CS2 in zolfo elementare con modello Claus congelato: senza S2/S6/S8 espliciti questi finding restano uno screening di servizio Claus."
+                    | _ ->
+                        sprintf "Modello Claus %s attivo, ma questo caso non sviluppa zolfo elementare accoppiato in misura apprezzabile." clausModeText
+            let dewBits =
+                [ match sulphur with
+                  | Some s ->
+                      match s.InletSulphurDewPoint with
+                      | Some t -> sprintf "dew point zolfo ingresso %.0f °C" (kToC t)
+                      | None -> ()
+                  | None ->
+                      match claus.SulphurDewPoint with
+                      | Some t -> sprintf "dew point zolfo elementare %.0f °C" (kToC t)
+                      | None -> ()
+                  match claus.WaterDewPoint with
+                  | Some t -> sprintf "dew point acqua %.0f °C" (kToC t)
+                  | None -> () ]
+            add Note "ZOLFO" "Specie Claus rilevate nel gas"
+                (sprintf "specie presenti: %s" speciesText)
+                "screening dedicato richiesto quando il gas contiene specie Claus"
+                "lato gas, intero apparecchio"
+                "Usare il comando --sulphur per sweep dew point/condensa e confermare drenaggio e finestre di temperatura."
+                (String.concat "; "
+                    ([ sulphurModelText ]
+                     @ dewBits))
+            addSulphurCheck (loc tmax)
+                "Limitare la temperatura di parete calda o valutare una metallurgia piu' resistente alla sulfidation."
+                (Sulphur.checkSulphidation tmax.TMetalIn claus.YH2S)
+            match claus.WaterDewPoint with
+            | Some tDewWater ->
+                addSulphurCheck (loc coldMetal)
+                    "Proteggere avviamenti/fermate, evitare zone fredde persistenti e verificare materiali HIC/SOHIC/SSC."
+                    (Sulphur.checkWetH2S coldMetal.TMetalIn tDewWater claus.YH2S)
+            | None -> ()
+            match sulphur with
+            | Some s when s.CondensingCells > 0 ->
+                add Warning "ZOLFO" "Condensazione di zolfo elementare nel fascio"
+                    (sprintf "frazione condensata in uscita %.1f %%"
+                        (100.0 * s.OutletCondensedFraction))
+                    "parete drenante e temperatura di film nella finestra liquida"
+                    (if Double.IsNaN s.FirstCondensationZ then locSimple coldMetal
+                     else sprintf "prima condensazione a z = %.2f m" s.FirstCondensationZ)
+                    "Verificare drenaggio del liquido, evitare ristagni e confermare il controllo della pressione LP."
+                    "Il bilancio termico principale ora include l'equilibrio e la condensazione dello zolfo elementare esplicito; resta comunque uno screening 1D senza idraulica del film liquido."
+                addSulphurCheck (loc coldMetal)
+                    "Tenere la parete nella finestra liquida drenabile dello zolfo e controllare i transitori."
+                    (Sulphur.checkWallWindow coldMetal.TMetalIn)
+            | None ->
+                match claus.SulphurDewPoint with
+                | Some tDewSulphur when case.Gas.ClausMode = Claus.Frozen && coldMetal.TMetalIn <= tDewSulphur ->
+                    add Warning "ZOLFO" "Parete in campo di condensazione dello zolfo non modellata"
+                        (sprintf "T metallo minima = %.0f °C, dew point zolfo = %.0f °C"
+                            (kToC coldMetal.TMetalIn) (kToC tDewSulphur))
+                        "T parete gas > dew point zolfo se il tratto deve restare in solo raffreddamento"
+                        (locSimple coldMetal)
+                        "Rieseguire il caso con --sulphur e verificare quota latente, drenaggio liquido e margine alla transizione lambda."
+                        "Questo e' uno screening: senza S2/S6/S8 espliciti il solve principale non sa quanta parte delle specie Claus diventi davvero zolfo elementare."
+                | _ -> ()
+            | _ -> ()
+
+        match sulphurCondenser with
+        | Some sc ->
+            add Note "CONDENSATORE ZOLFO" "Integrazione condensatore zolfo attiva"
+                (sprintf "sorgente %s, duty %.2f MW, area richiesta %.1f m2"
+                    sc.SourceLabel (sc.Duty / 1e6) sc.AreaRequired)
+                "modulo dedicato downstream per Claus"
+                "servizio Claus / condensatore zolfo"
+                "Controllare i file dedicati sulphur_condenser.txt e sulphur_condenser_profile.csv."
+                (sprintf "Outlet %.1f C, frazione condensata %.1f %%, portata liquido zolfo %.1f kg/h."
+                    (kToC sc.OutletState.T) (100.0 * sc.OutletState.CondensedFraction) (sc.CondensedSulphurMassFlow * 3600.0))
+            for chk in sc.Checks do
+                addCondenserCheck chk
+        | None -> ()
+
+        if dnb.DNBR < dnbReq then
             add Critical "EBOLLIZIONE" "Margine su DNB insufficiente"
-                (sprintf "DNBR = %.2f" dnb.DNBR) "DNBR >= 2 (pratica di progetto)"
+                (sprintf "DNBR = %.2f (%s)" dnb.DNBR dnbZone)
+                (sprintf "DNBR >= %.2f" dnbReq)
                 (loc dnb)
                 "Allungare la ferrula, aumentare la circolazione, o ridurre il titolo locale nella banda alta."
                 (sprintf "Il flusso locale (%.0f kW/m2) supera il CHF di fascio corretto per il titolo locale x = %.3f. E' il punto in cui il film di vapore puo' staccare l'acqua dalla parete (steam blanketing)." (dnb.QFluxOut / 1000.0) dnb.XOut)
-        elif dnb.DNBR < 2.0 then
+        elif dnb.DNBR < 1.25 * dnbReq then
             add Warning "EBOLLIZIONE" "Margine su DNB ridotto"
-                (sprintf "DNBR = %.2f" dnb.DNBR) "DNBR >= 2" (loc dnb)
+                (sprintf "DNBR = %.2f (%s)" dnb.DNBR dnbZone) (sprintf "DNBR >= %.2f" dnbReq) (loc dnb)
                 "Verificare con criterio di flusso termico massimo; valutare ferrula piu' lunga."
                 "Il criterio di Palen usato per il CHF di fascio e' conservativo, ma il margine resta sotto la pratica corrente."
+        let boWorst = WaterSide.boilingNumber dnb.QFluxOut dnb.GCross sat.Hfg
+        let coWorst = WaterSide.convectionNumber dnb.XOut sat
+        if boWorst > 1.5e-4 || coWorst > 0.65 then
+            add Note "EBOLLIZIONE" "Regime NBD al punto critico"
+                (sprintf "Bo = %.2e, Co = %.2f" boWorst coWorst)
+                "Bo > 1.5e-4 o Co > 0.65"
+                (loc dnb)
+                "Il vincolo di progetto e' il CHF locale, non l'HTC."
+                "Nelle condizioni tipiche WHB a bassa portata di massa e basso titolo il rischio di steam blanketing e' governato dal margine su DNB. L'opzione vapore.ebollizione_flusso = kandlikar permette di rivalutare l'HTC locale senza il fattore di soppressione di Chen."
 
         if qmax.QFluxOut > 300000.0 then
             add Warning "TERMICO" "Flusso termico di picco elevato"
@@ -554,14 +682,71 @@ module Design =
                 (if case.Bypass.Enabled then case.Bypass.PipeOd else 0.0)
         let nz = max 6 case.NZ
         let comp0 = GasProps.normalize case.Gas.Composition
+        let processActive =
+            Sulphur.hasElementalSulphur comp0
+            || (case.Gas.ClausMode <> Claus.Frozen && Claus.hasReactiveSpecies comp0)
+        let processStateAt pPa comp tK =
+            if processActive then
+                Sulphur.processStateAt case.Gas.ShiftMode case.Gas.RealGas pPa comp tK
+            else
+                let compGas = Shift.equilibrate case.Gas.ShiftMode comp tK
+                let st : Sulphur.ProcessState =
+                    { T = tK
+                      VapourComposition = compGas
+                      TotalSpecificEnthalpy = GasProps.enthalpyAbsReal case.Gas.RealGas compGas tK pPa
+                      CpApprox = (GasProps.mixReal GasProps.Wilke case.Gas.RealGas compGas tK pPa case.Gas.Z).Cp
+                      PSulphur = 0.0
+                      YElementalSulphurVapour = 0.0
+                      SulphurDewPoint = None
+                      Condensing = false
+                      CondensedAtoms = 0.0
+                      CondensedFraction = 0.0 }
+                st
+        let processStateFromEnthalpyAt pPa comp h =
+            if processActive then
+                Sulphur.processStateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pPa comp h
+            else
+                let (t0, compGas) = Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pPa comp h
+                let st : Sulphur.ProcessState =
+                    { T = t0
+                      VapourComposition = compGas
+                      TotalSpecificEnthalpy = h
+                      CpApprox = (GasProps.mixReal GasProps.Wilke case.Gas.RealGas compGas t0 pPa case.Gas.Z).Cp
+                      PSulphur = 0.0
+                      YElementalSulphurVapour = 0.0
+                      SulphurDewPoint = None
+                      Condensing = false
+                      CondensedAtoms = 0.0
+                      CondensedFraction = 0.0 }
+                st
+        let processEnthalpyAt pPa comp tK =
+            if processActive then
+                Sulphur.processEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas pPa comp tK
+            else
+                GasProps.enthalpyAbsReal case.Gas.RealGas comp tK pPa
+        let mixCompositionsByMass (m1: float) (c1: GasProps.Composition) (m2: float) (c2: GasProps.Composition) =
+            let c1n = GasProps.normalize c1
+            let c2n = GasProps.normalize c2
+            let n1 = if m1 > 0.0 then m1 / GasProps.mixMolarMass c1n else 0.0
+            let n2 = if m2 > 0.0 then m2 / GasProps.mixMolarMass c2n else 0.0
+            [ yield! c1n |> List.map (fun (sp, y) -> sp, n1 * y)
+              yield! c2n |> List.map (fun (sp, y) -> sp, n2 * y) ]
+            |> List.groupBy fst
+            |> List.map (fun (sp, items) -> sp, items |> List.sumBy snd)
+            |> GasProps.normalize
         let wGasTot = case.Gas.MassFlow
         let gasCache =
-            System.Collections.Concurrent.ConcurrentDictionary<struct (string * bool * float * float * float), GasProps.MixProps>()
+            System.Collections.Concurrent.ConcurrentDictionary<struct (string * bool * string * float * float * float), GasProps.MixProps>()
+        let compKey (comp: GasProps.Composition) =
+            comp
+            |> GasProps.normalize
+            |> List.map (fun (sp, y) -> sprintf "%s=%.6f" (GasProps.speciesName sp) y)
+            |> String.concat ";"
         let mixRealCached rule real comp tK pPa z =
             if not settings.GasPropertyCache then GasProps.mixReal rule real comp tK pPa z
             else
                 let key =
-                    struct (GasProps.mixingRuleName rule, real,
+                    struct (GasProps.mixingRuleName rule, real, compKey comp,
                             Math.Round(tK, 1), Math.Round(pPa, 0), Math.Round(z, 4))
                 match gasCache.TryGetValue key with
                 | true, value -> value
@@ -610,6 +795,17 @@ module Design =
                     wq <- wq + wgt
                     ta <- ta + wgt * o.TGasOutBandClass.[j, c]
             ta / wq
+        let tubeOutletCompositionOf (o: BundleSolver.SolveOutput) =
+            let ntb = o.NTubesBand
+            let cls = o.Classes |> List.toArray
+            [ for j in 0 .. ntb.Length - 1 do
+                for c in 0 .. cls.Length - 1 do
+                    let wgt = ntb.[j] * fst cls.[c]
+                    for (sp, y) in o.OutletCompositionBandClass.[j, c] do
+                        yield sp, wgt * y ]
+            |> List.groupBy fst
+            |> List.map (fun (sp, items) -> sp, items |> List.sumBy snd)
+            |> GasProps.normalize
 
         // Convergence data travels back with the result rather than through shared state,
         // because map points are evaluated concurrently.
@@ -617,23 +813,28 @@ module Design =
             let (o, d, iters, conv, residual) = coupled (caseWith x)
             let health = struct (iters, conv, residual)
             let tTubes = tubeOutOf o
+            let compTubes = tubeOutletCompositionOf o
             if not case.Bypass.Enabled || x <= 1e-6 then
                 (tTubes, o, d, None, health)
             else
-                let (nodes, tBp, qBp, dpBp, bpConverged) =
+                let (nodes, tBp, compBp, qBp, dpBp, bpConverged) =
                     Bypass.march case.Bypass comp0 case.Gas.PIn 0.0 case.Gas.TIn
-                        case.Gas.MixingRule case.Gas.RealGas case.Gas.ShiftMode sat (wGasTot * x) o.ZC o.Dz
+                        case.Gas.MixingRule case.Gas.RealGas case.Gas.ShiftMode
+                        case.Gas.ClausMode case.Gas.ClausKinetics sat (wGasTot * x) o.ZC o.Dz
+                let compMix =
+                    mixCompositionsByMass (wGasTot * x) compBp (wGasTot * (1.0 - x)) compTubes
                 let hMix =
-                    x * GasProps.enthalpyAbsReal case.Gas.RealGas comp0 tBp case.Gas.PIn
-                    + (1.0 - x) * GasProps.enthalpyAbsReal case.Gas.RealGas comp0 tTubes case.Gas.PIn
+                    x * processEnthalpyAt case.Gas.PIn compBp tBp
+                    + (1.0 - x) * processEnthalpyAt case.Gas.PIn compTubes tTubes
                 let tMix =
-                    fst (Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas case.Gas.PIn comp0 hMix)
+                    (processStateFromEnthalpyAt case.Gas.PIn compMix hMix).T
                 let res : Bypass.Result =
                     { Fraction = x
                       MassFlow = wGasTot * x
                       TOutBypass = tBp
                       TOutTubes = tTubes
                       TOutMixed = tMix
+                      OutletComposition = compBp
                       HeatLoss = qBp
                       SteamFromBypass = qBp / sat.Hfg
                       Nodes = nodes
@@ -651,10 +852,14 @@ module Design =
                 match bp with
                 | Some b ->
                     let n = if bpSpec.ValveAtOutlet then List.last b.Nodes else List.head b.Nodes
-                    let pr = mixRealCached case.Gas.MixingRule case.Gas.RealGas comp0 n.TGas case.Gas.PIn 1.0
+                    let compValve =
+                        (processStateAt case.Gas.PIn b.OutletComposition n.TGas).VapourComposition
+                    let pr = mixRealCached case.Gas.MixingRule case.Gas.RealGas compValve n.TGas case.Gas.PIn 1.0
                     (b.TOutBypass, b.TLinerMax, pr.Rho, n.TGas)
                 | None ->
-                    let pr = mixRealCached case.Gas.MixingRule case.Gas.RealGas comp0 sat.Tsat case.Gas.PIn 1.0
+                    let compValve =
+                        (processStateAt case.Gas.PIn comp0 sat.Tsat).VapourComposition
+                    let pr = mixRealCached case.Gas.MixingRule case.Gas.RealGas compValve sat.Tsat case.Gas.PIn 1.0
                     (sat.Tsat, sat.Tsat, pr.Rho, sat.Tsat)
             { X = x
               TMix = tm
@@ -867,6 +1072,34 @@ module Design =
                 tMin <- min tMin tv
                 tMax <- max tMax tv
         let tOutMean = tMixed
+        let tubeOutletComposition = tubeOutletCompositionOf out
+        let mixedOutletComposition =
+            match bpRes with
+            | Some b ->
+                mixCompositionsByMass b.MassFlow b.OutletComposition (wGasTot - b.MassFlow) tubeOutletComposition
+            | None -> tubeOutletComposition
+        let sulphurCondenserResult =
+            if case.SulphurCondenser.Enabled then
+                let feedUsed =
+                    if case.SulphurCondenser.UseWhbOutlet then
+                        { case.SulphurCondenser.Feed with
+                            Composition = mixedOutletComposition
+                            MassFlow = wGasTot
+                            TIn = tOutMean
+                            PIn = max 1.0e4 (case.Gas.PIn - out.DpGas)
+                            Z = case.Gas.Z
+                            ShiftMode = case.Gas.ShiftMode
+                            ClausMode = case.Gas.ClausMode
+                            ClausKinetics = case.Gas.ClausKinetics
+                            MixingRule = case.Gas.MixingRule
+                            RealGas = case.Gas.RealGas }
+                    else case.SulphurCondenser.Feed
+                Some(
+                    SulphurCondenser.solveWithFeed
+                        (if case.SulphurCondenser.UseWhbOutlet then "WHB mixed outlet" else "Dedicated case feed")
+                        case.SulphurCondenser
+                        feedUsed)
+            else None
         let dt1 = case.Gas.TIn - sat.Tsat
         let dt2 = tOutMean - sat.Tsat
         let lm = lmtd dt1 dt2
@@ -1376,7 +1609,7 @@ module Design =
             let baseCells = Array.init nz (fun i -> out.Cells.[i, jb, 0])
             [ for ex in [ 0.0; 0.05; 0.10; 0.15; 0.20; 0.30 ] ->
                 let w = wTube0 * (1.0 + ex)
-                let mutable h = GasProps.enthalpyAbsReal case.Gas.RealGas comp0 case.Gas.TIn case.Gas.PIn
+                let mutable h = processEnthalpyAt case.Gas.PIn comp0 case.Gas.TIn
                 let mutable qMax = 0.0
                 let mutable zMax = 0.0
                 let mutable tmiMax = 0.0
@@ -1387,8 +1620,9 @@ module Design =
                 for i in 0 .. nz - 1 do
                     let bc = baseCells.[i]
                     let p = bc.PGas
-                    let tG = fst (Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas p comp0 h)
-                    let pr = mixRealCached case.Gas.MixingRule case.Gas.RealGas comp0 tG p case.Gas.Z
+                    let state = processStateFromEnthalpyAt p comp0 h
+                    let tG = state.T
+                    let pr = mixRealCached case.Gas.MixingRule case.Gas.RealGas state.VapourComposition tG p case.Gas.Z
                     let bore = if bc.InFerrule then case.Ferrule.Bore else t.Di
                     let re = 4.0 * w / (Math.PI * bore * pr.Mu)
                     if i = 0 then reIn <- re
@@ -1415,7 +1649,7 @@ module Design =
                         if tmi > tmiMax then tmiMax <- tmi
                     duty <- duty + qlin * out.Dz.[i]
                     h <- h - qlin * out.Dz.[i] / w
-                let tOut = fst (Shift.stateFromEnthalpyAt case.Gas.ShiftMode case.Gas.RealGas case.Gas.PIn comp0 h)
+                let tOut = (processStateFromEnthalpyAt case.Gas.PIn comp0 h).T
                 { Excess = ex; FlowPerTube = w; ReIn = reIn; HGasPeak = hPeak
                   QFluxMax = qMax; ZQMax = zMax; TMetalInMax = tmiMax
                   TGasOut = tOut; DNBRMin = dnbMin; DutyTube = duty } ]
@@ -1505,7 +1739,7 @@ module Design =
                       Note = ln.Note }))
         let findings =
             buildFindings settings.CorrelationValidityWarnings case sat cells axial circ ftRes riserChecks expansions bpRes out.DpGas
-                stressRes valveRes notConnected vibration convergence
+                stressRes valveRes notConnected vibration convergence out.SulphurCoupling sulphurCondenserResult
         let warnings =
             findings
             |> List.map (fun f ->
@@ -1538,6 +1772,8 @@ module Design =
                          (Circulation.branchArea case.Loop.Downcomers))
              else None)
           BypassResult = bpRes
+          SulphurCoupling = out.SulphurCoupling
+          SulphurCondenserResult = sulphurCondenserResult
           Findings = findings
           RiserChecks = riserChecks
           LineChecks = lineChecks
@@ -1605,7 +1841,3 @@ module Design =
     /// </remarks>
     let run (caseIn: DesignCase) : DesignResult =
         runWithSettingsAndProgress defaultRunSettings ignore caseIn
-
-
-
-

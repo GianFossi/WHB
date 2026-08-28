@@ -2,7 +2,7 @@
 
 Single work list for the WHB project: near-term open items first, then the
 longer-term backlog. The reasoning behind each closed item is in the Modification
-Memory Log of [`AGENTS.md`](./AGENTS.md).
+Memory Log of [`.ai/AGENTS.md`](./.ai/AGENTS.md).
 
 Status: **24 of 28 register items implemented** (levels 0-4). 42 tests green,
 self-test bit-identical, `adaptive` and `full` bypass-map modes now agree.

@@ -49,6 +49,7 @@ module Bypass =
           TOutBypass: float        // K, bypass outlet
           TOutTubes: float         // K, tube outlet
           TOutMixed: float         // K, after mixing
+          OutletComposition: GasProps.Composition
           HeatLoss: float          // W transferred from bypass to water
           SteamFromBypass: float   // kg/s
           Nodes: Node list
@@ -63,24 +64,58 @@ module Bypass =
         (rLiner, rIns, rPipe)
     let march (s: Spec) (comp: GasProps.Composition) (pIn: float) (z: float) (tIn: float)
               (mixRule: GasProps.MixingRule) (real: bool) (shiftMode: Shift.Mode)
+              (clausMode: Claus.Mode) (clausKinetics: Claus.KineticParameters)
               (sat: Steam.SatProps) (wBp: float) (zc: float[]) (dz: float[]) =
         let comp0 = GasProps.normalize comp
+        let processActive =
+            Sulphur.hasElementalSulphur comp0
+            || (clausMode <> Claus.Frozen && Claus.hasReactiveSpecies comp0)
+        let processStateFromEnthalpyAt pPa compNow hNow =
+            if processActive then
+                Sulphur.processStateFromEnthalpyAt shiftMode real pPa compNow hNow
+            else
+                let (t0, compGas) = Shift.stateFromEnthalpyAt shiftMode real pPa compNow hNow
+                let st : Sulphur.ProcessState =
+                    { T = t0
+                      VapourComposition = compGas
+                      TotalSpecificEnthalpy = hNow
+                      CpApprox = (GasProps.mixReal GasProps.Wilke real compGas t0 pPa 1.0).Cp
+                      PSulphur = 0.0
+                      YElementalSulphurVapour = 0.0
+                      SulphurDewPoint = None
+                      Condensing = false
+                      CondensedAtoms = 0.0
+                      CondensedFraction = 0.0 }
+                st
         let rH2O = GasProps.molFrac comp0 GasProps.H2O
         let rCO2 = GasProps.molFrac comp0 GasProps.CO2
         let a = Math.PI * s.LinerId * s.LinerId / 4.0
-        let mutable h = GasProps.enthalpyAbsReal real comp0 tIn pIn
+        let mutable h =
+            if processActive then Sulphur.processEnthalpyAt shiftMode real pIn comp0 tIn
+            else GasProps.enthalpyAbsReal real comp0 tIn pIn
         let mutable p = pIn
+        let mutable compProc = comp0
         let nodes = ResizeArray<Node>()
         let mutable qTot = 0.0
         let mutable allConverged = true
         let gasCache = Collections.Generic.Dictionary<string, GasProps.MixProps>()
         let wallCache = Collections.Generic.Dictionary<string, float * float * float>()
+        let compKey (comp: GasProps.Composition) =
+            comp
+            |> GasProps.normalize
+            |> List.map (fun (sp, y) -> sprintf "%s=%.6f" (GasProps.speciesName sp) y)
+            |> String.concat ";"
         let gasProps tK pPa =
-            let key = sprintf "%.1f|%.0f" (Math.Round(tK * 2.0) / 2.0) (Math.Round(pPa / 100.0) * 100.0)
+            let compUse =
+                if processActive then
+                    (Sulphur.processStateAt shiftMode real pPa compProc (Math.Round(tK * 2.0) / 2.0)).VapourComposition
+                else compProc
+            let key = sprintf "%s|%.1f|%.0f" (compKey compUse) (Math.Round(tK * 2.0) / 2.0) (Math.Round(pPa / 100.0) * 100.0)
             match gasCache.TryGetValue key with
             | true, v -> v
             | _ ->
-                let v = GasProps.mixReal mixRule real comp0 (Math.Round(tK * 2.0) / 2.0) pPa 1.0
+                let tUse = Math.Round(tK * 2.0) / 2.0
+                let v = GasProps.mixReal mixRule real compUse tUse pPa 1.0
                 gasCache.[key] <- v
                 v
         let cachedWallResistance linerC pipeC =
@@ -92,8 +127,11 @@ module Bypass =
                 wallCache.[key] <- v
                 v
         for i in 0 .. zc.Length - 1 do
-            let tg = fst (Shift.stateFromEnthalpyAt shiftMode real p comp0 h)
+            let sulphurState = processStateFromEnthalpyAt p compProc h
+            let tg = sulphurState.T
             let props = gasProps tg p
+            let rH2OUse = GasProps.molFrac sulphurState.VapourComposition GasProps.H2O
+            let rCO2Use = GasProps.molFrac sulphurState.VapourComposition GasProps.CO2
             let g_ = wBp / a
             let vel = g_ / props.Rho
             let re = g_ * s.LinerId / props.Mu
@@ -111,7 +149,7 @@ module Bypass =
                 let nu = GasSide.nusseltFD GasSide.Gnielinski re props.Pr 1.0
                 let fProp = GasSide.gasPropertyCorrection tli props.T
                 let hConv = nu * fProp * props.K / s.LinerId
-                let eps = GasProps.gasEmissivity rH2O rCO2 p (0.9 * s.LinerId) props.T
+                let eps = GasProps.gasEmissivity rH2OUse rCO2Use p (0.9 * s.LinerId) props.T
                 let hRad = GasProps.hRadiation eps 0.85 props.T tli
                 hg <- hConv + hRad
                 let rGas = 1.0 / (hg * Math.PI * s.LinerId)
@@ -136,11 +174,19 @@ module Bypass =
                 { Z = zc.[i]; TGas = tg; Vel = vel; Re = re; HGas = hg
                   QLin = q; TLinerIn = tli; TLinerOut = tlo
                   TPipeIn = tpi; TPipeOut = tpo; DTInsul = tlo - tpi }
-            h <- h - q * dzi / max 1e-9 wBp
+            let hOut = h - q * dzi / max 1e-9 wBp
             let f = GasSide.darcyFriction re (4.5e-5 / s.LinerId)
-            p <- p - GasSide.dpFrictionPerM f s.LinerId props.Rho vel * dzi
-        let tOut = fst (Shift.stateFromEnthalpyAt shiftMode real p comp0 h)
-        (List.ofSeq nodes, tOut, qTot, pIn - p, allConverged)
+            let pOut = p - GasSide.dpFrictionPerM f s.LinerId props.Rho vel * dzi
+            let tau = dzi / max 1e-9 vel
+            let tRef = 0.5 * (sulphurState.T + tli)
+            compProc <-
+                if clausMode = Claus.Frozen then compProc
+                else Claus.advanceWith clausKinetics clausMode tRef tau compProc
+            h <- hOut
+            p <- pOut
+        let tOut =
+            (processStateFromEnthalpyAt p compProc h).T
+        (List.ofSeq nodes, tOut, compProc, qTot, pIn - p, allConverged)
 
 
 

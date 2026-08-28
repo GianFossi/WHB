@@ -21,5 +21,7 @@ module Report =
     let csvStress = ReportCsv.csvStress
     let csvValve = ReportCsv.csvValve
     let csvAxial = ReportCsv.csvAxial
+    let sulphurCondenserText = ReportSulphurCondenser.text
+    let sulphurCondenserCsv = ReportSulphurCondenser.csvProfile
 
 

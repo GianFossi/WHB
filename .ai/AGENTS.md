@@ -131,6 +131,16 @@ Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
 
+- 2026-08-28 — Added `Process/SulphurCondenser.fs` plus
+  `DesignCase.SulphurCondenser` / `DesignResult.SulphurCondenserResult`.
+  This is a dedicated 1D Claus sulphur-condenser rating/screening unit with
+  its own feed, target outlet temperature, assumed wall/coolant temperatures,
+  assumed `U`, residence time, pressure drop, text report and axial CSV.
+  Normal WHB runs now execute it when `condensatore_zolfo.presente = true`; it
+  may take inlet either from `condensatore_zolfo.gas_ingresso` or from the
+  solved mixed WHB outlet when `usa_uscita_whb = true`. Keep docs explicit
+  that this is a downstream integration and not a detailed exchanger geometry
+  model.
 - 2026-08-28 — `Claus.advance` now keeps backward-compatible default kinetics,
   while `Claus.advanceWith` takes explicit `GasStream.ClausKinetics`
   parameters (`SeverityFactor`, `TauFactor`, `SubSteps`, Arrhenius pairs for
@@ -292,6 +302,17 @@ ISO date. Keep each entry short (what / why / where).
   declared in the profile for the future WPF UI and deliberately NOT
   referenced from `Whb.Core` — a UI input package in the calculation core
   would violate `PRIN-3`.
+- 2026-08-28 — Consolidated every AI instruction file under `.ai/`:
+  `AGENTS.md` moved from the repository root to `.ai/AGENTS.md`, the
+  standard and the project profile moved from `docs/` to `.ai/`, and
+  `.ai/README.md` rewritten as the folder index. Removed `.ai/CLAUDE.md`,
+  `.ai/GEMINI.md`, `.ai/PROJECT_MEMORY.md` and the old `.ai/README.md`:
+  all four were copies from the unrelated BismarckGame project (564 lines,
+  zero WHB content) and gave assistants wrong context. Removed `.ai/` from
+  `.gitignore` — the folder now holds the canonical memory and must be
+  versioned. Root `AGENTS.md`, `CLAUDE.md` and
+  `.github/copilot-instructions.md` remain as pointers because each tool
+  discovers them at those paths; they carry no rule text.
 
 ## Related AI Memory Files
 

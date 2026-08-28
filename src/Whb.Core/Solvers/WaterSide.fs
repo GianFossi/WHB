@@ -109,6 +109,64 @@ module WaterSide =
                * Math.Pow(s.RhoV, 0.24))
             * Math.Pow(dTsat, 0.24)
             * Math.Pow(max dPsat 0.0, 0.75)
+    let boilingNumber (q: float) (gMass: float) (hfg: float) =
+        max 0.0 q / (max 1.0 gMass * max 1.0 hfg)
+    let convectionNumber (x: float) (s: Steam.SatProps) =
+        let xc = min 0.95 (max 1e-4 x)
+        Math.Pow((1.0 - xc) / xc, 0.8) * Math.Pow(s.RhoV / s.RhoL, 0.5)
+    let froudeLO (gMass: float) (d: float) (s: Steam.SatProps) =
+        gMass * gMass / (s.RhoL * s.RhoL * g * max 1e-6 d)
+    let kandlikarF2 (frLO: float) (horizontal: bool) =
+        if horizontal && frLO < 0.04 then Math.Pow(25.0 * frLO, 0.3) else 1.0
+    type FlowBoilingRegime =
+        | NucleateBoilingDominant
+        | ConvectiveBoilingDominant
+    let flowBoilingRegimeName =
+        function
+        | NucleateBoilingDominant -> "NBD - ebollizione nucleata dominante"
+        | ConvectiveBoilingDominant -> "CBD - ebollizione convettiva dominante"
+    let regimeByCo (co: float) =
+        if co > 0.65 then NucleateBoilingDominant else ConvectiveBoilingDominant
+    type KandlikarResult =
+        { HNbd: float
+          HCbd: float
+          HTp: float
+          Bo: float
+          Co: float
+          FrLO: float
+          F2: float
+          Regime: FlowBoilingRegime }
+    let hKandlikar
+        (hLO: float) (q: float) (gMass: float) (x: float) (d: float)
+        (horizontal: bool) (fFl: float) (s: Steam.SatProps) : KandlikarResult =
+        let xc = min 0.95 (max 1e-4 x)
+        let bo = boilingNumber q gMass s.Hfg
+        let co = convectionNumber xc s
+        let fr = froudeLO gMass d s
+        let f2 = kandlikarF2 fr horizontal
+        let oneMinusX = Math.Pow(1.0 - xc, 0.8)
+        let boPow = Math.Pow(bo, 0.7)
+        let hNbd = (0.6683 * Math.Pow(co, -0.2) * f2 + 1058.0 * boPow * fFl) * oneMinusX * hLO
+        let hCbd = (1.136 * Math.Pow(co, -0.9) * f2 + 667.2 * boPow * fFl) * oneMinusX * hLO
+        { HNbd = hNbd
+          HCbd = hCbd
+          HTp = max hNbd hCbd
+          Bo = bo
+          Co = co
+          FrLO = fr
+          F2 = f2
+          Regime = if hNbd >= hCbd then NucleateBoilingDominant else ConvectiveBoilingDominant }
+    type FlowBoilingModel =
+        | ChenSuperposition
+        | KandlikarMax
+    let flowBoilingModelName =
+        function
+        | ChenSuperposition -> "Chen (superposizione con soppressione)"
+        | KandlikarMax -> "Kandlikar (1990) - max(h_NBD, h_CBD)"
+    let dnbAllowableFraction (firstRow: bool) (inFerrule: bool) =
+        if firstRow || inFerrule then 0.5 else 0.7
+    let dnbrRequired (firstRow: bool) (inFerrule: bool) =
+        1.0 / dnbAllowableFraction firstRow inFerrule
     let hZukauskas (reMax: float) (pr: float) (prW: float) (k: float) (d: float) (staggered: bool) (stOverSl: float) =
         let c, m =
             if staggered then

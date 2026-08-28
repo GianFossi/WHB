@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
@@ -25,6 +25,9 @@
     <Compile Include="Materials\GasProps.fs" />
     <Compile Include="Options\Shift.fs" />
     <Compile Include="Materials\Materials.fs" />
+    <Compile Include="Process\Claus.fs" />
+    <Compile Include="Process\Sulphur.fs" />
+    <Compile Include="Process\SulphurCondenser.fs" />
     <Compile Include="Components\Geometry\Geometry.fs" />
     <Compile Include="Components\Catalog\WhbComponents.fs" />
     <Compile Include="Components\Catalog\SteamDrumComponents.fs" />
@@ -62,6 +65,7 @@
     <Compile Include="Reports\Report.Text.fs" />
     <Compile Include="Reports\Report.Synthesis.fs" />
     <Compile Include="Reports\Report.Csv.fs" />
+    <Compile Include="Reports\Report.SulphurCondenser.fs" />
     <Compile Include="Reports\Report.fs" />
     <Compile Include="Reports\HtmlReport.fs" />
     <Compile Include="Options\Defaults.fs" />
@@ -73,4 +77,3 @@
   </ItemGroup>
 
 </Project>
-

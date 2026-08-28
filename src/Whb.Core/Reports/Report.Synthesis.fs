@@ -111,6 +111,12 @@ module ReportSynthesis =
             |> List.length
         if validityWarnings > 0 then
             kv2 "Warning validita' correlazioni/proprieta'" (sprintf "%d da verificare" validityWarnings)
+        (match r.SulphurCondenserResult with
+         | Some sc ->
+            kv2 "Condensatore zolfo integrato"
+                (sprintf "duty %s MW | liquido %s kg/h | area %s m2"
+                    (f2 (sc.Duty / 1e6)) (f0 (sc.CondensedSulphurMassFlow * 3600.0)) (f1 sc.AreaRequired))
+         | None -> ())
         (match r.LineChecks |> List.filter (fun l -> not l.Connected) with
          | [] -> ()
          | nc -> kv2 "BOCCHELLI NON COLLEGATI" (nc |> List.map (fun l -> l.Tag) |> String.concat ", "))

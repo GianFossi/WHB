@@ -21,13 +21,20 @@ the practical starting point.
 
 | Field | Meaning |
 |---|---|
-| `gas.composizione` | Mole fractions for the gas species. Values are normalized by the model. |
+| `gas.composizione` | Mole fractions for the gas species. Values are normalized by the model. Supported families now cover the legacy syngas set plus Claus/SRU, TLE and flue-gas species; unknown names are warned on stderr and ignored. Explicit elemental sulphur species (`S2`, `S6`, `S8`) always participate in the main WHB thermal solve. `H2S`, `SO2`, `COS`, `CS2` stay as screening-only inputs when `gas.modello_claus = frozen`, and are closed into the simplified Claus marching model when `gas.modello_claus = equilibrium` or `kinetic`. |
 | `gas.portata_kgs` | Gas mass flow in kg/s before optional margin. |
 | `gas.maggiorazione` | Multiplicative flow margin. |
 | `gas.t_ingresso_C` | Gas inlet temperature in degC. |
 | `gas.p_ingresso_bara` | Gas inlet absolute pressure in bara. |
 | `gas.z` | User compressibility factor for ideal-base density calculation. |
 | `gas.modello_gas` | `ideale`, `viriale`, or `realistico`. |
+| `gas.modello_claus` | `frozen` (default), `equilibrium`, or `kinetic`. `equilibrium` applies instantaneous local closure to the simplified Claus surrogate; `kinetic` marches the same surrogate with finite residence time through the bundle/bypass cells. |
+| `gas.claus_cinetica.fattore_severita` | Multiplies every simplified kinetic rate. Lower than `1.0` makes `kinetic` less aggressive; the default template uses `0.15`. |
+| `gas.claus_cinetica.fattore_tau` | Multiplies the residence time seen by the simplified kinetic model. Lower than `1.0` reduces conversion severity; default `0.35`. |
+| `gas.claus_cinetica.sottopassi` | Number of marching substeps used only by `kinetic`. Default `8`. |
+| `gas.claus_cinetica.claus_a_1s`, `claus_ea_kjmol` | Arrhenius pair for the simplified `2 H2S + SO2 -> 1.5 S2 + 2 H2O` closure. |
+| `gas.claus_cinetica.cos_a_1s`, `cos_ea_kjmol` | Arrhenius pair for the simplified `COS + H2O -> H2S + CO2` hydrolysis closure. |
+| `gas.claus_cinetica.cs2_a_1s`, `cs2_ea_kjmol` | Arrhenius pair for the simplified `CS2 + 2 H2O -> 2 H2S + CO2` hydrolysis closure. |
 | `gas.gas_reale` | Backward-compatible boolean; used when `modello_gas` is absent. |
 | `gas.miscelazione` | Transport-property mixing rule: `wilke` or `molare`. |
 | `gas.irraggiamento` | Enables gas-radiation contribution. |
@@ -42,11 +49,31 @@ and must be validated for final design use.
 | Field | Meaning |
 |---|---|
 | `vapore.pressione_bara` | Steam drum absolute pressure in bara. |
+| `vapore.ebollizione_flusso` | Shell-side flow-boiling model: `chen` (default, historical behavior) or `kandlikar` for NBD/CBD screening. |
 | `vapore.modello_chf` | CHF model for the cell-by-cell DNBR field: `palen` (default, conservative bundle factor), `lienhard`, `zuber`, or a bare number read as a practical design limit in kW/m2. |
 | `vapore.t_alimento_C` | Feedwater temperature in degC. |
 | `vapore.correlazione` | Pool-boiling correlation name. |
 | `vapore.fouling_m2KW` | Shell-side fouling resistance. |
 | `vapore.rugosita_um` | Water-side roughness in micrometre. |
+
+## Sulphur Condenser Section
+
+The optional `condensatore_zolfo` section defines a dedicated Claus sulphur
+condenser. It can run as a standalone unit or as a downstream integration of the
+base WHB case.
+
+| Field | Meaning |
+|---|---|
+| `condensatore_zolfo.presente` | Enables the dedicated sulphur-condenser module in a normal WHB run. |
+| `condensatore_zolfo.usa_uscita_whb` | If `true`, the condenser inlet is the solved mixed WHB outlet stream. If `false`, the dedicated feed under `gas_ingresso` is used instead. |
+| `condensatore_zolfo.sezioni` | Number of 1D condenser marching segments. |
+| `condensatore_zolfo.tempo_residenza_s` | Total gas residence time used by the simplified kinetic Claus march inside the dedicated condenser. |
+| `condensatore_zolfo.dp_mbar` | Total gas-side pressure drop assigned to the dedicated condenser. |
+| `condensatore_zolfo.t_uscita_target_C` | Outlet target temperature for the dedicated condenser rating calculation. |
+| `condensatore_zolfo.t_parete_C` | Assumed metal or film-side wall temperature used for wall-window, wet-H2S and sulfidation screening. |
+| `condensatore_zolfo.t_refrigerante_C` | Assumed coolant temperature used for the required-area estimate. |
+| `condensatore_zolfo.u_assunto_Wm2K` | Assumed overall heat-transfer coefficient used to convert duty into required area. |
+| `condensatore_zolfo.gas_ingresso.*` | Dedicated feed for standalone sulphur-condenser runs. The fields mirror the main `gas.*` block, including `modello_claus` and `claus_cinetica.*`. |
 
 ## Circuit And Equipment Sections
 
@@ -135,4 +162,8 @@ Every normal run writes:
 
 - Existing files using only `gas.gas_reale` continue to work.
 - New files should prefer `gas.modello_gas` for readability.
+- New files may set `vapore.ebollizione_flusso` to `kandlikar`; omitting it keeps
+  the historical `chen` path.
+- New files may tune `gas.claus_cinetica.*`; omitting the block keeps the
+  documented conservative defaults for the simplified kinetic Claus branch.
 - The template keeps both fields during the transition.

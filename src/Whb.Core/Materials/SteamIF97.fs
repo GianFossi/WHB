@@ -200,6 +200,40 @@ module Steam =
         let tau = 1.0 - tK / Tc_water
         if tau <= 0.0 then 0.0
         else 235.8e-3 * Math.Pow(tau, 1.256) * (1.0 - 0.625 * tau)
+    module Explicit =
+        let rhoLsat (tK: float) =
+            let th = 1.0 - tK / Tc_water
+            if th <= 0.0 then Rhoc_water
+            else
+                Rhoc_water *
+                (1.0
+                 + 1.99274064 * Math.Pow(th, 1.0 / 3.0)
+                 + 1.09965342 * Math.Pow(th, 2.0 / 3.0)
+                 - 0.510839303 * Math.Pow(th, 5.0 / 3.0)
+                 - 1.75493479 * Math.Pow(th, 16.0 / 3.0)
+                 - 45.5170352 * Math.Pow(th, 43.0 / 3.0)
+                 - 6.74694450e5 * Math.Pow(th, 110.0 / 3.0))
+        let rhoVsat (tK: float) =
+            let th = 1.0 - tK / Tc_water
+            if th <= 0.0 then Rhoc_water
+            else
+                Rhoc_water *
+                exp (-2.03150240 * Math.Pow(th, 2.0 / 6.0)
+                     - 2.68302940 * Math.Pow(th, 4.0 / 6.0)
+                     - 5.38626492 * Math.Pow(th, 8.0 / 6.0)
+                     - 17.2991605 * Math.Pow(th, 18.0 / 6.0)
+                     - 44.7586581 * Math.Pow(th, 37.0 / 6.0)
+                     - 63.9201063 * Math.Pow(th, 71.0 / 6.0))
+        let muLVogel (tK: float) =
+            exp (-3.7188 + 578.919 / (tK - 137.546)) * 1e-3
+        let kLRamires (tK: float) =
+            let tr = tK / 298.15
+            0.6065 * (-1.48445 + 4.12292 * tr - 1.63866 * tr * tr)
+        let hfgWatson (tK: float) =
+            let tr = 1.0 - tK / Tc_water
+            let tr0 = 1.0 - 373.124 / Tc_water
+            if tr <= 0.0 then 0.0
+            else 2256.5e3 * Math.Pow(tr / tr0, 0.38)
     type SatProps =
         { P: float          // Pa
           Tsat: float       // K
@@ -217,9 +251,8 @@ module Steam =
           Sigma: float      // N/m
           PrL: float
           PrV: float }
-    let sat (pPa: float) : SatProps =
+    let private satCore (pPa: float) (tK: float) : SatProps =
         let pMPa = pPa / 1.0e6
-        let tK = tsat_K pMPa
         let (vl, hl, cpl, _) = reg1 pMPa tK
         let (vv, hv, cpv, _) = reg2 pMPa tK
         let rhol = 1.0 / vl
@@ -244,6 +277,18 @@ module Steam =
           Sigma = surfaceTension tK
           PrL = cpl * 1000.0 * mul / kl
           PrV = cpv * 1000.0 * muv / kv }
+    let sat (pPa: float) : SatProps =
+        let tK = tsat_K (pPa / 1.0e6)
+        satCore pPa tK
+    let satT (tK: float) : SatProps =
+        satCore (psat_MPa tK * 1.0e6) tK
+    let saturationTable (tMinC: float) (tMaxC: float) (stepC: float) : SatProps list =
+        let step = max 0.1 stepC
+        let lo = max 0.02 tMinC
+        let hi = min 370.0 tMaxC
+        let n = max 0 (int (round ((hi - lo) / step)))
+        [ for i in 0 .. n -> satT (cToK (lo + float i * step)) ]
+    let saturationTable20to310 () = saturationTable 20.0 310.0 10.0
     let region1 (pMPa: float) (tK: float) = reg1 pMPa tK
     let region2 (pMPa: float) (tK: float) = reg2 pMPa tK
     let hLiquid (pPa: float) (tK: float) =

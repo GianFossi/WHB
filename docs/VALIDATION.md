@@ -2,7 +2,11 @@
 
 These tables describe the regression tests used by the repository. They are not a replacement for independent engineering validation, but they make numerical drift visible during development.
 
-The current automated suite contains 21 tests.
+The automated suite covers the legacy WHB regression anchors plus the extended
+gas database, saturation-table helpers, and the new flow-boiling screening
+utilities. It also regression-checks the sulphur process helpers and the
+explicit elemental-sulphur coupling now wired into the main bundle solve, plus
+the simplified closed Claus marching modes.
 
 ## Heat Transfer And Pressure Drop
 
@@ -26,6 +30,27 @@ Additional behavioral tests check that:
 - water-side natural convection and boiling correlations return usable positive
   preliminary coefficients;
 - shell-side HTC combines boiling, bundle factor and convection consistently.
+- the extended gas database returns physical properties for all supported
+  species and keeps sulphur allotropes on the ideal-gas path in virial mode;
+- `satT`, `saturationTable`, and the explicit saturation helper correlations
+  stay aligned with IF97/IAPWS anchors within their stated screening accuracy;
+- the Kandlikar/NBD helper functions and proposal DNBR thresholds stay on their
+  intended regime boundaries.
+- the sulphur process-state enthalpy inversion round-trips through condensing
+  cases;
+- the simplified Claus closure conserves S/C/H/O atoms while generating
+  elemental sulphur from `H2S`/`SO2`/`COS`/`CS2`;
+- the default `kinetic` Claus branch remains less aggressive than
+  `equilibrium` on the same segment, and its outlet conversion increases
+  monotonically when `gas.claus_cinetica.fattore_severita` is raised;
+- a Claus-service case with `gas.modello_claus = frozen` stays report-level
+  screening, while cases with explicit `S2` or with
+  `gas.modello_claus = equilibrium` raise a coupled bundle-condensation result
+  and finding.
+- the dedicated sulphur-condenser solver returns positive duty, required area,
+  and liquid sulphur flow for a representative Claus-service feed;
+- a normal WHB design run can execute the integrated dedicated sulphur
+  condenser and surface its own findings under `CONDENSATORE ZOLFO`.
 
 The ferrule component test campaign checks that:
 
@@ -90,6 +115,31 @@ The vibration testing campaign also checks:
 | Lamé radial stress | -10000000 Pa | 1e-6 |
 | Lamé hoop stress | 55454545.45454548 Pa | 1e-5 |
 | Von Mises check value | 108.972473588517 | 1e-12 |
+
+## Sulphur Module
+
+| Area | Case | Expected value | Test tolerance |
+|---|---|---:|---:|
+| Equilibrium | `exp(lnKpS6)` at 600 K | 7.7119e7 | 0.02e7 |
+| Equilibrium | `exp(lnKpS8)` at 600 K | 1.5592e11 | 0.02e11 |
+| Speciation | Sulphur mole fraction at 300 degC, 1.7 bara, 8 mol/s S in 100 mol/s inert | 0.01118250 | 1e-6 |
+| Polymerisation duty | 300 -> 170 degC, 1.7 bara | 9815 W | 1 W |
+| Dew point / vapour pressure | `pSatTotal(150 degC)` | 32.2973 Pa | 1e-3 |
+| Dew point / vapour pressure | `pSatTotal(300 degC)` | 6158.65 Pa | 1 |
+| Condenser state | Sulphur partial pressure at 170 degC | 86.432079 Pa | 1e-3 |
+| Condenser state | Condensed fraction at 170 degC | 0.952407 | 1e-4 |
+| Condensation | Colburn-Hougen interface temperature | 426.499368 K | 1e-3 |
+| Condensation | Colburn-Hougen molar flux | 0.01478073 mol/m2/s | 1e-6 |
+| Liquid sulphur | Viscosity at 187 degC | 93 Pa s | 0.1 |
+
+Behavioral checks also verify that:
+
+- heavier sulphur allotropes become dominant on cooling while conserving the
+  sulphur atom balance;
+- the dew-point inversion round-trips the saturation curve;
+- the lambda-transition cliff is visible in liquid viscosity;
+- wall-window, sulfidation, wet-H2S and fogging checks fire in the intended
+  regimes.
 
 ## Numerical Methods
 

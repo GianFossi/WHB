@@ -4,13 +4,13 @@ These instructions are automatically loaded by GitHub Copilot for this
 repository.
 
 The canonical AI assistant memory, project conventions and modification
-rules are maintained in [`AGENTS.md`](../AGENTS.md) at the repository
-root. Treat that file as authoritative and follow it when suggesting or
-applying changes.
+rules are maintained in [`.ai/AGENTS.md`](../.ai/AGENTS.md). Treat that
+file as authoritative and follow it when suggesting or applying changes.
+Every AI instruction file for this repository is in `.ai/`.
 
 Key points:
 
-- F# on .NET 8, solution `WhbDesign.sln`.
+- F# on .NET 10, solution `WhbDesign.sln`.
 - Projects: `src/Whb.Core` (library), `src/Whb.Cli` (CLI),
   `tests/Whb.Tests` (xUnit).
 - Build & test with `.\build.ps1` or `dotnet build` / `dotnet test`.
@@ -22,4 +22,4 @@ Key points:
   position of its `.fsproj`.
 
 Record notable modification decisions in the "Modification Memory Log"
-section of `AGENTS.md`.
+section of `.ai/AGENTS.md`.

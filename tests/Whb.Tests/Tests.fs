@@ -29,6 +29,10 @@ let ``default project options expose thermal precision controls`` () =
     Assert.True(Options.Options.defaultOptions.Calculation.BypassTargetToleranceK > 0.0)
     Assert.True(Options.Options.defaultOptions.Calculation.GasPropertyCache)
     Assert.True(Options.Options.defaultOptions.Calculation.CorrelationValidityWarnings)
+    Assert.Equal(Claus.Frozen, Defaults.referenceCase.Gas.ClausMode)
+    Assert.True(Defaults.referenceCase.Gas.ClausKinetics.SeverityFactor > 0.0)
+    Assert.True(Defaults.referenceCase.Gas.ClausKinetics.TauFactor > 0.0)
+    Assert.False(Defaults.referenceCase.SulphurCondenser.Enabled)
 
 [<Fact>]
 let ``bisect handles normal and reversed brackets`` () =
@@ -547,3 +551,417 @@ let ``open work list stays in step with the code`` () =
             System.IO.Path.Combine(root, "src", "Whb.Core", "Solvers", "BundleSolver.fs"))
     Assert.Contains("dpWeight", solver)
     Assert.DoesNotContain("dpAcc / float (ny * nc)", solver)
+
+[<Fact>]
+let ``extended gas database returns physical properties for all supported species`` () =
+    let t = cToK 500.0
+    for sp in GasProps.allSpecies do
+        Assert.True(GasProps.molarMass sp > 0.0, sprintf "M %A" sp)
+        Assert.True(GasProps.cpMolar sp t > 0.0, sprintf "cp %A" sp)
+        Assert.True(GasProps.muPure sp t > 0.0, sprintf "mu %A" sp)
+        Assert.True(GasProps.kPure sp t > 0.0, sprintf "k %A" sp)
+
+[<Fact>]
+let ``species parser accepts formulas and service aliases`` () =
+    Assert.Equal(Some GasProps.H2S, GasProps.tryParseSpecies "H2S")
+    Assert.Equal(Some GasProps.S8, GasProps.tryParseSpecies "s8")
+    Assert.Equal(Some GasProps.C6H6, GasProps.tryParseSpecies "benzene")
+    Assert.Equal(Some GasProps.C7H8, GasProps.tryParseSpecies "TOLUENE")
+    Assert.Equal(Some GasProps.He, GasProps.tryParseSpecies "elio")
+    Assert.Equal(None, GasProps.tryParseSpecies "unknown")
+
+[<Fact>]
+let ``sulphur allotropes stay ideal in virial mode instead of throwing`` () =
+    let mix = [ GasProps.S2, 0.4; GasProps.S6, 0.3; GasProps.S8, 0.3 ]
+    let props = GasProps.mixReal GasProps.Wilke true mix (cToK 600.0) (barToPa 2.0) 1.0
+    Assert.True(props.Rho > 0.0)
+    Assert.Equal(None, GasProps.Virial.criticalOpt GasProps.S8)
+
+[<Fact>]
+let ``satT and saturation table stay aligned with IF97 anchors`` () =
+    let table = Steam.saturationTable20to310 ()
+    Assert.Equal(30, table.Length)
+    table
+    |> List.pairwise
+    |> List.iter (fun (a, b) ->
+        Assert.True(b.P > a.P)
+        Assert.True(b.Hfg < a.Hfg)
+        Assert.True(b.RhoL < a.RhoL))
+    let s100 = Steam.satT (cToK 100.0)
+    approx 1.01418 1e-3 (paToBar s100.P)
+    approx 2256.47e3 1.0e3 s100.Hfg
+    let s310 = Steam.satT (cToK 310.0)
+    approx 690.7 0.6 s310.RhoL
+    approx s100.Hfg 1.0 (Steam.sat s100.P).Hfg
+
+[<Fact>]
+let ``explicit saturation correlations remain within their stated screening accuracy`` () =
+    for tc in [ 20.0; 100.0; 200.0; 310.0 ] do
+        let s = Steam.satT (cToK tc)
+        approx s.RhoL (0.001 * s.RhoL) (Steam.Explicit.rhoLsat (cToK tc))
+        approx s.RhoV (0.02 * s.RhoV) (Steam.Explicit.rhoVsat (cToK tc))
+    for tc in [ 20.0; 60.0; 100.0 ] do
+        let s = Steam.satT (cToK tc)
+        approx s.MuL (0.01 * s.MuL) (Steam.Explicit.muLVogel (cToK tc))
+        approx s.KL (0.01 * s.KL) (Steam.Explicit.kLRamires (cToK tc))
+    for tc in [ 50.0; 100.0; 200.0; 300.0 ] do
+        let s = Steam.satT (cToK tc)
+        approx s.Hfg (0.03 * s.Hfg) (Steam.Explicit.hfgWatson (cToK tc))
+
+[<Fact>]
+let ``kandlikar helpers classify the NBD regime and default stays on chen`` () =
+    let sat = Steam.sat Defaults.referenceCase.Water.DrumPressure
+    let q = 150.0e3
+    let g = 300.0
+    let d = Defaults.referenceCase.Tube.Do
+    let reLO = g * d / sat.MuL
+    let hLO = WaterSide.hZukauskas reLO sat.PrL sat.PrL sat.KL d true (1.0 / 0.8660254)
+    let k = WaterSide.hKandlikar hLO q g 0.05 d false 1.0 sat
+    Assert.True(k.HTp > 0.0)
+    Assert.True(k.Bo > 1.5e-4)
+    Assert.True(k.Co > 0.65)
+    Assert.Equal(WaterSide.NucleateBoilingDominant, WaterSide.regimeByCo k.Co)
+    Assert.Equal(WaterSide.ChenSuperposition, Defaults.referenceCase.Water.FlowBoiling)
+
+[<Fact>]
+let ``dnb screening limits follow the 07 and 05 proposal criteria`` () =
+    approx 0.7 1e-12 (WaterSide.dnbAllowableFraction false false)
+    approx 0.5 1e-12 (WaterSide.dnbAllowableFraction true false)
+    approx 0.5 1e-12 (WaterSide.dnbAllowableFraction false true)
+    approx (1.0 / 0.7) 1e-12 (WaterSide.dnbrRequired false false)
+    approx 2.0 1e-12 (WaterSide.dnbrRequired true false)
+    approx 2.0 1e-12 (WaterSide.dnbrRequired false true)
+
+[<Fact>]
+let ``sulphur equilibrium constants and reaction heats stay on their anchors`` () =
+    approx 25.772024 1e-5 (Sulphur.lnKpS8 600.0)
+    approx 7.7119e7 0.02e7 (exp (Sulphur.lnKpS6 600.0))
+    approx 1.5592e11 0.02e11 (exp (Sulphur.lnKpS8 600.0))
+    Assert.True(Sulphur.dhReactionS6 400.0 < 0.0)
+    Assert.True(Sulphur.dhReactionS8 700.0 < 0.0)
+
+[<Fact>]
+let ``sulphur speciation shifts towards heavier allotropes on cooling`` () =
+    let p = barToPa 1.7
+    let hot = Sulphur.speciate (cToK 500.0) p 8.0 100.0
+    let cold = Sulphur.speciate (cToK 200.0) p 8.0 100.0
+    let atoms (s: Sulphur.Speciation) = 2.0 * s.NS2 + 6.0 * s.NS6 + 8.0 * s.NS8
+    Assert.True(cold.MeanAtomicity > hot.MeanAtomicity)
+    approx 8.0 1e-6 (atoms hot)
+    approx 8.0 1e-6 (atoms cold)
+    approx 0.01118250 1e-6 ((Sulphur.speciate (cToK 300.0) p 8.0 100.0).YSulphur)
+
+[<Fact>]
+let ``polymerisation duty is positive because frozen speciation underpredicts it`` () =
+    let extra = Sulphur.polymerisationDuty (cToK 300.0) (cToK 170.0) (barToPa 1.7) 8.0 100.0
+    Assert.True(extra > 0.0)
+    approx 9815.0 1.0 extra
+
+[<Fact>]
+let ``sulphur vapour pressure and dew point are monotone and round trip`` () =
+    approx 32.2973 1e-3 (Sulphur.pSatTotal (cToK 150.0))
+    approx 6158.65 1.0 (Sulphur.pSatTotal (cToK 300.0))
+    let ps = [ 120.0; 150.0; 200.0; 250.0; 300.0 ] |> List.map (fun t -> Sulphur.pSatTotal (cToK t))
+    ps |> List.pairwise |> List.iter (fun (a, b) -> Assert.True(b > a))
+    let t = cToK 230.0
+    approx (kToC t) 0.01 (kToC (Sulphur.dewPoint (Sulphur.pSatTotal t)))
+
+[<Fact>]
+let ``condenser state caps vapour at saturation and reports condensed fraction`` () =
+    let p = barToPa 1.7
+    let st300 = Sulphur.condenserState (cToK 300.0) p 8.0 100.0
+    Assert.False(st300.Condensing)
+    approx 0.0 1e-12 st300.NCondensed
+    let st170 = Sulphur.condenserState (cToK 170.0) p 8.0 100.0
+    Assert.True(st170.Condensing)
+    approx 86.432079 1e-3 st170.PSulphur
+    approx 0.952407 1e-4 st170.CondensedFraction
+
+[<Fact>]
+let ``sulphur process state inverts enthalpy through condensation`` () =
+    let p = barToPa 1.7
+    let t = cToK 170.0
+    let comp = [ GasProps.N2, 0.85; GasProps.H2O, 0.05; GasProps.S2, 0.10 ]
+    let h = Sulphur.processEnthalpyAt Shift.Frozen false p comp t
+    let st = Sulphur.processStateFromEnthalpyAt Shift.Frozen false p comp h
+
+    Assert.True(st.Condensing)
+    Assert.True(st.CondensedFraction > 0.0)
+    approx t 0.01 st.T
+    approx h 1e-6 st.TotalSpecificEnthalpy
+
+[<Fact>]
+let ``sulphur liquid viscosity captures the lambda transition cliff`` () =
+    Assert.InRange(Sulphur.muLiquid (cToK 140.0), 5e-3, 15e-3)
+    Assert.True(Sulphur.muLiquid (cToK 165.0) > 100.0 * Sulphur.muLiquid (cToK 155.0))
+    approx 93.0 0.1 (Sulphur.muLiquid (cToK 187.0))
+    Assert.True(Sulphur.muLiquid (cToK 187.0) > Sulphur.muLiquid (cToK 250.0))
+
+[<Fact>]
+let ``wall window condensation and corrosion checks fire in the intended regimes`` () =
+    Assert.Equal(Sulphur.Alarm, (Sulphur.checkWallWindow (cToK 118.0)).Severity)
+    Assert.Equal(Sulphur.Ok, (Sulphur.checkWallWindow (cToK 140.0)).Severity)
+    Assert.Equal(Sulphur.Watch, (Sulphur.checkWallWindow (cToK 157.0)).Severity)
+    Assert.Equal(Sulphur.Alarm, (Sulphur.checkWallWindow (cToK 165.0)).Severity)
+    Assert.Equal(Sulphur.Watch, (Sulphur.checkSulphidation (cToK 300.0) 0.05).Severity)
+    Assert.Equal(Sulphur.Alarm, (Sulphur.checkSulphidation (cToK 360.0) 0.05).Severity)
+    Assert.Equal(Sulphur.Alarm, (Sulphur.checkWetH2S (cToK 80.0) (cToK 90.0) 0.05).Severity)
+
+[<Fact>]
+let ``claus screening separates elemental sulphur from generic claus species`` () =
+    let p = barToPa 1.7
+    let sc =
+        Sulphur.clausScreening p [ GasProps.N2, 0.55; GasProps.H2O, 0.20; GasProps.H2S, 0.10; GasProps.S2, 0.15 ]
+
+    Assert.True(sc.HasClausSpecies)
+    Assert.True(sc.HasElementalSulphurVapour)
+    Assert.Contains("H2S", sc.PresentSpecies)
+    Assert.Contains("S2", sc.PresentSpecies)
+    approx 0.10 1e-12 sc.YH2S
+    approx 0.15 1e-12 sc.YElementalSulphur
+    approx (kToC (Sulphur.dewPoint (0.15 * p))) 0.01 (kToC sc.SulphurDewPoint.Value)
+    Assert.True(sc.WaterDewPoint.Value > cToK 50.0)
+
+[<Fact>]
+let ``claus pseudo-closure conserves atoms while generating elemental sulphur`` () =
+    let atoms (comp: GasProps.Composition) =
+        let cn = GasProps.normalize comp
+        let y sp = GasProps.molFrac cn sp
+        let nTot = 1.0 / GasProps.mixMolarMass cn
+        let s =
+            nTot * (y GasProps.H2S
+                    + y GasProps.SO2
+                    + y GasProps.COS
+                    + 2.0 * y GasProps.CS2
+                    + 2.0 * y GasProps.S2
+                    + 6.0 * y GasProps.S6
+                    + 8.0 * y GasProps.S8)
+        let c = nTot * (y GasProps.CO + y GasProps.CO2 + y GasProps.COS + y GasProps.CS2)
+        let h =
+            nTot * (2.0 * y GasProps.H2
+                    + 4.0 * y GasProps.CH4
+                    + 2.0 * y GasProps.H2O
+                    + 2.0 * y GasProps.H2S)
+        let o =
+            nTot * (y GasProps.CO
+                    + 2.0 * y GasProps.CO2
+                    + y GasProps.H2O
+                    + y GasProps.COS
+                    + 2.0 * y GasProps.SO2)
+        struct (s, c, h, o)
+    let compIn =
+        [ GasProps.N2, 0.70
+          GasProps.H2O, 0.15
+          GasProps.H2S, 0.10
+          GasProps.SO2, 0.03
+          GasProps.COS, 0.015
+          GasProps.CS2, 0.005 ]
+    let compOut = Claus.advance Claus.Equilibrium (cToK 900.0) 0.05 compIn
+    let struct (sIn, cIn, hIn, oIn) = atoms compIn
+    let struct (sOut, cOut, hOut, oOut) = atoms compOut
+
+    approx sIn 1e-6 sOut
+    approx cIn 1e-6 cOut
+    approx hIn 1e-6 hOut
+    approx oIn 1e-6 oOut
+    Assert.True((GasProps.molFrac compOut GasProps.S2) > 0.0)
+    Assert.True((GasProps.molFrac compOut GasProps.H2S) < (GasProps.molFrac compIn GasProps.H2S))
+
+[<Fact>]
+let ``default claus kinetic mode is less aggressive than equilibrium on the same segment`` () =
+    let compIn =
+        [ GasProps.N2, 0.70
+          GasProps.H2O, 0.15
+          GasProps.H2S, 0.10
+          GasProps.SO2, 0.03
+          GasProps.COS, 0.015
+          GasProps.CS2, 0.005 ]
+    let eqOut = Claus.advance Claus.Equilibrium (cToK 900.0) 0.05 compIn
+    let kinOut = Claus.advance Claus.Kinetic (cToK 900.0) 0.05 compIn
+    let eqClosure = Claus.elementalSulphurAtomFraction eqOut
+    let kinClosure = Claus.elementalSulphurAtomFraction kinOut
+
+    Assert.True(kinClosure > 0.0)
+    Assert.True(kinClosure < eqClosure)
+    Assert.True((GasProps.molFrac kinOut GasProps.SO2) > (GasProps.molFrac eqOut GasProps.SO2))
+
+[<Fact>]
+let ``claus kinetic severity factor changes conversion monotonically`` () =
+    let compIn =
+        [ GasProps.N2, 0.70
+          GasProps.H2O, 0.15
+          GasProps.H2S, 0.10
+          GasProps.SO2, 0.03
+          GasProps.COS, 0.015
+          GasProps.CS2, 0.005 ]
+    let basePars = Defaults.referenceCase.Gas.ClausKinetics
+    let mild = Claus.advanceWith (Claus.withSeverity 0.05 basePars) Claus.Kinetic (cToK 900.0) 0.05 compIn
+    let strong = Claus.advanceWith (Claus.withSeverity 0.60 basePars) Claus.Kinetic (cToK 900.0) 0.05 compIn
+    let mildClosure = Claus.elementalSulphurAtomFraction mild
+    let strongClosure = Claus.elementalSulphurAtomFraction strong
+
+    Assert.True(strongClosure > mildClosure)
+    Assert.True((GasProps.molFrac strong GasProps.SO2) < (GasProps.molFrac mild GasProps.SO2))
+
+[<Fact>]
+let ``claus severity calibration matches a requested surrogate closure`` () =
+    let compIn =
+        [ GasProps.N2, 0.70
+          GasProps.H2O, 0.15
+          GasProps.H2S, 0.10
+          GasProps.SO2, 0.03
+          GasProps.COS, 0.015
+          GasProps.CS2, 0.005 ]
+    let target = 0.12
+    let fitted =
+        Claus.calibrateSeverity target Defaults.referenceCase.Gas.ClausKinetics (cToK 900.0) 0.05 compIn
+    let outComp =
+        Claus.advanceWith fitted Claus.Kinetic (cToK 900.0) 0.05 compIn
+    let closure = Claus.elementalSulphurAtomFraction outComp
+
+    approx target 2e-3 closure
+
+[<Fact>]
+let ``colburn hougen and fog helpers remain numerically stable`` () =
+    let p = barToPa 1.7
+    let pS = Sulphur.pSatTotal (cToK 250.0)
+    let kG = Sulphur.kGasFromHtc 60.0 35.0 1.2 p
+    let r = Sulphur.condenseColburnHougen (cToK 240.0) pS p 60.0 kG 400.0 (cToK 140.0)
+    Assert.InRange(r.TInterface, cToK 140.0, cToK 240.0)
+    approx 426.499368 1e-3 r.TInterface
+    approx 0.01478073 1e-6 r.MolarFlux
+    approx (r.QLatent + r.QSensible) 1e-6 r.QTotal
+    let fog = Sulphur.assessFog (cToK 240.0) (1.5 * pS) 1.2 -25.0 -300.0
+    Assert.True(fog.FogLikely)
+
+[<Fact>]
+let ``dedicated sulphur condenser solver returns duty area and liquid sulphur`` () =
+    let feed : SulphurCondenser.Feed =
+        { Composition = [ GasProps.N2, 0.72; GasProps.H2O, 0.08; GasProps.S2, 0.20 ]
+          MassFlow = 12.0
+          TIn = cToK 220.0
+          PIn = barToPa 1.7
+          Z = 1.0
+          ShiftMode = Shift.Frozen
+          ClausMode = Claus.Frozen
+          ClausKinetics = Defaults.referenceCase.Gas.ClausKinetics
+          MixingRule = GasProps.Wilke
+          RealGas = true }
+    let spec : SulphurCondenser.Spec =
+        { Enabled = true
+          UseWhbOutlet = false
+          Sections = 24
+          ResidenceTime = 1.0
+          DpTotal = 2000.0
+          TOutTarget = cToK 145.0
+          TWall = cToK 140.0
+          TCoolant = cToK 135.0
+          UAssumed = 60.0
+          Feed = feed }
+    let result = SulphurCondenser.solve spec
+
+    Assert.True(result.Duty > 0.0)
+    Assert.True(result.AreaRequired > 0.0)
+    Assert.True(result.OutletState.CondensedFraction > 0.0)
+    Assert.True(result.CondensedSulphurMassFlow > 0.0)
+    Assert.Equal(24, result.Segments.Length)
+
+[<Fact>]
+let ``design run can execute an integrated dedicated sulphur condenser module`` () =
+    let baseCase = Defaults.referenceCase
+    let scaled =
+        baseCase.Gas.Composition
+        |> List.map (fun (sp, y) -> sp, 0.98 * y)
+    let case =
+        { baseCase with
+            NZ = 16
+            NY = 4
+            Gas =
+                { baseCase.Gas with
+                    Composition = (GasProps.S2, 0.02) :: scaled }
+            SulphurCondenser =
+                { baseCase.SulphurCondenser with
+                    Enabled = true
+                    UseWhbOutlet = false
+                    TWall = cToK 165.0
+                    Feed =
+                        { baseCase.SulphurCondenser.Feed with
+                            Composition = [ GasProps.N2, 0.72; GasProps.H2O, 0.08; GasProps.S2, 0.20 ]
+                            MassFlow = 12.0
+                            TIn = cToK 220.0
+                            PIn = barToPa 1.7 } } }
+    let settings =
+        { Design.defaultRunSettings with Parallelism = 1 }
+    let result = Design.runWithSettingsAndProgress settings ignore case
+    let sc = result.SulphurCondenserResult.Value
+
+    Assert.True(result.SulphurCondenserResult.IsSome)
+    Assert.True(sc.CondensedSulphurMassFlow > 0.0)
+    Assert.Contains(result.Findings, fun f -> f.Area = "CONDENSATORE ZOLFO")
+
+[<Fact>]
+let ``design findings keep generic claus species as screening only`` () =
+    let baseCase = Defaults.referenceCase
+    let scaled =
+        baseCase.Gas.Composition
+        |> List.map (fun (sp, y) -> sp, 0.98 * y)
+    let case =
+        { baseCase with
+            NZ = 16
+            NY = 4
+            Gas =
+                { baseCase.Gas with
+                    Composition = (GasProps.H2S, 0.02) :: scaled } }
+    let settings =
+        { Design.defaultRunSettings with Parallelism = 1 }
+    let result = Design.runWithSettingsAndProgress settings ignore case
+
+    Assert.True(result.SulphurCoupling.IsNone)
+    Assert.Contains(result.Findings, fun f -> f.Area = "ZOLFO" && f.Title.Contains("Specie Claus"))
+
+[<Fact>]
+let ``generic claus species can generate coupled sulphur when claus model is active`` () =
+    let baseCase = Defaults.referenceCase
+    let scaled =
+        baseCase.Gas.Composition
+        |> List.map (fun (sp, y) -> sp, 0.955 * y)
+    let case =
+        { baseCase with
+            NZ = 16
+            NY = 4
+            Gas =
+                { baseCase.Gas with
+                    ClausMode = Claus.Equilibrium
+                    Composition = [ GasProps.H2S, 0.03; GasProps.SO2, 0.015 ] @ scaled } }
+    let settings =
+        { Design.defaultRunSettings with Parallelism = 1 }
+    let result = Design.runWithSettingsAndProgress settings ignore case
+    let s = result.SulphurCoupling.Value
+
+    Assert.True(result.SulphurCoupling.IsSome)
+    Assert.True(s.CondensingCells > 0)
+    Assert.True(s.OutletCondensedFraction > 0.0)
+    Assert.Contains(result.Findings, fun f -> f.Area = "ZOLFO" && f.Title.Contains("Condensazione di zolfo elementare"))
+
+[<Fact>]
+let ``explicit elemental sulphur is coupled into the main bundle solve`` () =
+    let baseCase = Defaults.referenceCase
+    let scaled =
+        baseCase.Gas.Composition
+        |> List.map (fun (sp, y) -> sp, 0.98 * y)
+    let case =
+        { baseCase with
+            NZ = 16
+            NY = 4
+            Gas =
+                { baseCase.Gas with
+                    Composition = (GasProps.S2, 0.02) :: scaled } }
+    let settings =
+        { Design.defaultRunSettings with Parallelism = 1 }
+    let result = Design.runWithSettingsAndProgress settings ignore case
+    let s = result.SulphurCoupling.Value
+
+    Assert.True(result.SulphurCoupling.IsSome)
+    Assert.True(s.CondensingCells > 0)
+    Assert.True(s.OutletCondensedFraction > 0.0)
+    Assert.Contains(result.Findings, fun f -> f.Area = "ZOLFO" && f.Title.Contains("Condensazione di zolfo elementare"))
