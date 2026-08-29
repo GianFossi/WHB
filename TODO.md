@@ -4,7 +4,7 @@ Single work list for the WHB project: near-term open items first, then the
 longer-term backlog. The reasoning behind each closed item is in the Modification
 Memory Log of [`.ai/AGENTS.md`](./.ai/AGENTS.md).
 
-Status: **24 of 28 register items implemented** (levels 0-4). 42 tests green,
+Status: **24 of 28 register items implemented** (levels 0-4). 85 tests green,
 self-test bit-identical, `adaptive` and `full` bypass-map modes now agree.
 
 ---
@@ -151,8 +151,8 @@ marked and kept for context.
 - Configurable client PDS comparison data instead of the built-in reference values
   only.
 - Explicit pipe OD / wall-thickness input for material take-off accuracy.
-- Widen the `--optimize` variable set beyond ferrule and tube length, and let the
-  problem be defined from the case file.
+- Widen the built-in `--optimize` defaults and add richer examples/templates for
+  the now case-file-driven variable set.
 
 ### Quality
 
@@ -177,8 +177,9 @@ marked and kept for context.
 - Turbulent buffeting in the vibration verdict; slug forces per bend with their
   passing frequency; two-phase damping reported as a sensitivity.
 - Ledinegg criterion and root count on the circulation balance.
-- Constrained search (`--optimize`) reporting *what holds* the optimum: active
-  constraint, search bound, interior stationary point, or no feasible point.
+- Legacy constrained search (`--optimize-legacy`) reporting *what holds* the
+  optimum: active constraint, search bound, interior stationary point, or no
+  feasible point.
 - Full `--help`: commands, options, project-options keys, output files, exit codes.
 - Performance: reference case 38.7 s -> under 6 s, `full` mode 124.6 s -> ~5 s,
   `--loads` 131.8 s -> ~15 s, with the cell and stress tables unchanged except in
@@ -188,7 +189,7 @@ marked and kept for context.
 
 ## Rule that still holds
 
-The root finders in [`Circulation.fs`](./src/Whb.Core/Solvers/Circulation.fs) must
+The root finders in [`Circulation.Pipeline.fs`](./src/Whb.Core/Solvers/Circulation.Pipeline.fs) must
 stay bisection. Replacing them with Brent was tried and reverted: it converges to a
 different root and moves the circulation flow by roughly 9x. The residual has
 multiple roots, so the choice of solver there is a modelling decision, not a speed

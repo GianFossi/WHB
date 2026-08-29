@@ -49,6 +49,7 @@ and must be validated for final design use.
 | Field | Meaning |
 |---|---|
 | `vapore.pressione_bara` | Steam drum absolute pressure in bara. |
+| `vapore.dnbr_min` | Minimum DNBR criterion for this case. Default `2.0`; used by local DNBR reporting and as the default mode constraint when `vincoli` omits `dnbr_min`. |
 | `vapore.ebollizione_flusso` | Shell-side flow-boiling model: `chen` (default, historical behavior) or `kandlikar` for NBD/CBD screening. |
 | `vapore.modello_chf` | CHF model for the cell-by-cell DNBR field: `palen` (default, conservative bundle factor), `lienhard`, `zuber`, or a bare number read as a practical design limit in kW/m2. |
 | `vapore.t_alimento_C` | Feedwater temperature in degC. |
@@ -104,6 +105,174 @@ base WHB case.
 
 Backward-compatible Italian `convogliatore` / `canale` fields are still accepted,
 but new input files should prefer the `calm_box_*` names.
+
+## Mode Sections
+
+The optional top-level mode sections make `rating`, `optimize`, and `design`
+explicitly separate CLI workflows while still using the same underlying
+verification engine.
+
+### Shared Constraints: `vincoli`
+
+`vincoli` is an optional array of constraint objects. If omitted, the CLI uses
+the built-in rating defaults (`DNBR`, tube metal temperature, gas pressure
+drop, vibration FEI).
+
+```json
+{
+  "vincoli": [
+    { "chiave": "dnbr_min", "min": 2.0, "peso": 1.0, "richiesto": true },
+    { "chiave": "t_metallo_tubi_max_c", "max": 450.0, "peso": 1.0, "richiesto": true },
+    { "chiave": "dp_gas_mbar", "max": 300.0, "peso": 0.5, "richiesto": true },
+    { "chiave": "peso_whb_kg", "max": 250000.0, "peso": 0.2, "richiesto": false }
+  ]
+}
+```
+
+Supported `chiave` aliases include both internal names and engineering-style
+aliases such as:
+
+- `duty_mw`
+- `steam_tph`
+- `t_gas_out_c`
+- `dp_gas_mbar`
+- `q_max_kwm2`
+- `dnbr_min`
+- `rapporto_circolazione`
+- `v_vcrit`
+- `t_metallo_tubi_max_c`
+- `t_liner_bypass_max_c`
+- `t_tubo_bypass_max_c`
+- `margine_sottoraffreddamento_k`
+- `residuo_accoppiato`
+- `celle_non_convergenti`
+- `peso_whb_kg`
+- `peso_piping_kg`
+- `diametro_esterno_whb_mm`
+- `diametro_esterno_drum_mm`
+- `ingombro_whb_m2`
+- `ingombro_drum_m2`
+- `quota_drum_m`
+
+Field meanings:
+
+- `min`: lower bound in the engineering units implied by `chiave`.
+- `max`: upper bound in the engineering units implied by `chiave`.
+- `peso`: relative penalty used when the optimizer ranks infeasible candidates.
+- `richiesto`: if `false`, the reading is reported but does not block feasibility.
+
+### Rating Loads: `rating.carichi`
+
+`rating.carichi` is an optional array of operating cases applied on top of the
+base geometry. If omitted, the base case alone is checked.
+
+```json
+{
+  "rating": {
+    "carichi": [
+      { "nome": "base" },
+      { "nome": "110%", "fattore_portata_gas": 1.10 },
+      { "nome": "hot gas", "t_ingresso_gas_C": 990.0, "pressione_vapore_bara": 120.0 }
+    ]
+  }
+}
+```
+
+Supported load-case fields:
+
+- `nome`
+- `portata_gas_kgs`
+- `fattore_portata_gas`
+- `t_ingresso_gas_C`
+- `pressione_vapore_bara`
+- `t_miscelata_target_C`
+- `bypass_frazione_aperta`
+- `note`
+
+### Optimize Section: `optimize`
+
+`optimize` applies to one existing geometry and varies only the configured
+design variables, always rechecking every candidate with the same verification
+engine used by `rating`.
+
+```json
+{
+  "optimize": {
+    "carichi": [
+      { "nome": "base" },
+      { "nome": "110%", "fattore_portata_gas": 1.10 }
+    ],
+    "variabili": [
+      { "chiave": "lunghezza_ferrula_mm", "min": 100.0, "max": 350.0, "passo": 25.0 },
+      { "chiave": "lunghezza_tubi_m", "min": 11.0, "max": 14.0, "passo": 0.25 },
+      { "chiave": "numero_tubi", "min": 780.0, "max": 900.0, "passo": 4.0 }
+    ],
+    "obiettivo": [
+      { "chiave": "peso_whb_kg", "peso": 1.0, "senso": "min" },
+      { "chiave": "ingombro_whb_m2", "peso": 0.25, "senso": "min" }
+    ],
+    "max_iterazioni": 80,
+    "tolleranza": 0.001
+  }
+}
+```
+
+Supported variable aliases:
+
+- `lunghezza_ferrula_mm`
+- `lunghezza_tubi_m`
+- `numero_tubi`
+- `passo_tubi_mm`
+- `mantello_id_mm`
+- `quota_drum_m`
+
+For each variable:
+
+- `min`, `max`, `passo` use the engineering units implied by `chiave`.
+- `corrente` is optional and overrides the value taken from the base case.
+- If `variabili` is omitted, the CLI uses the built-in optimize defaults
+  (ferrule length and tube length).
+
+`obiettivo` is an optional array of weighted terms. `senso` accepts `min`,
+`max`, `massimizza`, or `maximize`. If omitted, the default objective minimizes
+WHB weight, WHB envelope, drum envelope, and external piping weight.
+
+- `peso` multiplies the term after normalization.
+- `scala` is optional. When provided, the solver minimizes or maximizes
+  `value / scala` so heterogeneous metrics can be combined consistently.
+- If `scala` is omitted, the term stays in its raw engineering units. This is
+  appropriate for single-metric objectives such as pure weight minimization.
+
+### Greenfield Design Section: `design`
+
+`design` explores a discrete candidate space. The input case still provides the
+non-varied details (materials, process definition, piping model, reporting
+context), while `design.spazio` enumerates the geometry choices to test.
+
+```json
+{
+  "design": {
+    "carichi": [
+      { "nome": "base" },
+      { "nome": "110%", "fattore_portata_gas": 1.10 }
+    ],
+    "obiettivo": [
+      { "chiave": "peso_whb_kg", "peso": 1.0, "senso": "min" }
+    ],
+    "spazio": {
+      "numero_tubi": [800, 848, 896],
+      "lunghezza_tubi_m": [12.0, 13.0, 14.0],
+      "lunghezza_ferrula_mm": [150.0, 200.0, 250.0],
+      "mantello_id_mm": [1950.0, 2025.0, 2100.0],
+      "passo_tubi_mm": [48.0, 50.8, 53.0],
+      "quota_drum_m": [5.5, 6.0, 6.5]
+    }
+  }
+}
+```
+
+Every list under `design.spazio` is optional. If one list is omitted, the
+current value from the template case is reused for that dimension.
 
 ## Project Options File
 

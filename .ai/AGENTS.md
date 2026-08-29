@@ -29,11 +29,15 @@ Use the existing scripts and standard `dotnet` commands. Do not add new
 build tooling.
 
 ```powershell
-.\build.ps1                 # restore + build + test in Release
-.\build.ps1 -Task Build     # restore + build
-.\build.ps1 -Task Test      # restore + build + test
-.\build.ps1 -Task Rebuild   # clean + restore + build + test
-.\build.ps1 -Task Clean     # clean build outputs and generated folders
+.\macro\build.ps1           # restore + build + test in Release
+.\macro\build.ps1 -Task Build
+                             # restore + build
+.\macro\build.ps1 -Task Test
+                             # restore + build + test
+.\macro\build.ps1 -Task Rebuild
+                             # clean + restore + build + test
+.\macro\build.ps1 -Task Clean
+                             # clean build outputs and generated folders
 ```
 
 Cross-platform equivalent:
@@ -62,14 +66,25 @@ src/Whb.Core/
   Solvers/TwoPhase.fs        void fraction and two-phase friction
   Options/Shift.fs           water-gas shift equilibrium helpers
   Components/Equipment/*.fs  bundle, drum, bypass, valves, nozzles
-  Solvers/BundleSolver.fs    coupled gas/water bundle solve
-  Solvers/Circulation.fs     natural-circulation loop solve
-  Designers/Design.fs        top-level design orchestration and diagnostics
+  Solvers/BundleSolver*.fs   coupled gas/water bundle solve split into
+                             contracts, low-level kernels, support and orchestration
+  Solvers/Circulation*.fs    natural-circulation loop solve split into
+                             contracts, hydraulics, pipeline and orchestration
+  Designers/Design.fs        top-level composition and result assembly
+  Designers/DesignThermalProcess.fs
+                             shared thermal/process verification stage
+  Designers/DesignMechanical.fs
+                             mechanical screening stage on shared contracts
+  Designers/DesignContracts.fs
+                             typed handoff between verification stages
+  Designers/DesignRuntime.fs shared run settings and progress contracts
+  Modes/*.fs                 rating / optimize / design shared-engine modes
   Reports/*.fs               text, CSV and HTML reports
   Options/Defaults.fs        built-in reference case
 
 src/Whb.Cli/
-  Program.fs                 CLI, JSON input, reports and self-test
+  Program.fs                 CLI, mode dispatch, reports and self-test
+  Json.fs                    JSON readers and input helpers
 
 tests/Whb.Tests/
   Tests.fs                   xUnit tests
@@ -131,6 +146,112 @@ Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
 
+- 2026-08-29 — Refreshed the repository maps and backlog wording after the
+  shared-verification split so the docs no longer conflate the new
+  `--optimize` geometry optimizer with `--optimize-legacy`, and the
+  canonical layout now lists the separated thermal/process, mechanical and
+  mode-orchestration modules. Keep future documentation aligned with the
+  shared-engine `rating` / `optimize` / `design` scheme.
+- 2026-08-29 — Audited the DNBR thresholds against the repository documents.
+  No repo-traceable external source was found for the old local `1.43`
+  criterion (`1/0.7`), while the docs and default constraints already
+  declared `DNBR >= 2.0` as the project criterion. `WaterSide.dnbrRequired`,
+  findings text, validation notes and tests are now aligned to the single
+  documented threshold.
+- 2026-08-29 — Promoted the DNBR project criterion into the case options as
+  `vapore.dnbr_min` (default `2.0`). The local boiling-crisis screening, the
+  default shared-mode constraint set, the legacy optimizer defaults, the
+  sizing defaults, and the report text/HTML thresholds now all read the same
+  case-level value instead of hard-coding `2.0` in multiple places.
+- 2026-08-29 — Refined bypass-map progress reporting so the CLI no longer
+  keeps the last completed fraction while a bypass point is already running.
+  `Designers/DesignBypass.fs` now reports both point launch and point
+  completion with structured fractions, which makes the CLI ETA less jumpy
+  during the parallel adaptive-map phase without mixing solver logic and UI.
+- 2026-08-29 — Pushed structured progress one level deeper inside the bypass
+  point solve. `Designers/DesignThermalProcess.fs` now reports coupled
+  bundle/circulation correction steps for each map point, and
+  `Components/Equipment/Bypass.fs` exposes `marchWithProgress` so the axial
+  bypass march can contribute its own coarse subprogress. `DesignBypass.fs`
+  aggregates those per-point fractions across concurrent map points, which
+  makes the CLI ETA and activity text more informative during the longest
+  internal solve phase. Covered by `tests/Whb.Tests/ProgressTests.fs`.
+- 2026-08-29 — Moved the repository PowerShell helper scripts from the root
+  into `macro/` (`macro/build.ps1`, `macro/clean.ps1`). `macro/build.ps1`
+  now resolves the repo root from its parent directory, and docs/pointers
+  were updated accordingly. VS Code `tasks.json` and `launch.json` were
+  checked after the move: they use `dotnet` directly, so no path change was
+  required there.
+- 2026-08-29 — Reworked CLI progress reporting to use typed progress updates
+  instead of plain text wherever the shared verification flow knows real work
+  completion. `Options/ProgressModel.fs` now carries the reusable progress
+  contract, `Design` / `LoadCases` / `Rating` / `Optimize` / `GreenfieldDesign`
+  propagate structured fractions, and `Whb.Cli/Progress.fs` computes ETA from
+  reported fraction first, falling back to nominal command duration only when
+  no real progress fraction is available.
+- 2026-08-29 — Exposed the prepared mechanical-sizing interface as a public
+  report artifact. `Reports/Report.MechanicalInterface.fs` renders the
+  immutable future-calculation inputs from the same shared verification path,
+  `MechanicalDesignInterface.fromDesignResult` rebuilds that interface from a
+  `DesignResult` without duplicating formulas, and the CLI now writes
+  `interfaccia_meccanica.txt` for normal runs plus the shared-engine
+  `--rating`, `--optimize`, and `--design` modes.
+- 2026-08-29 — Fixed a scoring defect in `Modes/Optimize.scoreObjective`:
+  an omitted objective `Scale` must mean "use raw engineering units", not
+  "renormalize by the candidate itself". The previous behavior collapsed
+  positive single-metric objectives to a constant and could leave `optimize`
+  pinned to its starting point unless a required constraint forced movement.
+  `README.md`, `docs/INPUT_SCHEMA.md`, and `tests/Whb.Tests/ModeConstraintAuditTests.fs`
+  now document and lock the corrected behavior.
+- 2026-08-29 — Added a separate mechanical-sizing interface layer in
+  `Designers/MechanicalDesignContracts.fs` and
+  `Designers/MechanicalDesignInterface.fs`. It does NOT perform code
+  thickness calculations yet; it prepares typed, immutable inputs for future
+  tube, shell, channel, bypass, crevice-free weld, and tubesheet sizing,
+  while explicitly marking missing geometry such as channel dimensions or
+  external-pressure design cases. `DesignMechanical.runPure` now returns that
+  package under `MechanicalStageResult.CalculationInterface`.
+- 2026-08-29 — Split the two largest internal solver modules by functional
+  unit so the top-level files now read as orchestration only.
+  `BundleSolver` is separated into `BundleSolver.Contracts`,
+  `BundleSolver.Foundation`, `BundleSolver.CellKernel`, `BundleSolver.Support`
+  and a thin `BundleSolver.fs`; `Circulation` is separated into
+  `Circulation.Contracts`, `Circulation.Hydraulics`, `Circulation.Pipeline`
+  and a thin `Circulation.fs`. Keep future solver work flowing top-down in the
+  public file and push detail into focused companion files before those files
+  become monolithic again.
+- 2026-08-29 — Reframed the public core workflows as explicit top-down
+  function compositions. `Design.fs`, `VerificationEngine.fs`, `LoadCases.fs`,
+  `PerformanceAssessment.fs`, `Rating.fs`, `Optimize.fs`, and
+  `GreenfieldDesign.fs` now read as staged pipelines from general intent to
+  detailed evaluation, while `DesignThermalProcess.runPure` and
+  `DesignMechanical.runPure` expose side-effect-free shared verification
+  entry points. `docs/FUNCTION_COMPOSITION_ARCHITECTURE.md` and the added
+  determinism tests document and verify the purity boundary.
+- 2026-08-29 — Wired the shared-verification mode architecture into the CLI.
+  `src/Whb.Cli/Program.fs` now exposes first-class `--rating`,
+  `--optimize`, and `--design` commands that all reuse
+  `Modes/VerificationEngine` through the mode modules, with optional JSON
+  sections `vincoli`, `rating`, `optimize`, and `design`. The previous
+  maximize-duty search remains available as `--optimize-legacy`, so future
+  changes should treat the new `--optimize` as the user-facing geometry
+  optimizer and avoid adding parallel solver/report paths around it.
+- 2026-08-29 — Split the top-level WHB orchestration into
+  `Designers/DesignThermalProcess.fs`, `Designers/DesignMechanical.fs`,
+  `Designers/DesignRuntime.fs` and `Designers/DesignContracts.fs`, with
+  `Design.fs` reduced to composition plus findings/result assembly. The
+  thermal/process verification engine remains the single source of truth;
+  the mechanical stage now consumes a typed shared contract instead of
+  sharing orchestration state. Keep future rating/optimize/design modes
+  layered on that same contract rather than duplicating solver logic.
+- 2026-08-29 — Added first-class shared-verification modes in
+  `Modes/VerificationEngine.fs`, `LoadCases.fs`, `ConstraintModel.fs`,
+  `ConstraintReaders.fs`, `PerformanceAssessment.fs`, `Rating.fs`,
+  `Optimize.fs` and `GreenfieldDesign.fs`. Constraints are now explicit
+  data that can cover process, thermal, hydraulic, numerical, weight and
+  envelope metrics, while `Rating`, `Optimize` and greenfield candidate
+  selection all call the same verification engine instead of embedding
+  parallel solver logic.
 - 2026-08-28 — Adopted AI Engineering Project Standard v2.1 in
   `.ai/AI_ENGINEERING_PROJECT_STANDARD.md`: purity/statelessness is now
   explicit by default for calculation work, top-down decomposition has a

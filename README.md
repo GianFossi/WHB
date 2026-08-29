@@ -12,6 +12,7 @@ an elevated steam drum.
 - [What the software does](docs/SCOPE.md)
 - [Main assumptions](docs/ASSUMPTIONS.md)
 - [Theory recap](docs/THEORY.md)
+- [Function-composition architecture](docs/FUNCTION_COMPOSITION_ARCHITECTURE.md)
 - [Limitations and simplifications](docs/LIMITATIONS.md)
 - [Acronyms and terms](docs/ACRONYMS.md)
 - [Input schema and options](docs/INPUT_SCHEMA.md)
@@ -57,7 +58,7 @@ dotnet --info
 Build and test:
 
 ```powershell
-.\build.ps1
+.\macro\build.ps1
 ```
 
 Run the built-in reference case:
@@ -87,7 +88,8 @@ Logging is on by default for every calculation command (the default run,
 `--sizing` and `--loads`); keys omitted from an options file keep their
 documented defaults, so logging stays on unless `logging.enabled` is set to
 `false` explicitly. By default logs are written to `logs/whb-run.log`,
-temporary/service files use `tmp/`, and preflight checks verify active runs,
+temporary/service files should be placed under `temp/` (`tmp/` remains ignored
+for backward compatibility), and preflight checks verify active runs,
 read/write access and disk space before the calculation starts.
 
 Bypass-map points are solved concurrently (see `calculation.parallelism`), so
@@ -149,6 +151,24 @@ Generate partial-load curves from a case file:
 dotnet run --project src/Whb.Cli -- --loads my-case.json --out results/load-curves
 ```
 
+Run the shared-engine rating mode on configured load cases:
+
+```bash
+dotnet run --project src/Whb.Cli -- --rating my-case.json --out results/rating
+```
+
+Optimize an existing geometry against shared constraints and objectives:
+
+```bash
+dotnet run --project src/Whb.Cli -- --optimize my-case.json --out results/optimize
+```
+
+Explore a discrete greenfield design space:
+
+```bash
+dotnet run --project src/Whb.Cli -- --design my-case.json --out results/design
+```
+
 Generate the automatic sizing report:
 
 ```bash
@@ -183,9 +203,12 @@ whb --selftest
 whb --steamtable [file.csv] [--tmin <C>] [--tmax <C>] [--step <C>]
 whb --sulphur [file.csv] [--pressure-bara <bar>] [--s-atoms-mols <mol>] [--inert-mols <mol>] [--tmin <C>] [--tmax <C>] [--step <C>]
 whb --sulphur-condenser [case.json] [--out <folder>]
+whb --rating [case.json] [--out <folder>]
+whb --design [case.json] [--out <folder>]
 whb --loads [case.json] [--out <folder>]
 whb --sizing [case.json] [--out <folder>]
 whb --optimize [case.json] [--out <folder>]
+whb --optimize-legacy [case.json] [--out <folder>]
 whb --github-plan [options.json]
 whb --github-push [options.json]
 whb --help
@@ -196,13 +219,28 @@ the project options file, the files each command writes, and the exit codes.
 
 If no case file is supplied, the reference case is executed.
 
-`--optimize` runs a constrained search over ferrule length and tube length for
-the largest duty that still satisfies the design limits (DNBR, metal temperature,
-gas pressure drop, flow-induced vibration). It writes `ottimizzazione.txt`, which
-states not just where the optimum is but **what holds it there**: an active
-constraint, the edge of the search range, a genuine interior stationary point, or
-no feasible point at all. Each evaluation is a full coupled solve, so the search
-takes minutes rather than seconds.
+The shared-engine mode family is now split explicitly into three commands:
+
+- `--rating` verifies one fixed geometry against the configured load cases and
+  constraints, writing `rating.txt`, `rating.csv`, and
+  `interfaccia_meccanica.txt`.
+- `--optimize` changes an existing geometry within configured bounds to minimize
+  weight and envelope objectives while reusing the exact same thermal/process
+  and mechanical verification engine used by rating, also exporting
+  `interfaccia_meccanica.txt` for the best geometry across the governing load
+  cases.
+- `--design` explores a discrete greenfield geometry space, again with the same
+  verification engine and the same constraint language, also exporting
+  `interfaccia_meccanica.txt` for the best candidate.
+
+The optional JSON sections are `vincoli`, `rating`, `optimize`, and `design`.
+See `docs/INPUT_SCHEMA.md` and the generated template for the exact shape.
+For mixed-unit objectives, provide `scala` on each objective term; if omitted,
+the term is evaluated in its raw engineering units.
+
+`--optimize-legacy` preserves the previous constrained search over ferrule
+length and tube length for the largest duty that still satisfies the design
+limits. It now writes `ottimizzazione_legacy.txt`.
 
 `--sulphur` is a standalone Claus/SRU utility. It writes a temperature sweep with
 S2/S6/S8 equilibrium, sulphur saturation pressure, condensation onset and
@@ -226,12 +264,12 @@ the condenser module. If `false`, the condenser runs on its own
 ## Local Tasks
 
 ```powershell
-.\build.ps1                         # restore + build + test in Release
-.\build.ps1 -Task Build             # restore + build
-.\build.ps1 -Task Test              # restore + build + test
-.\build.ps1 -Task Rebuild           # clean + restore + build + test
-.\build.ps1 -Task Clean             # clean build outputs and generated folders
-.\clean.ps1                         # shortcut for clean
+.\macro\build.ps1                   # restore + build + test in Release
+.\macro\build.ps1 -Task Build       # restore + build
+.\macro\build.ps1 -Task Test        # restore + build + test
+.\macro\build.ps1 -Task Rebuild     # clean + restore + build + test
+.\macro\build.ps1 -Task Clean       # clean build outputs and generated folders
+.\macro\clean.ps1                   # shortcut for clean
 ```
 
 ## NuGet Usage
@@ -298,6 +336,8 @@ to your release process. This repository currently builds the CLI from source.
 - Vibration, nozzle, maldistribution and mechanical-stress diagnostics.
 - Text, CSV and self-contained HTML reports.
 - Partial-load curve generation from 50% to 110% gas flow.
+- Shared-engine `rating`, `optimize`, and greenfield `design` modes with
+  explicit load cases, constraints, objectives, and design spaces from JSON.
 
 ## Capabilities
 
@@ -335,6 +375,7 @@ Default output is written to `results/` unless `--out` is provided.
 | `pds_comparison.csv` | Spreadsheet-ready PDS comparison table |
 | `inventory_summary.txt` | Water-volume and estimated metal-weight summary |
 | `inventory_summary.csv` | Spreadsheet-ready inventory summary |
+| `interfaccia_meccanica.txt` | Prepared interface for future detailed mechanical code calculations, generated from the same shared verification path |
 | `celle.csv` | One row per calculation cell |
 | `profilo_assiale.csv` | Axial aggregate profile |
 | `tensioni.csv` | Stress/check table |
@@ -342,8 +383,11 @@ Default output is written to `results/` unless `--out` is provided.
 | `maldistribuzione.txt` | Maldistribution notes |
 | `vibrazioni.txt` | Vibration checks |
 | `dimensionamento.txt` | Sizing sheet; the only file written by `--sizing` |
+| `rating.txt` / `rating.csv` | Shared-engine geometry rating over configured load cases |
 | `carichi.txt` / `carichi.csv` | Partial-load curves, written by `--loads` |
-| `ottimizzazione.txt` | Constrained search result, written by `--optimize` |
+| `ottimizzazione.txt` | Shared-engine optimize result, written by `--optimize` |
+| `ottimizzazione_legacy.txt` | Legacy maximize-duty search result, written by `--optimize-legacy` |
+| `design.txt` | Shared-engine greenfield design result, written by `--design` |
 | `sulphur_table.csv` | Standalone sulphur temperature sweep, written by `--sulphur` |
 | `sulphur_condenser.txt` | Dedicated sulphur-condenser report, written by `--sulphur-condenser` and by normal runs when `condensatore_zolfo.presente = true` |
 | `sulphur_condenser_profile.csv` | Segment-by-segment sulphur-condenser profile |
@@ -357,7 +401,7 @@ The built-in `--selftest` command checks:
 - selected gas-property values for air and the reference syngas mixture;
 - real-gas virial correction traces used by the gas model.
 
-The repository test suite currently covers 68 tests across core numerical
+The repository test suite currently covers 85 tests across core numerical
 utilities and root finders, unit conversions, grid generation, piping geometry
 helpers, material lookup, heat-transfer behavior, two-phase multipliers, the
 enthalpy inversion, the constrained search and its optimum classification,
@@ -367,7 +411,7 @@ dedicated sulphur-condenser path.
 Run:
 
 ```powershell
-.\build.ps1 -Task Test
+.\macro\build.ps1 -Task Test
 ```
 
 Or directly with `dotnet`:
@@ -426,7 +470,8 @@ checked against the available client PDS data.
 - Drum-internals pressure drop defaults to an engineering estimate and should be
   replaced with vendor data when available.
 - Palen bundle CHF is conservative for forced crossflow and should be reviewed
-  against project boiling-crisis criteria.
+  against the project boiling-crisis criterion configured in
+  `vapore.dnbr_min`.
 - CKTI/Blokh-style gas emissivity assumptions should be used carefully at high
   pressure and short optical path length.
 
@@ -443,14 +488,25 @@ src/Whb.Core/
   Solvers/TwoPhase.fs        void fraction and two-phase friction
   Options/Shift.fs           water-gas shift equilibrium helpers
   Components/Equipment/*.fs  bundle, drum, bypass, valves, nozzles
-  Solvers/BundleSolver.fs    coupled gas/water bundle solve
-  Solvers/Circulation.fs     natural-circulation loop solve
-  Designers/Design.fs        top-level design orchestration and diagnostics
+  Solvers/BundleSolver*.fs   coupled gas/water bundle solve split into
+                             contracts, low-level kernels, support and orchestration
+  Solvers/Circulation*.fs    natural-circulation loop solve split into
+                             contracts, hydraulics, pipeline and orchestration
+  Designers/Design.fs        top-level composition and result assembly
+  Designers/DesignThermalProcess.fs
+                             shared thermal/process verification stage
+  Designers/DesignMechanical.fs
+                             mechanical screening stage on shared contracts
+  Designers/DesignContracts.fs
+                             typed handoff between verification stages
+  Designers/DesignRuntime.fs shared run settings and progress contracts
+  Modes/*.fs                 rating / optimize / design shared-engine modes
   Reports/*.fs               text, CSV and HTML reports
   Options/Defaults.fs        built-in reference case
 
 src/Whb.Cli/
-  Program.fs                 CLI, JSON input, reports and self-test
+  Program.fs                 CLI, mode dispatch, reports and self-test
+  Json.fs                    JSON readers and input helpers
 
 tests/Whb.Tests/
   Tests.fs                   xUnit tests

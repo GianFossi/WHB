@@ -36,8 +36,14 @@ The software can estimate:
 - estimated component metal weights;
 - numerical health of the run: convergence, clamped quantities, circulation
   stability and whether a reported limit is a real limit;
-- a constrained search for the largest duty within the design limits, reporting
-  what holds the optimum in place;
+- a shared-engine `rating` mode that verifies one fixed geometry on one or more
+  load cases;
+- a shared-engine `optimize` mode that modifies one existing geometry to
+  minimize weight and envelope metrics within explicit constraints;
+- a shared-engine greenfield `design` mode that searches a discrete geometry
+  space from scratch under the same verification engine;
+- a legacy constrained search for the largest duty within the design limits,
+  reporting what holds the optimum in place;
 - report tables for engineering review.
 
 ## Intended Use

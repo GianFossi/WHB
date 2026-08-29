@@ -34,8 +34,9 @@ Additional behavioral tests check that:
   species and keeps sulphur allotropes on the ideal-gas path in virial mode;
 - `satT`, `saturationTable`, and the explicit saturation helper correlations
   stay aligned with IF97/IAPWS anchors within their stated screening accuracy;
-- the Kandlikar/NBD helper functions and proposal DNBR thresholds stay on their
-  intended regime boundaries.
+- the Kandlikar/NBD helper functions stay on their intended regime boundaries,
+  and the local DNBR screening remains aligned with the case-level documented
+  project criterion (`vapore.dnbr_min`, default `DNBR >= 2.0`).
 - the sulphur process-state enthalpy inversion round-trips through condensing
   cases;
 - the simplified Claus closure conserves S/C/H/O atoms while generating
