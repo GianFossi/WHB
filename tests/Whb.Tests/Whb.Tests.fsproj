@@ -7,6 +7,9 @@
 
   <ItemGroup>
     <Compile Include="Tests.fs" />
+    <Compile Include="ModeConstraintAuditTests.fs" />
+    <Compile Include="MechanicalDesignInterfaceTests.fs" />
+    <Compile Include="ProgressTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Whb.Core\Whb.Core.fsproj" />
+    <ProjectReference Include="..\..\src\Whb.Cli\Whb.Cli.fsproj" />
   </ItemGroup>
 
 </Project>

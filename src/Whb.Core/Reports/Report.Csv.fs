@@ -39,7 +39,7 @@ module ReportCsv =
         sb.AppendLine(sprintf "Data: %s" (DateTime.Now.ToString("yyyy-MM-dd HH:mm", ci))) |> ignore
         sb.AppendLine("Estratto dal report esteso: stessi dati, stesso calcolo, nessuna rielaborazione.") |> ignore
         sb.AppendLine(dline) |> ignore
-        definizioni sb
+        definizioni r.Case.Water.MinDNBR sb
         sb.Append(body) |> ignore
         sb.ToString()
     let maldistributionText (r: DesignResult) =

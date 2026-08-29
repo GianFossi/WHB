@@ -363,7 +363,7 @@ module ReportText =
         hdr sb "5. Flusso termico e temperature metalliche"
         let qmax = hot |> List.maxBy (fun x -> x.QFluxOut)
         let tmax = cells |> List.maxBy (fun x -> x.TMetalIn)
-        let dnbReqOf (x: CellResult) = WaterSide.dnbrRequired (x.I = 0) x.InFerrule
+        let dnbReqOf (x: CellResult) = WaterSide.dnbrRequired c.Water.MinDNBR (x.I = 0) x.InFerrule
         let dnb = cells |> List.minBy (fun x -> x.DNBR / dnbReqOf x)
         let dnbZone =
             if dnb.InFerrule then "zona ferrula"

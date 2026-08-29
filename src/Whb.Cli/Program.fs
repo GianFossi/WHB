@@ -186,6 +186,7 @@ let loadCase (path: string) : DesignCase =
           FlowBoiling = flowBoilingModel (Json.s r "vapore.ebollizione_flusso" "chen")
           Csf = Json.f r "vapore.csf" wt.Csf
           ChfModel = chfModel (Json.s r "vapore.modello_chf" "") wt.ChfModel
+          MinDNBR = Json.f r "vapore.dnbr_min" wt.MinDNBR
           TFeed = cToK (Json.f r "vapore.t_alimento_C" (kToC wt.TFeed)) }
     let l = d.Loop
     let loop =
@@ -312,6 +313,523 @@ let loadCase (path: string) : DesignCase =
       SulphurCondenser = sulphurCondenser
       AllowInternalRecirculation = Json.b r "ricircolo_interno" d.AllowInternalRecirculation
       BypassOpenFraction = Json.f r "bypass_frazione_aperta" d.BypassOpenFraction }
+
+type private MetricInfo =
+    { Key: ConstraintModel.ConstraintValueKey
+      Aliases: string list
+      Name: string
+      Domain: ConstraintModel.ConstraintDomain
+      Unit: string
+      FromCli: float -> float
+      ToCli: float -> float }
+
+type private VariableInfo =
+    { Key: Optimize.VariableKey
+      Aliases: string list
+      Name: string
+      Unit: string
+      Current: DesignCase -> float
+      FromCli: float -> float
+      ToCli: float -> float }
+
+let private idFloat x = x
+let private lowerText (text: string) = text.Trim().ToLowerInvariant()
+let private metricInfos =
+    [ { Key = ConstraintModel.Duty
+        Aliases = [ "Duty"; "duty"; "potenza"; "potenza_mw"; "duty_mw" ]
+        Name = "Duty"
+        Domain = ConstraintModel.Process
+        Unit = "MW"
+        FromCli = fun x -> x * 1e6
+        ToCli = fun x -> x / 1e6 }
+      { Key = ConstraintModel.SteamProduction
+        Aliases = [ "SteamProduction"; "steamproduction"; "vapore"; "vapore_th"; "steam_tph" ]
+        Name = "Steam production"
+        Domain = ConstraintModel.Process
+        Unit = "t/h"
+        FromCli = fun x -> x / 3.6
+        ToCli = fun x -> x * 3.6 }
+      { Key = ConstraintModel.GasOutletTemperature
+        Aliases = [ "GasOutletTemperature"; "gasoutlettemperature"; "t_gas_uscita"; "t_gas_uscita_c"; "t_gas_out_c" ]
+        Name = "Gas outlet temperature"
+        Domain = ConstraintModel.Process
+        Unit = "degC"
+        FromCli = cToK
+        ToCli = kToC }
+      { Key = ConstraintModel.GasPressureDrop
+        Aliases = [ "GasPressureDrop"; "gaspressuredrop"; "dp_gas"; "dp_gas_mbar" ]
+        Name = "Gas pressure drop"
+        Domain = ConstraintModel.Hydraulic
+        Unit = "mbar"
+        FromCli = fun x -> x * 100.0
+        ToCli = fun x -> x / 100.0 }
+      { Key = ConstraintModel.MaxHeatFlux
+        Aliases = [ "MaxHeatFlux"; "maxheatflux"; "q_max"; "q_max_kwm2" ]
+        Name = "Maximum heat flux"
+        Domain = ConstraintModel.Thermal
+        Unit = "kW/m2"
+        FromCli = fun x -> x * 1000.0
+        ToCli = fun x -> x / 1000.0 }
+      { Key = ConstraintModel.MinDNBR
+        Aliases = [ "MinDNBR"; "mindnbr"; "dnbr"; "dnbr_min" ]
+        Name = "Minimum DNBR"
+        Domain = ConstraintModel.Thermal
+        Unit = "-"
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = ConstraintModel.MinCirculationRatio
+        Aliases = [ "MinCirculationRatio"; "mincirculationratio"; "cr"; "circulation_ratio"; "rapporto_circolazione" ]
+        Name = "Minimum circulation ratio"
+        Domain = ConstraintModel.Hydraulic
+        Unit = "-"
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = ConstraintModel.MaxFeiRatio
+        Aliases = [ "MaxFeiRatio"; "maxfeiratio"; "fei"; "fei_max"; "v_vcrit" ]
+        Name = "Maximum FIV ratio"
+        Domain = ConstraintModel.Vibration
+        Unit = "-"
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = ConstraintModel.MaxTubeMetalTemperature
+        Aliases = [ "MaxTubeMetalTemperature"; "maxtubemetaltemperature"; "t_metallo_tubi"; "t_metallo_tubi_max_c" ]
+        Name = "Maximum tube metal temperature"
+        Domain = ConstraintModel.Thermal
+        Unit = "degC"
+        FromCli = cToK
+        ToCli = kToC }
+      { Key = ConstraintModel.MaxBypassLinerTemperature
+        Aliases = [ "MaxBypassLinerTemperature"; "maxbypasslinertemperature"; "t_liner_bypass"; "t_liner_bypass_max_c" ]
+        Name = "Maximum bypass liner temperature"
+        Domain = ConstraintModel.Mechanical
+        Unit = "degC"
+        FromCli = cToK
+        ToCli = kToC }
+      { Key = ConstraintModel.MaxBypassPipeTemperature
+        Aliases = [ "MaxBypassPipeTemperature"; "maxbypasspipetemperature"; "t_tubo_bypass"; "t_tubo_bypass_max_c" ]
+        Name = "Maximum bypass pipe temperature"
+        Domain = ConstraintModel.Mechanical
+        Unit = "degC"
+        FromCli = cToK
+        ToCli = kToC }
+      { Key = ConstraintModel.DowncomerSubcoolingMargin
+        Aliases = [ "DowncomerSubcoolingMargin"; "downcomersubcoolingmargin"; "margine_sottoraffreddamento"; "margine_sottoraffreddamento_k" ]
+        Name = "Downcomer subcooling margin"
+        Domain = ConstraintModel.Hydraulic
+        Unit = "K"
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = ConstraintModel.CoupledResidual
+        Aliases = [ "CoupledResidual"; "coupledresidual"; "residuo_accoppiato" ]
+        Name = "Coupled residual"
+        Domain = ConstraintModel.Numerical
+        Unit = "-"
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = ConstraintModel.NonConvergedCells
+        Aliases = [ "NonConvergedCells"; "nonconvergedcells"; "celle_non_convergenti" ]
+        Name = "Non-converged cells"
+        Domain = ConstraintModel.Numerical
+        Unit = "-"
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = ConstraintModel.WhbWeightKg
+        Aliases = [ "WhbWeightKg"; "whbweightkg"; "peso_whb"; "peso_whb_kg" ]
+        Name = "Estimated WHB weight"
+        Domain = ConstraintModel.Weight
+        Unit = "kg"
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = ConstraintModel.ExternalPipingWeightKg
+        Aliases = [ "ExternalPipingWeightKg"; "externalpipingweightkg"; "peso_piping"; "peso_piping_kg" ]
+        Name = "Estimated external piping weight"
+        Domain = ConstraintModel.Weight
+        Unit = "kg"
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = ConstraintModel.WhbOuterDiameter
+        Aliases = [ "WhbOuterDiameter"; "whbouterdiameter"; "diametro_esterno_whb"; "diametro_esterno_whb_mm" ]
+        Name = "WHB outer diameter"
+        Domain = ConstraintModel.Envelope
+        Unit = "mm"
+        FromCli = fun x -> x / 1000.0
+        ToCli = fun x -> x * 1000.0 }
+      { Key = ConstraintModel.DrumOuterDiameter
+        Aliases = [ "DrumOuterDiameter"; "drumouterdiameter"; "diametro_esterno_drum"; "diametro_esterno_drum_mm" ]
+        Name = "Steam drum outer diameter"
+        Domain = ConstraintModel.Envelope
+        Unit = "mm"
+        FromCli = fun x -> x / 1000.0
+        ToCli = fun x -> x * 1000.0 }
+      { Key = ConstraintModel.WhbIdTimesLength
+        Aliases = [ "WhbIdTimesLength"; "whbidtimeslength"; "ingombro_whb"; "ingombro_whb_m2"; "whb_id_x_l" ]
+        Name = "WHB ID x L"
+        Domain = ConstraintModel.Envelope
+        Unit = "m2"
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = ConstraintModel.DrumIdTimesLength
+        Aliases = [ "DrumIdTimesLength"; "drumidtimeslength"; "ingombro_drum"; "ingombro_drum_m2"; "drum_id_x_l" ]
+        Name = "Steam drum ID x L"
+        Domain = ConstraintModel.Envelope
+        Unit = "m2"
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = ConstraintModel.DrumCenterlineHeight
+        Aliases = [ "DrumCenterlineHeight"; "drumcenterlineheight"; "quota_drum"; "quota_drum_m" ]
+        Name = "Steam drum centerline elevation"
+        Domain = ConstraintModel.Geometry
+        Unit = "m"
+        FromCli = idFloat
+        ToCli = idFloat } ]
+
+let private variableInfos =
+    [ { Key = Optimize.FerruleLengthMm
+        Aliases = [ "FerruleLengthMm"; "ferrulelengthmm"; "lunghezza_ferrula"; "lunghezza_ferrula_mm" ]
+        Name = "lunghezza ferrula"
+        Unit = "mm"
+        Current = fun c -> (c.Ferrule.Lengths |> List.sumBy (fun (frac, l) -> frac * l)) * 1000.0
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = Optimize.TubeLengthM
+        Aliases = [ "TubeLengthM"; "tubelengthm"; "lunghezza_tubi"; "lunghezza_tubi_m" ]
+        Name = "lunghezza tubi"
+        Unit = "m"
+        Current = fun c -> c.Tube.Length
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = Optimize.TubeCount
+        Aliases = [ "TubeCount"; "tubecount"; "numero_tubi" ]
+        Name = "numero tubi"
+        Unit = "-"
+        Current = fun c -> float c.Tube.NTubes
+        FromCli = idFloat
+        ToCli = idFloat }
+      { Key = Optimize.TubePitchM
+        Aliases = [ "TubePitchM"; "tubepitchm"; "passo_tubi"; "passo_tubi_mm" ]
+        Name = "passo tubi"
+        Unit = "mm"
+        Current = fun c -> c.Tube.Pitch * 1000.0
+        FromCli = fun x -> x / 1000.0
+        ToCli = fun x -> x * 1000.0 }
+      { Key = Optimize.ShellInnerDiameterM
+        Aliases = [ "ShellInnerDiameterM"; "shellinnerdiameterm"; "diametro_interno_mantello"; "mantello_id_mm" ]
+        Name = "diametro interno mantello"
+        Unit = "mm"
+        Current = fun c -> c.Tube.ShellId * 1000.0
+        FromCli = fun x -> x / 1000.0
+        ToCli = fun x -> x * 1000.0 }
+      { Key = Optimize.DrumCenterlineHeightM
+        Aliases = [ "DrumCenterlineHeightM"; "drumcenterlineheightm"; "quota_drum"; "quota_drum_m" ]
+        Name = "quota drum"
+        Unit = "m"
+        Current = fun c -> c.Loop.DzDrumWhb
+        FromCli = idFloat
+        ToCli = idFloat } ]
+
+let private metricInfo key = metricInfos |> List.find (fun info -> info.Key = key)
+let private tryMetricInfo (name: string) =
+    let target = lowerText name
+    metricInfos
+    |> List.tryFind (fun info -> info.Aliases |> List.exists (fun alias -> lowerText alias = target))
+
+let private variableInfo key = variableInfos |> List.find (fun info -> info.Key = key)
+let private tryVariableInfo (name: string) =
+    let target = lowerText name
+    variableInfos
+    |> List.tryFind (fun info -> info.Aliases |> List.exists (fun alias -> lowerText alias = target))
+
+let private createRunSettings (options: Options.ProjectOptions) (correlationValidityWarnings: bool) : Design.RunSettings =
+    { BypassMapMode = options.Calculation.BypassMapMode
+      BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
+      GasPropertyCache = options.Calculation.GasPropertyCache
+      CorrelationValidityWarnings = correlationValidityWarnings
+      Parallelism = max 1 options.Calculation.Parallelism }
+
+let private readCaseRoot (casePath: string option) (fallback: 'T) (reader: JsonElement -> 'T) =
+    match casePath with
+    | Some path ->
+        use fs = File.OpenRead path
+        use doc =
+            JsonDocument.Parse(
+                fs,
+                JsonDocumentOptions(AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip))
+        reader doc.RootElement
+    | None -> fallback
+
+let private tryArrayAtPath (root: JsonElement) (paths: string list) =
+    paths |> List.tryPick (fun path -> Json.tryArrayElements root path)
+
+let private tryNumberArrayAtPath (root: JsonElement) (paths: string list) =
+    paths |> List.tryPick (fun path -> Json.tryArray root path)
+
+let private loadCaseSpecAt (item: JsonElement) =
+    let notes =
+        match Json.tryStringArrayAt item "note" with
+        | Some xs -> xs
+        | None ->
+            match Json.trySAt item "nota" with
+            | Some note -> [ note ]
+            | None -> []
+    { LoadCases.baseCase (Json.sAt item "nome" "base")
+        with GasMassFlow = Json.tryFAt item "portata_gas_kgs"
+             GasMassFlowFactor =
+                match Json.tryFAt item "fattore_portata_gas", Json.tryFAt item "carico" with
+                | Some value, _ -> Some value
+                | None, Some value -> Some value
+                | _ -> None
+             GasInletTemperature =
+                match Json.tryFAt item "t_ingresso_gas_C", Json.tryFAt item "t_gas_ingresso_C" with
+                | Some value, _ -> Some(cToK value)
+                | None, Some value -> Some(cToK value)
+                | _ -> None
+             DrumPressure =
+                match Json.tryFAt item "pressione_vapore_bara", Json.tryFAt item "pressione_drum_bara" with
+                | Some value, _ -> Some(barToPa value)
+                | None, Some value -> Some(barToPa value)
+                | _ -> None
+             BypassTargetMixOut =
+                match Json.tryFAt item "t_miscelata_target_C", Json.tryFAt item "t_uscita_bypass_C" with
+                | Some value, _ -> Some(cToK value)
+                | None, Some value -> Some(cToK value)
+                | _ -> None
+             BypassOpenFraction = Json.tryFAt item "bypass_frazione_aperta"
+             Notes = notes }
+
+let private readLoadCases (root: JsonElement) (paths: string list) =
+    match tryArrayAtPath root paths with
+    | Some items when not (List.isEmpty items) -> items |> List.map loadCaseSpecAt
+    | _ -> []
+
+let private defaultConstraintSet (caseIn: DesignCase) =
+    ConstraintModel.defaultRatingConstraints caseIn
+
+let private parseConstraintTarget (item: JsonElement) : ConstraintModel.ConstraintTarget =
+    let keyText = Json.sAt item "chiave" ""
+    let info =
+        match tryMetricInfo keyText with
+        | Some found -> found
+        | None -> failwithf "Vincolo non riconosciuto: %s" keyText
+    let minValue = Json.tryFAt item "min" |> Option.map info.FromCli
+    let maxValue = Json.tryFAt item "max" |> Option.map info.FromCli
+    let limit =
+        match minValue, maxValue with
+        | Some lo, Some hi -> ConstraintModel.Range(lo, hi)
+        | Some lo, None -> ConstraintModel.Min lo
+        | None, Some hi -> ConstraintModel.Max hi
+        | None, None -> failwithf "Il vincolo '%s' richiede almeno min o max." keyText
+    { Key = info.Key
+      Name = Json.sAt item "nome" info.Name
+      Domain = info.Domain
+      Unit = info.Unit
+      Limit = limit
+      Required = Json.bAt item "richiesto" true
+      Weight = Json.fAt item "peso" 1.0 }
+
+let private readConstraintSet (caseIn: DesignCase) (root: JsonElement) : ConstraintModel.ConstraintSet =
+    match Json.tryArrayElements root "vincoli" with
+    | Some items when not (List.isEmpty items) ->
+        { Targets = items |> List.map parseConstraintTarget }
+    | _ -> defaultConstraintSet caseIn
+
+let private objectiveSense (text: string) =
+    match lowerText text with
+    | "max" | "maximize" | "massimizza" | "massimo" -> Optimize.Maximize
+    | _ -> Optimize.Minimize
+
+let private parseObjectiveTerm (item: JsonElement) : Optimize.ObjectiveTerm =
+    let keyText = Json.sAt item "chiave" ""
+    let info =
+        match tryMetricInfo keyText with
+        | Some found -> found
+        | None -> failwithf "Obiettivo non riconosciuto: %s" keyText
+    { Key = info.Key
+      Name = Json.sAt item "nome" info.Name
+      Weight = Json.fAt item "peso" 1.0
+      Scale = Json.tryFAt item "scala" |> Option.map info.FromCli
+      Sense = objectiveSense (Json.sAt item "senso" "min") }
+
+let private readObjectiveSet (root: JsonElement) (path: string) (fallback: Optimize.ObjectiveSet) : Optimize.ObjectiveSet =
+    match Json.tryArrayElements root path with
+    | Some items when not (List.isEmpty items) ->
+        { Terms = items |> List.map parseObjectiveTerm }
+    | _ -> fallback
+
+let private defaultVariableFor (caseIn: DesignCase) (key: Optimize.VariableKey) : Optimize.DesignVariable =
+    let info = variableInfo key
+    let currentCli = info.Current caseIn
+    match key with
+    | Optimize.FerruleLengthMm ->
+        { Key = key
+          Name = info.Name
+          Current = currentCli
+          Lower = max 50.0 (currentCli * 0.5)
+          Upper = max (currentCli + 50.0) (currentCli * 1.5)
+          Step = max 10.0 (currentCli * 0.1)
+          Unit = info.Unit }
+    | Optimize.TubeLengthM ->
+        { Key = key
+          Name = info.Name
+          Current = currentCli
+          Lower = max 1.0 (currentCli * 0.8)
+          Upper = max (currentCli + 0.5) (currentCli * 1.2)
+          Step = max 0.1 (currentCli * 0.05)
+          Unit = info.Unit }
+    | Optimize.TubeCount ->
+        { Key = key
+          Name = info.Name
+          Current = currentCli
+          Lower = max 1.0 (floor (currentCli * 0.85))
+          Upper = max (currentCli + 1.0) (ceil (currentCli * 1.15))
+          Step = max 1.0 (Math.Round(currentCli * 0.02))
+          Unit = info.Unit }
+    | Optimize.TubePitchM ->
+        let current = info.FromCli currentCli
+        { Key = key
+          Name = info.Name
+          Current = current
+          Lower = max 0.005 (current * 0.85)
+          Upper = max (current + 0.002) (current * 1.15)
+          Step = max 0.001 (current * 0.025)
+          Unit = info.Unit }
+    | Optimize.ShellInnerDiameterM ->
+        let current = info.FromCli currentCli
+        { Key = key
+          Name = info.Name
+          Current = current
+          Lower = max 0.5 (current * 0.9)
+          Upper = max (current + 0.05) (current * 1.1)
+          Step = max 0.01 (current * 0.025)
+          Unit = info.Unit }
+    | Optimize.DrumCenterlineHeightM ->
+        { Key = key
+          Name = info.Name
+          Current = currentCli
+          Lower = max 0.5 (currentCli * 0.75)
+          Upper = max (currentCli + 0.5) (currentCli * 1.25)
+          Step = max 0.1 (currentCli * 0.05)
+          Unit = info.Unit }
+
+let private parseVariable (caseIn: DesignCase) (defaults: Map<Optimize.VariableKey, Optimize.DesignVariable>) (item: JsonElement) =
+    let keyText = Json.sAt item "chiave" ""
+    let info =
+        match tryVariableInfo keyText with
+        | Some found -> found
+        | None -> failwithf "Variabile di progetto non riconosciuta: %s" keyText
+    let baseVar =
+        defaults
+        |> Map.tryFind info.Key
+        |> Option.defaultWith (fun () -> defaultVariableFor caseIn info.Key)
+    let currentValue =
+        Json.tryFAt item "corrente"
+        |> Option.map info.FromCli
+        |> Option.defaultValue baseVar.Current
+    let lowerValue =
+        Json.tryFAt item "min"
+        |> Option.map info.FromCli
+        |> Option.defaultValue baseVar.Lower
+    let upperValue =
+        Json.tryFAt item "max"
+        |> Option.map info.FromCli
+        |> Option.defaultValue baseVar.Upper
+    { baseVar with
+        Name = Json.sAt item "nome" baseVar.Name
+        Current = currentValue
+        Lower = min lowerValue upperValue
+        Upper = max lowerValue upperValue
+        Step =
+            Json.tryFAt item "passo"
+            |> Option.map (info.FromCli >> abs)
+            |> Option.defaultValue baseVar.Step
+        Unit = info.Unit }
+
+let private readOptimizeVariables (root: JsonElement) (caseIn: DesignCase) =
+    let defaults =
+        Optimize.defaultVariables caseIn
+        |> List.map (fun item -> item.Key, item)
+        |> Map.ofList
+    match Json.tryArrayElements root "optimize.variabili" with
+    | Some items when not (List.isEmpty items) -> items |> List.map (parseVariable caseIn defaults)
+    | _ -> Optimize.defaultVariables caseIn
+
+let private readDesignSpace (root: JsonElement) : GreenfieldDesign.DesignSpace =
+    let tubeCounts =
+        tryNumberArrayAtPath root [ "design.spazio.numero_tubi"; "design.spazio.tube_count" ]
+        |> Option.defaultValue []
+        |> List.map (fun (x: float) -> max 1 (int (Math.Round x)))
+    let tubeLengths =
+        tryNumberArrayAtPath root [ "design.spazio.lunghezza_tubi_m"; "design.spazio.tube_length_m" ]
+        |> Option.defaultValue []
+    let ferruleLengths =
+        tryNumberArrayAtPath root [ "design.spazio.lunghezza_ferrula_mm"; "design.spazio.ferrule_length_mm" ]
+        |> Option.defaultValue []
+    let shellIds =
+        tryNumberArrayAtPath root [ "design.spazio.mantello_id_mm"; "design.spazio.shell_id_mm" ]
+        |> Option.defaultValue []
+        |> List.map (fun x -> x / 1000.0)
+    let pitches =
+        tryNumberArrayAtPath root [ "design.spazio.passo_tubi_mm"; "design.spazio.tube_pitch_mm" ]
+        |> Option.defaultValue []
+        |> List.map (fun x -> x / 1000.0)
+    let drumHeights =
+        tryNumberArrayAtPath root [ "design.spazio.quota_drum_m"; "design.spazio.drum_centerline_m" ]
+        |> Option.defaultValue []
+    { TubeCounts = tubeCounts
+      TubeLengthsM = tubeLengths
+      FerruleLengthsMm = ferruleLengths
+      ShellInnerDiametersM = shellIds
+      TubePitchesM = pitches
+      DrumCenterlineHeightsM = drumHeights }
+
+let private formatNumber (value: float) =
+    if Double.IsNaN value then "n/a"
+    else value.ToString("F3", CultureInfo.InvariantCulture)
+
+let private formatMetricValue (key: ConstraintModel.ConstraintValueKey) (value: float) =
+    let info = metricInfo key
+    if Double.IsNaN value then "n/a"
+    else sprintf "%s %s" (formatNumber (info.ToCli value)) info.Unit
+
+let private formatConstraintLimit (target: ConstraintModel.ConstraintTarget) =
+    let info = metricInfo target.Key
+    let f x = formatNumber (info.ToCli x)
+    match target.Limit with
+    | ConstraintModel.Min x -> sprintf ">= %s %s" (f x) info.Unit
+    | ConstraintModel.Max x -> sprintf "<= %s %s" (f x) info.Unit
+    | ConstraintModel.Range(lo, hi) -> sprintf "%s .. %s %s" (f lo) (f hi) info.Unit
+
+let private summaryValue key (result: DesignResult) =
+    ConstraintReaders.tryFindValue key result
+    |> Option.map (fun x -> x.Value)
+    |> Option.defaultValue nan
+
+let private writeTextFile (outDir: string) (name: string) (content: string) =
+    File.WriteAllText(Path.Combine(outDir, name), content)
+
+let private writeMechanicalInterfaceFile (outDir: string) (title: string) (results: (string * DesignResult) list) =
+    Report.mechanicalInterfaceTextMany title results
+    |> writeTextFile outDir "interfaccia_meccanica.txt"
+
+let private progressState description =
+    ref (Progress.snapshot description None)
+
+let private setProgress (state: Progress.StatusSnapshot ref) (description: string) (fraction: float option) =
+    state.Value <- { Description = description; Fraction = fraction }
+
+let private reportStructuredProgress (logger: PhaseLogger.Logger) (state: Progress.StatusSnapshot ref) (update: DesignRuntime.ProgressUpdate) =
+    state.Value <- Progress.mergeStatus state.Value update
+    logger update.Description
+
+let private filteredArgs (rest: string list) (outDir: string) (optionsPath: string) =
+    rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath)
+
+let private resolveCaseArg (rest: string list) (outDir: string) (optionsPath: string) =
+    match filteredArgs rest outDir optionsPath with
+    | f :: _ when File.Exists f -> Some f, loadCase f
+    | f :: _ when not (f.StartsWith("--")) ->
+        eprintfn "Case file not found: %s" f
+        raise (FileNotFoundException("Case file not found", f))
+    | _ -> None, Defaults.referenceCase
 let template = """{
   "nome": "WHB reformer secondario - caso base",
   "materiale": "T11",
@@ -409,6 +927,7 @@ let template = """{
 
   "vapore": {
     "pressione_bara": 117.84,
+    "dnbr_min": 2.0,
     "fouling_m2KW": 0.00015,
     "rugosita_um": 1.0,
     "fattore_fascio": 1.5,
@@ -525,6 +1044,60 @@ let template = """{
     "v_downcomer_ms": 2.0,
     "rhov2_max_riser": 6000.0,
     "rhov2_max_downcomer": 3000.0
+  },
+
+  "vincoli": [
+    { "chiave": "dnbr_min", "min": 2.0, "peso": 1.0, "richiesto": true },
+    { "chiave": "t_metallo_tubi_max_c", "max": 450.0, "peso": 1.0, "richiesto": true },
+    { "chiave": "dp_gas_mbar", "max": 300.0, "peso": 0.5, "richiesto": true },
+    { "chiave": "v_vcrit", "max": 0.80, "peso": 1.0, "richiesto": true },
+    { "chiave": "peso_whb_kg", "max": 999999.0, "peso": 0.2, "richiesto": false },
+    { "chiave": "ingombro_whb_m2", "max": 999999.0, "peso": 0.2, "richiesto": false }
+  ],
+
+  "rating": {
+    "carichi": [
+      { "nome": "base" },
+      { "nome": "110%", "fattore_portata_gas": 1.10 }
+    ]
+  },
+
+  "optimize": {
+    "carichi": [
+      { "nome": "base" },
+      { "nome": "110%", "fattore_portata_gas": 1.10 }
+    ],
+    "variabili": [
+      { "chiave": "lunghezza_ferrula_mm", "min": 100.0, "max": 350.0, "passo": 25.0 },
+      { "chiave": "lunghezza_tubi_m", "min": 11.0, "max": 14.0, "passo": 0.25 },
+      { "chiave": "numero_tubi", "min": 780.0, "max": 900.0, "passo": 4.0 }
+    ],
+    "obiettivo": [
+      { "chiave": "peso_whb_kg", "peso": 1.0, "senso": "min" },
+      { "chiave": "ingombro_whb_m2", "peso": 0.25, "senso": "min" },
+      { "chiave": "ingombro_drum_m2", "peso": 0.10, "senso": "min" }
+    ],
+    "max_iterazioni": 80,
+    "tolleranza": 0.001
+  },
+
+  "design": {
+    "carichi": [
+      { "nome": "base" },
+      { "nome": "110%", "fattore_portata_gas": 1.10 }
+    ],
+    "obiettivo": [
+      { "chiave": "peso_whb_kg", "peso": 1.0, "senso": "min" },
+      { "chiave": "ingombro_whb_m2", "peso": 0.25, "senso": "min" }
+    ],
+    "spazio": {
+      "numero_tubi": [800, 848, 896],
+      "lunghezza_tubi_m": [12.0, 13.0, 14.0],
+      "lunghezza_ferrula_mm": [150.0, 200.0, 250.0],
+      "mantello_id_mm": [1950.0, 2025.0, 2100.0],
+      "passo_tubi_mm": [48.0, 50.8, 53.0],
+      "quota_drum_m": [5.5, 6.0, 6.5]
+    }
   }
 }
 """
@@ -735,20 +1308,14 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
     let logger = PhaseLogger.create options
     Preflight.run options casePath outDir logger
     let sw = Diagnostics.Stopwatch.StartNew()
-    let currentTask =
-        ref "Starting design run"
+    let currentStatus = progressState "Starting design run"
     logger "Run started"
     let r =
-        let runSettings : Design.RunSettings =
-            { BypassMapMode = options.Calculation.BypassMapMode
-              BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
-              GasPropertyCache = options.Calculation.GasPropertyCache
-              CorrelationValidityWarnings = options.Calculation.CorrelationValidityWarnings
-              Parallelism = max 1 options.Calculation.Parallelism }
-        Progress.runWithStatusDynamic
-            (fun () -> currentTask.Value)
+        let runSettings = createRunSettings options options.Calculation.CorrelationValidityWarnings
+        Progress.runWithStatusSnapshot
+            (fun () -> currentStatus.Value)
             25.0
-            (fun () -> Design.runWithSettingsAndProgress runSettings (PhaseLogger.phase logger currentTask) case)
+            (fun () -> Design.runWithSettingsAndStructuredProgress runSettings (reportStructuredProgress logger currentStatus) case)
     logger "Design calculation completed; writing reports"
     sw.Stop()
     if options.Reporting.GenerateFullReport then
@@ -765,6 +1332,7 @@ let runCase (options: Options.ProjectOptions) (casePath: string option) (case: D
     let inventoryText = Report.inventoryText r
     File.WriteAllText(Path.Combine(outDir, "inventory_summary.txt"), inventoryText)
     File.WriteAllText(Path.Combine(outDir, "inventory_summary.csv"), Report.inventoryCsv r)
+    writeMechanicalInterfaceFile outDir (sprintf "MECHANICAL CALCULATION INTERFACE - %s" r.Case.Name) [ sprintf "Caso %s" r.Case.Name, r ]
     File.WriteAllText(Path.Combine(outDir, "celle.csv"), Report.csvCells r)
     File.WriteAllText(Path.Combine(outDir, "profilo_assiale.csv"), Report.csvAxial r)
     File.WriteAllText(Path.Combine(outDir, "tensioni.csv"), Report.csvStress r)
@@ -796,31 +1364,26 @@ let runSulphurCondenserCase (options: Options.ProjectOptions) (casePath: string 
     let logger = PhaseLogger.create options
     Preflight.run options casePath outDir logger
     let sw = Diagnostics.Stopwatch.StartNew()
-    let currentTask = ref "Starting sulphur-condenser run"
+    let currentStatus = progressState "Starting sulphur-condenser run"
     logger "Sulphur-condenser run started"
     let scSpec = { case.SulphurCondenser with Enabled = true }
     let caseWithSc = { case with SulphurCondenser = scSpec }
     let result =
         if scSpec.UseWhbOutlet then
-            let runSettings : Design.RunSettings =
-                { BypassMapMode = options.Calculation.BypassMapMode
-                  BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
-                  GasPropertyCache = options.Calculation.GasPropertyCache
-                  CorrelationValidityWarnings = options.Calculation.CorrelationValidityWarnings
-                  Parallelism = max 1 options.Calculation.Parallelism }
-            currentTask.Value <- "Running base WHB calculation for sulphur-condenser inlet"
+            let runSettings = createRunSettings options options.Calculation.CorrelationValidityWarnings
+            setProgress currentStatus "Running base WHB calculation for sulphur-condenser inlet" (Some 0.0)
             let design =
-                Progress.runWithStatusDynamic
-                    (fun () -> currentTask.Value)
+                Progress.runWithStatusSnapshot
+                    (fun () -> currentStatus.Value)
                     25.0
-                    (fun () -> Design.runWithSettingsAndProgress runSettings (PhaseLogger.phase logger currentTask) caseWithSc)
+                    (fun () -> Design.runWithSettingsAndStructuredProgress runSettings (reportStructuredProgress logger currentStatus) caseWithSc)
             match design.SulphurCondenserResult with
             | Some sc -> sc
             | None -> failwith "Sulphur-condenser integration did not produce a result."
         else
-            currentTask.Value <- "Running dedicated sulphur-condenser calculation"
-            Progress.runWithStatusDynamic
-                (fun () -> currentTask.Value)
+            setProgress currentStatus "Running dedicated sulphur-condenser calculation" None
+            Progress.runWithStatusSnapshot
+                (fun () -> currentStatus.Value)
                 10.0
                 (fun () -> SulphurCondenser.solve scSpec)
     File.WriteAllText(Path.Combine(outDir, "sulphur_condenser.txt"), Report.sulphurCondenserText result)
@@ -835,16 +1398,15 @@ let runSulphurCondenserCase (options: Options.ProjectOptions) (casePath: string 
 let sizingOnly (options: Options.ProjectOptions) (case: DesignCase) (outDir: string) =
     Directory.CreateDirectory outDir |> ignore
     let logger = PhaseLogger.create options
-    let currentTask = ref "Starting sizing run"
+    let currentStatus = progressState "Starting sizing run"
     let sw = Diagnostics.Stopwatch.StartNew()
     logger "Sizing run started"
-    let runSettings : Design.RunSettings =
-        { BypassMapMode = options.Calculation.BypassMapMode
-          BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
-          GasPropertyCache = options.Calculation.GasPropertyCache
-          CorrelationValidityWarnings = options.Calculation.CorrelationValidityWarnings
-          Parallelism = max 1 options.Calculation.Parallelism }
-    let r = Design.runWithSettingsAndProgress runSettings (PhaseLogger.phase logger currentTask) case
+    let runSettings = createRunSettings options options.Calculation.CorrelationValidityWarnings
+    let r =
+        Progress.runWithStatusSnapshot
+            (fun () -> currentStatus.Value)
+            25.0
+            (fun () -> Design.runWithSettingsAndStructuredProgress runSettings (reportStructuredProgress logger currentStatus) case)
     let txt = Report.sizingText r
     File.WriteAllText(Path.Combine(outDir, "dimensionamento.txt"), txt)
     printfn "%s" txt
@@ -852,18 +1414,13 @@ let sizingOnly (options: Options.ProjectOptions) (case: DesignCase) (outDir: str
     logger (sprintf "Sizing run completed in %.1f s; output folder: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir))
     0
 
-let optimizeCase (options: Options.ProjectOptions) (case: DesignCase) (outDir: string) =
+let optimizeCaseLegacy (options: Options.ProjectOptions) (case: DesignCase) (outDir: string) =
     Directory.CreateDirectory outDir |> ignore
     let logger = PhaseLogger.create options
-    let currentTask = ref "Starting constrained search"
+    let currentStatus = progressState "Starting constrained search"
     let sw = Diagnostics.Stopwatch.StartNew()
     logger "Constrained design search started"
-    let runSettings : Design.RunSettings =
-        { BypassMapMode = options.Calculation.BypassMapMode
-          BypassTargetToleranceK = options.Calculation.BypassTargetToleranceK
-          GasPropertyCache = options.Calculation.GasPropertyCache
-          CorrelationValidityWarnings = false
-          Parallelism = max 1 options.Calculation.Parallelism }
+    let runSettings = createRunSettings options false
     let problem = Designers.Designer.defaultProblem case
     let mutable n = 0
     let runOne (c: DesignCase) =
@@ -871,12 +1428,15 @@ let optimizeCase (options: Options.ProjectOptions) (case: DesignCase) (outDir: s
         let label =
             sprintf "Design evaluation %d (ferrula %.0f mm, tubi %.2f m)"
                 n (1000.0 * (c.Ferrule.Lengths |> List.sumBy (fun (f, l) -> f * l))) c.Tube.Length
-        currentTask.Value <- label
-        logger label
-        Design.runWithSettingsAndProgress runSettings ignore c
+        let startFraction = float (n - 1) / float (max 1 problem.MaxIterations)
+        let endFraction = float n / float (max 1 problem.MaxIterations)
+        let spanReporter =
+            ExecutionProgress.Reporting.scale startFraction endFraction (reportStructuredProgress logger currentStatus)
+        spanReporter (ExecutionProgress.Reporting.step 0.0 label)
+        Design.runWithSettingsAndStructuredProgress runSettings spanReporter c
     let result =
-        Progress.runWithStatusDynamic
-            (fun () -> currentTask.Value)
+        Progress.runWithStatusSnapshot
+            (fun () -> currentStatus.Value)
             60.0
             (fun () -> Designers.Designer.optimize runOne case problem)
     let sb = Text.StringBuilder()
@@ -923,10 +1483,277 @@ let optimizeCase (options: Options.ProjectOptions) (case: DesignCase) (outDir: s
         sb.AppendLine(sprintf "    %s" note) |> ignore
     sb.AppendLine(String('=', 96)) |> ignore
     let txt = sb.ToString()
-    File.WriteAllText(Path.Combine(outDir, "ottimizzazione.txt"), txt)
+    File.WriteAllText(Path.Combine(outDir, "ottimizzazione_legacy.txt"), txt)
     printfn "%s" txt
     printfn "Search completed in %.1f s. File written to: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
     logger (sprintf "Constrained design search completed in %.1f s" sw.Elapsed.TotalSeconds)
+    0
+
+let runRatingMode (options: Options.ProjectOptions) (casePath: string option) (case0: DesignCase) (outDir: string) =
+    Directory.CreateDirectory outDir |> ignore
+    let logger = PhaseLogger.create options
+    let currentStatus = progressState "Starting rating run"
+    let sw = Stopwatch.StartNew()
+    logger "Rating mode started"
+    let runSettings = createRunSettings options options.Calculation.CorrelationValidityWarnings
+    let loadCases =
+        readCaseRoot casePath [] (fun root ->
+            readLoadCases root [ "rating.carichi"; "carichi" ])
+    let constraints =
+        readCaseRoot casePath (defaultConstraintSet case0) (readConstraintSet case0)
+    let input : Rating.RatingInput =
+        { BaseCase = case0
+          LoadCases = loadCases
+          Constraints = constraints
+          RunSettings = runSettings }
+    let result =
+        Progress.runWithStatusSnapshot
+            (fun () -> currentStatus.Value)
+            20.0
+            (fun () ->
+                setProgress currentStatus (sprintf "Rating: %d load case(s) through the shared verification engine" (max 1 input.LoadCases.Length)) (Some 0.0)
+                Rating.runWithProgress (reportStructuredProgress logger currentStatus) input)
+    let sb = Text.StringBuilder()
+    let csv = Text.StringBuilder()
+    sb.AppendLine(String('=', 96)) |> ignore
+    sb.AppendLine(sprintf "RATING - %s" case0.Name) |> ignore
+    sb.AppendLine(String('=', 96)) |> ignore
+    sb.AppendLine(sprintf "  Carichi valutati : %d" result.LoadCaseResults.Length) |> ignore
+    sb.AppendLine(sprintf "  Ammissibile      : %s" (if result.Assessment.IsFeasible then "SI" else "NO")) |> ignore
+    if not result.Assessment.GoverningLoadCases.IsEmpty then
+        sb.AppendLine(sprintf "  Carichi governanti: %s" (String.concat ", " result.Assessment.GoverningLoadCases)) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  VINCOLI") |> ignore
+    for reading in result.Assessment.ConstraintReadings do
+        let verdict = if reading.Passed then "OK " else "NO "
+        sb.AppendLine(
+            sprintf "    [%s] %-32s %-18s limite %s  (carico %s)"
+                verdict
+                reading.Target.Name
+                (formatMetricValue reading.Target.Key reading.Value)
+                (formatConstraintLimit reading.Target)
+                reading.GoverningLoadCase) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  RISULTATI PER CARICO") |> ignore
+    sb.AppendLine("    nome                 duty [MW]  steam [t/h]  T gas out [C]  dP gas [mbar]  DNBR min  T met max [C]  FEI max") |> ignore
+    csv.AppendLine("nome;duty_MW;steam_th;T_gas_out_C;dp_gas_mbar;dnbr_min;T_met_max_C;fei_max") |> ignore
+    for load in result.LoadCaseResults do
+        let design = load.Verification.Result
+        let duty = summaryValue ConstraintModel.Duty design / 1e6
+        let steam = summaryValue ConstraintModel.SteamProduction design * 3.6
+        let tOut = kToC (summaryValue ConstraintModel.GasOutletTemperature design)
+        let dpGas = summaryValue ConstraintModel.GasPressureDrop design / 100.0
+        let dnbr = summaryValue ConstraintModel.MinDNBR design
+        let tMetal = kToC (summaryValue ConstraintModel.MaxTubeMetalTemperature design)
+        let fei = summaryValue ConstraintModel.MaxFeiRatio design
+        sb.AppendLine(
+            sprintf "    %-20s %10.3f %11.3f %14.3f %15.3f %9.3f %14.3f %8.3f"
+                load.Spec.Name duty steam tOut dpGas dnbr tMetal fei) |> ignore
+        csv.AppendLine(
+            String.Join(";",
+                [ load.Spec.Name
+                  duty.ToString("F3", CultureInfo.InvariantCulture)
+                  steam.ToString("F3", CultureInfo.InvariantCulture)
+                  tOut.ToString("F3", CultureInfo.InvariantCulture)
+                  dpGas.ToString("F3", CultureInfo.InvariantCulture)
+                  dnbr.ToString("F3", CultureInfo.InvariantCulture)
+                  tMetal.ToString("F3", CultureInfo.InvariantCulture)
+                  fei.ToString("F3", CultureInfo.InvariantCulture) ])) |> ignore
+    let txt = sb.ToString()
+    writeTextFile outDir "rating.txt" txt
+    writeTextFile outDir "rating.csv" (csv.ToString())
+    result.LoadCaseResults
+    |> List.map (fun load -> load.Spec.Name, load.Verification.Result)
+    |> writeMechanicalInterfaceFile outDir (sprintf "MECHANICAL CALCULATION INTERFACE - RATING - %s" case0.Name)
+    printfn "%s" txt
+    printfn "Rating completed in %.1f s. Files written to: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
+    logger (sprintf "Rating mode completed in %.1f s; output folder: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir))
+    0
+
+let optimizeCase (options: Options.ProjectOptions) (casePath: string option) (case0: DesignCase) (outDir: string) =
+    Directory.CreateDirectory outDir |> ignore
+    let logger = PhaseLogger.create options
+    let currentStatus = progressState "Starting optimize run"
+    let sw = Stopwatch.StartNew()
+    logger "Shared optimize mode started"
+    let runSettings = createRunSettings options options.Calculation.CorrelationValidityWarnings
+    let constraints =
+        readCaseRoot casePath (defaultConstraintSet case0) (readConstraintSet case0)
+    let loadCases =
+        readCaseRoot casePath [] (fun root ->
+            readLoadCases root [ "optimize.carichi"; "rating.carichi"; "carichi" ])
+    let variables =
+        readCaseRoot casePath (Optimize.defaultVariables case0) (fun root ->
+            readOptimizeVariables root case0)
+    let objective =
+        readCaseRoot casePath Optimize.defaultObjective (fun root ->
+            readObjectiveSet root "optimize.obiettivo" Optimize.defaultObjective)
+    let maxIterations =
+        readCaseRoot casePath 80 (fun root ->
+            Json.tryI root "optimize.max_iterazioni" |> Option.defaultValue 80)
+    let tolerance =
+        readCaseRoot casePath 1e-3 (fun root ->
+            Json.tryF root "optimize.tolleranza" |> Option.defaultValue 1e-3)
+    let input : Optimize.OptimizeInput =
+        { BaseCase = case0
+          LoadCases = loadCases
+          Constraints = constraints
+          Variables = variables
+          Objective = objective
+          RunSettings = runSettings
+          MaxIterations = maxIterations
+          Tolerance = tolerance }
+    let result =
+        Progress.runWithStatusSnapshot
+            (fun () -> currentStatus.Value)
+            60.0
+            (fun () ->
+                setProgress currentStatus (sprintf "Optimize: %d variable(s), %d load case(s) through the shared verification engine" input.Variables.Length (max 1 input.LoadCases.Length)) (Some 0.0)
+                Optimize.runWithProgress (reportStructuredProgress logger currentStatus) input)
+    let sb = Text.StringBuilder()
+    sb.AppendLine(String('=', 96)) |> ignore
+    sb.AppendLine(sprintf "OPTIMIZE - %s" case0.Name) |> ignore
+    sb.AppendLine(String('=', 96)) |> ignore
+    sb.AppendLine(sprintf "  Valutazioni       : %d" result.Solver.Evaluations) |> ignore
+    sb.AppendLine(sprintf "  Convergenza       : %s" (if result.Solver.Converged then "raggiunta" else "fermata al tetto")) |> ignore
+    sb.AppendLine(sprintf "  Ammissibile       : %s" (if result.Best.Assessment.IsFeasible then "SI" else "NO")) |> ignore
+    sb.AppendLine(sprintf "  Violazione totale : %.6f" result.Best.Assessment.TotalViolation) |> ignore
+    sb.AppendLine(sprintf "  Obiettivo         : %.6f" result.Best.ObjectiveValue) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  GEOMETRIA OTTIMA") |> ignore
+    for variable in input.Variables do
+        let bestCurrent = variableInfo variable.Key |> fun info -> info.Current result.Best.Case
+        sb.AppendLine(
+            sprintf "    %-28s %12s %s"
+                variable.Name
+                (formatNumber bestCurrent)
+                variable.Unit) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  VINCOLI") |> ignore
+    for reading in result.Best.Assessment.ConstraintReadings do
+        let verdict = if reading.Passed then "OK " else "NO "
+        sb.AppendLine(
+            sprintf "    [%s] %-32s %-18s limite %s  (carico %s)"
+                verdict
+                reading.Target.Name
+                (formatMetricValue reading.Target.Key reading.Value)
+                (formatConstraintLimit reading.Target)
+                reading.GoverningLoadCase) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  CARICHI DELLA GEOMETRIA OTTIMA") |> ignore
+    for load in result.Best.LoadCaseResults do
+        let design = load.Verification.Result
+        sb.AppendLine(
+            sprintf "    %-18s duty %8.3f MW | steam %8.3f t/h | T gas out %8.3f C | dP gas %8.3f mbar"
+                load.Spec.Name
+                (summaryValue ConstraintModel.Duty design / 1e6)
+                (summaryValue ConstraintModel.SteamProduction design * 3.6)
+                (kToC (summaryValue ConstraintModel.GasOutletTemperature design))
+                (summaryValue ConstraintModel.GasPressureDrop design / 100.0)) |> ignore
+    if not result.Solver.ActiveConstraints.IsEmpty then
+        sb.AppendLine() |> ignore
+        sb.AppendLine(sprintf "  Vincoli attivi del solver: %s" (String.concat ", " result.Solver.ActiveConstraints)) |> ignore
+    if not result.Solver.Notes.IsEmpty then
+        sb.AppendLine() |> ignore
+        sb.AppendLine("  NOTE DEL SOLVER") |> ignore
+        for note in result.Solver.Notes do
+            sb.AppendLine(sprintf "    %s" note) |> ignore
+    let txt = sb.ToString()
+    writeTextFile outDir "ottimizzazione.txt" txt
+    result.Best.LoadCaseResults
+    |> List.map (fun load -> load.Spec.Name, load.Verification.Result)
+    |> writeMechanicalInterfaceFile outDir (sprintf "MECHANICAL CALCULATION INTERFACE - OPTIMIZE - %s" case0.Name)
+    printfn "%s" txt
+    printfn "Optimize completed in %.1f s. Files written to: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
+    logger (sprintf "Shared optimize mode completed in %.1f s; output folder: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir))
+    0
+
+let runDesignMode (options: Options.ProjectOptions) (casePath: string option) (case0: DesignCase) (outDir: string) =
+    Directory.CreateDirectory outDir |> ignore
+    let logger = PhaseLogger.create options
+    let currentStatus = progressState "Starting greenfield design run"
+    let sw = Stopwatch.StartNew()
+    logger "Greenfield design mode started"
+    let runSettings = createRunSettings options options.Calculation.CorrelationValidityWarnings
+    let constraints =
+        readCaseRoot casePath (defaultConstraintSet case0) (readConstraintSet case0)
+    let loadCases =
+        readCaseRoot casePath [] (fun root ->
+            readLoadCases root [ "design.carichi"; "rating.carichi"; "carichi" ])
+    let objective =
+        readCaseRoot casePath Optimize.defaultObjective (fun root ->
+            readObjectiveSet root "design.obiettivo" Optimize.defaultObjective)
+    let space =
+        readCaseRoot casePath
+            ({ TubeCounts = []
+               TubeLengthsM = []
+               FerruleLengthsMm = []
+               ShellInnerDiametersM = []
+               TubePitchesM = []
+               DrumCenterlineHeightsM = [] } : GreenfieldDesign.DesignSpace)
+            readDesignSpace
+    let input : GreenfieldDesign.DesignInput =
+        { TemplateCase = case0
+          LoadCases = loadCases
+          Constraints = constraints
+          Objective = objective
+          Space = space
+          RunSettings = runSettings }
+    let result =
+        Progress.runWithStatusSnapshot
+            (fun () -> currentStatus.Value)
+            60.0
+            (fun () ->
+                setProgress currentStatus "Design: exploring the configured candidate space through the shared verification engine" (Some 0.0)
+                GreenfieldDesign.runWithProgress (reportStructuredProgress logger currentStatus) input)
+    let sb = Text.StringBuilder()
+    let best = result.Best
+    sb.AppendLine(String('=', 96)) |> ignore
+    sb.AppendLine(sprintf "DESIGN - %s" case0.Name) |> ignore
+    sb.AppendLine(String('=', 96)) |> ignore
+    sb.AppendLine(sprintf "  Candidati valutati : %d" result.Evaluations) |> ignore
+    sb.AppendLine(sprintf "  Ammissibile        : %s" (if best.Assessment.IsFeasible then "SI" else "NO")) |> ignore
+    sb.AppendLine(sprintf "  Violazione totale  : %.6f" best.Assessment.TotalViolation) |> ignore
+    sb.AppendLine(sprintf "  Obiettivo          : %.6f" best.ObjectiveValue) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  MIGLIOR GEOMETRIA") |> ignore
+    sb.AppendLine(sprintf "    numero tubi                %d" best.Case.Tube.NTubes) |> ignore
+    sb.AppendLine(sprintf "    lunghezza tubi             %s m" (formatNumber best.Case.Tube.Length)) |> ignore
+    sb.AppendLine(sprintf "    lunghezza ferrula          %s mm" (formatNumber ((best.Case.Ferrule.Lengths |> List.sumBy (fun (frac, l) -> frac * l)) * 1000.0))) |> ignore
+    sb.AppendLine(sprintf "    diametro interno mantello  %s mm" (formatNumber (best.Case.Tube.ShellId * 1000.0))) |> ignore
+    sb.AppendLine(sprintf "    passo tubi                %s mm" (formatNumber (best.Case.Tube.Pitch * 1000.0))) |> ignore
+    sb.AppendLine(sprintf "    quota drum                %s m" (formatNumber best.Case.Loop.DzDrumWhb)) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  VINCOLI DEL MIGLIOR CANDIDATO") |> ignore
+    for reading in best.Assessment.ConstraintReadings do
+        let verdict = if reading.Passed then "OK " else "NO "
+        sb.AppendLine(
+            sprintf "    [%s] %-32s %-18s limite %s  (carico %s)"
+                verdict
+                reading.Target.Name
+                (formatMetricValue reading.Target.Key reading.Value)
+                (formatConstraintLimit reading.Target)
+                reading.GoverningLoadCase) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("  SHORTLIST") |> ignore
+    for candidate in result.Shortlist do
+        sb.AppendLine(
+            sprintf "    %s | obj %.6f | viol %.6f | tubi %d | L %.3f m | ferrula %.1f mm | mantello %.1f mm"
+                (if candidate.Assessment.IsFeasible then "OK " else "NO ")
+                candidate.ObjectiveValue
+                candidate.Assessment.TotalViolation
+                candidate.Case.Tube.NTubes
+                candidate.Case.Tube.Length
+                ((candidate.Case.Ferrule.Lengths |> List.sumBy (fun (frac, l) -> frac * l)) * 1000.0)
+                (candidate.Case.Tube.ShellId * 1000.0)) |> ignore
+    let txt = sb.ToString()
+    writeTextFile outDir "design.txt" txt
+    result.Best.LoadCaseResults
+    |> List.map (fun load -> load.Spec.Name, load.Verification.Result)
+    |> writeMechanicalInterfaceFile outDir (sprintf "MECHANICAL CALCULATION INTERFACE - DESIGN - %s" case0.Name)
+    printfn "%s" txt
+    printfn "Design completed in %.1f s. Files written to: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir)
+    logger (sprintf "Greenfield design mode completed in %.1f s; output folder: %s" sw.Elapsed.TotalSeconds (Path.GetFullPath outDir))
     0
 
 let writeDefaultOptions path =
@@ -1010,9 +1837,12 @@ let main argv =
         printfn "  whb --sulphur [file.csv] [--pressure-bara <bar>] [--s-atoms-mols <mol>] [--inert-mols <mol>]"
         printfn "                 [--tmin <C>] [--tmax <C>] [--step <C>]"
         printfn "  whb --sulphur-condenser [case.json] [--out <folder>]"
+        printfn "  whb --rating [case.json] [--out <folder>]"
+        printfn "  whb --design [case.json] [--out <folder>]"
         printfn "  whb --loads [case.json] [--out <folder>]"
         printfn "  whb --sizing [case.json] [--out <folder>]"
         printfn "  whb --optimize [case.json] [--out <folder>]"
+        printfn "  whb --optimize-legacy [case.json] [--out <folder>]"
         printfn "  whb --github-plan [options.json]"
         printfn "  whb --github-push [options.json]"
         printfn ""
@@ -1042,14 +1872,34 @@ let main argv =
         printfn "  --sizing [case.json]    Design run reported as a sizing sheet only."
         printfn "                          Writes dimensionamento.txt and nothing else."
         printfn ""
+        printfn "  --rating [case.json]    Verifies one fixed geometry against one or more"
+        printfn "                          configured load cases and explicit constraints."
+        printfn "                          All checks go through the same shared thermal/"
+        printfn "                          process plus mechanical verification engine used"
+        printfn "                          by the other modes. Writes rating.txt and"
+        printfn "                          rating.csv plus interfaccia_meccanica.txt."
+        printfn ""
+        printfn "  --optimize [case.json]  Modifies one existing geometry within explicit"
+        printfn "                          variable bounds to minimize configured weight/"
+        printfn "                          envelope objectives while keeping every required"
+        printfn "                          load case inside the same shared verification"
+        printfn "                          constraints. Writes ottimizzazione.txt plus"
+        printfn "                          interfaccia_meccanica.txt."
+        printfn ""
+        printfn "  --design [case.json]    Explores a discrete greenfield geometry space,"
+        printfn "                          starting from the non-varied details of the case"
+        printfn "                          and selecting the best candidate under the same"
+        printfn "                          shared verification engine and constraints."
+        printfn "                          Writes design.txt plus interfaccia_meccanica.txt."
+        printfn ""
         printfn "  --loads [case.json]     Partial-load campaign at 50, 60, 70, 80, 90, 100"
         printfn "                          and 110 %% of gas flow, on a reduced 40 x 8 grid."
         printfn "                          Writes carichi.txt and carichi.csv."
         printfn ""
-        printfn "  --optimize [case.json]  Constrained search for the largest duty that still"
+        printfn "  --optimize-legacy       Legacy constrained search for the largest duty that still"
         printfn "                          satisfies DNBR, metal temperature, gas pressure"
         printfn "                          drop and flow-induced vibration, moving ferrule"
-        printfn "                          length and tube length. Writes ottimizzazione.txt,"
+        printfn "                          length and tube length. Writes ottimizzazione_legacy.txt,"
         printfn "                          which reports not only where the optimum is but"
         printfn "                          WHAT HOLDS IT THERE: an active constraint, the edge"
         printfn "                          of the search range, a genuine interior stationary"
@@ -1155,6 +2005,7 @@ let main argv =
         printfn "%s" rule
         printfn "  The JSON case file uses engineering datasheet language, grouped in"
         printfn "  sections: gas, vapore, tubi, ferrula, circuito, drum, bypass, materiali."
+        printfn "  Mode-specific optional sections are: vincoli, rating, optimize, design."
         printfn "  Start from 'whb --template case.json'; the full field list is in"
         printfn "  docs/INPUT_SCHEMA.md."
         printfn ""
@@ -1167,6 +2018,8 @@ let main argv =
         printfn "  criticita.txt              Findings and warnings, most severe first."
         printfn "  pds_comparison.txt/.csv    Comparison against the client datasheet."
         printfn "  inventory_summary.txt/.csv Water volumes and estimated metal weights."
+        printfn "  interfaccia_meccanica.txt  Prepared interface for future mechanical"
+        printfn "                             code calculations."
         printfn "  celle.csv                  Cell-by-cell thermal field."
         printfn "  profilo_assiale.csv        Axial profiles."
         printfn "  tensioni.csv               Stress field."
@@ -1174,8 +2027,11 @@ let main argv =
         printfn "  vibrazioni.txt             Vibration screening per band."
         printfn "  maldistribuzione.txt       Maldistribution sensitivity."
         printfn "  dimensionamento.txt        Sizing sheet (--sizing, and normal runs)."
+        printfn "  rating.txt / rating.csv    Shared-engine geometry rating."
         printfn "  carichi.txt / carichi.csv  Partial-load curves (--loads)."
-        printfn "  ottimizzazione.txt         Constrained search result (--optimize)."
+        printfn "  ottimizzazione.txt         Shared-engine optimize result (--optimize)."
+        printfn "  ottimizzazione_legacy.txt  Legacy maximize-duty search (--optimize-legacy)."
+        printfn "  design.txt                 Shared-engine greenfield design result (--design)."
         printfn "  sulphur_table.csv          Standalone sulphur sweep (--sulphur)."
         printfn "  sulphur_condenser.txt      Dedicated Claus sulphur-condenser report."
         printfn "  sulphur_condenser_profile.csv"
@@ -1198,8 +2054,11 @@ let main argv =
         printfn "  whb my-case.json --out results/run1     Run a case into a folder."
         printfn "  whb --template my-case.json            Start a new case file."
         printfn "  whb my-case.json --options prj.json    Use a specific options file."
+        printfn "  whb --rating my-case.json              Rate one geometry on configured loads."
+        printfn "  whb --optimize my-case.json            Optimize an existing geometry."
+        printfn "  whb --design my-case.json              Explore a greenfield geometry space."
         printfn "  whb --loads my-case.json               Partial-load curves."
-        printfn "  whb --optimize my-case.json            Constrained search."
+        printfn "  whb --optimize-legacy my-case.json     Legacy maximize-duty search."
         printfn "  whb --selftest                         Verify the installation."
         printfn "  whb --sulphur sulphur.csv --pressure-bara 1.7 --s-atoms-mols 8 --inert-mols 100"
         printfn "  whb --sulphur-condenser claus-case.json --out results/condenser"
@@ -1293,32 +2152,23 @@ let main argv =
         | "--github-push" :: rest ->
             let f = match rest with | x :: _ when File.Exists x -> x | _ -> "whb.options.json"
             githubPush f
+        | "--rating" :: rest ->
+            let casePath, c = resolveCaseArg rest outDir optionsPath
+            runRatingMode projectOptions casePath c outDir
         | "--optimize" :: rest ->
-            let c =
-                match rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath) with
-                | f :: _ when File.Exists f -> loadCase f
-                | f :: _ when not (f.StartsWith("--")) ->
-                    eprintfn "Case file not found: %s" f
-                    raise (FileNotFoundException("Case file not found", f))
-                | _ -> Defaults.referenceCase
-            optimizeCase projectOptions c outDir
+            let casePath, c = resolveCaseArg rest outDir optionsPath
+            optimizeCase projectOptions casePath c outDir
+        | "--design" :: rest ->
+            let casePath, c = resolveCaseArg rest outDir optionsPath
+            runDesignMode projectOptions casePath c outDir
+        | "--optimize-legacy" :: rest ->
+            let _, c = resolveCaseArg rest outDir optionsPath
+            optimizeCaseLegacy projectOptions c outDir
         | "--sizing" :: rest ->
-            let c =
-                match rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath) with
-                | f :: _ when File.Exists f -> loadCase f
-                | f :: _ when not (f.StartsWith("--")) ->
-                    eprintfn "Case file not found: %s" f
-                    raise (FileNotFoundException("Case file not found", f))
-                | _ -> Defaults.referenceCase
+            let _, c = resolveCaseArg rest outDir optionsPath
             sizingOnly projectOptions c outDir
         | "--loads" :: rest ->
-            let c =
-                match rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath) with
-                | f :: _ when File.Exists f -> loadCase f
-                | f :: _ when not (f.StartsWith("--")) ->
-                    eprintfn "Case file not found: %s" f
-                    raise (FileNotFoundException("Case file not found", f))
-                | _ -> Defaults.referenceCase
+            let _, c = resolveCaseArg rest outDir optionsPath
             loadCurves projectOptions c outDir
         | opt :: _ when opt.StartsWith("--") ->
             eprintfn "Unknown option: %s" opt

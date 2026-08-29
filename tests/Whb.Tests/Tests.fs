@@ -2,6 +2,7 @@ module Tests
 
 open Whb.Core
 open Whb.Core.Constants
+open Whb.Core.Types
 open Xunit
 
 /// <summary>
@@ -12,6 +13,80 @@ open Xunit
 /// </remarks>
 let approx (expected: float) (tolerance: float) (actual: float) =
     Assert.True(abs (actual - expected) <= tolerance, sprintf "Expected %g +/- %g, got %g" expected tolerance actual)
+
+let private compactCase (caseIn: DesignCase) : DesignCase =
+    { caseIn with
+        NZ = 16
+        NY = 4 }
+
+let private fastDeterministicCase (caseIn: DesignCase) : DesignCase =
+    { caseIn with
+        NZ = 6
+        NY = 2 }
+
+let private permissiveConstraints : ConstraintModel.ConstraintSet =
+    { Targets =
+        [ { Key = ConstraintModel.MinDNBR
+            Name = "DNBR"
+            Domain = ConstraintModel.Thermal
+            Unit = "-"
+            Limit = ConstraintModel.Min 0.5
+            Required = true
+            Weight = 1.0 }
+          { Key = ConstraintModel.GasPressureDrop
+            Name = "Gas pressure drop"
+            Domain = ConstraintModel.Hydraulic
+            Unit = "Pa"
+            Limit = ConstraintModel.Max 1.0e6
+            Required = true
+            Weight = 1.0 }
+          { Key = ConstraintModel.WhbWeightKg
+            Name = "Estimated WHB weight"
+            Domain = ConstraintModel.Weight
+            Unit = "kg"
+            Limit = ConstraintModel.Max 1.0e9
+            Required = true
+            Weight = 0.1 } ] }
+
+let private weightObjective : Optimize.ObjectiveSet =
+    { Terms =
+        [ { Key = ConstraintModel.WhbWeightKg
+            Name = "Estimated WHB weight"
+            Weight = 1.0
+            Scale = None
+            Sense = Optimize.Minimize } ] }
+
+let private deterministicSettings =
+    { Design.defaultRunSettings with
+        Parallelism = 1
+        GasPropertyCache = false }
+
+let private caseSnapshot (caseIn: DesignCase) =
+    struct (
+        caseIn.Name,
+        caseIn.Tube.Length,
+        caseIn.Tube.NTubes,
+        caseIn.Tube.Pitch,
+        caseIn.Tube.ShellId,
+        caseIn.Gas.MassFlow,
+        caseIn.Gas.TIn,
+        caseIn.Water.DrumPressure,
+        caseIn.Loop.DzDrumWhb,
+        caseIn.BypassOpenFraction,
+        caseIn.Ferrule.Lengths
+    )
+
+let private designResultSnapshot (result: DesignResult) =
+    struct (
+        result.Duty,
+        result.SteamProduction,
+        result.TGasOutMean,
+        result.DpGas,
+        result.Findings.Length,
+        result.Warnings.Length,
+        result.RiserChecks.Length,
+        result.LineChecks.Length
+    )
 
 [<Fact>]
 let ``core constants are available to tests`` () =
@@ -532,6 +607,183 @@ let ``an infeasible best point is never reported as an interior optimum`` () =
     Assert.Contains("impossibile", r.ActiveConstraints)
 
 [<Fact>]
+let ``load case overrides update the operating point without changing the base geometry contract`` () =
+    let baseCase = Defaults.referenceCase
+    let spec =
+        { LoadCases.baseCase "110%"
+            with GasMassFlowFactor = Some 1.10
+                 GasInletTemperature = Some(cToK 980.0)
+                 DrumPressure = Some(barToPa 45.0)
+                 BypassOpenFraction = Some 0.15 }
+    let rated = LoadCases.applyToCase spec baseCase
+
+    approx (1.10 * baseCase.Gas.MassFlow) 1e-12 rated.Gas.MassFlow
+    approx (cToK 980.0) 1e-12 rated.Gas.TIn
+    approx (barToPa 45.0) 1e-6 rated.Water.DrumPressure
+    approx 0.15 1e-12 rated.BypassOpenFraction
+    Assert.Equal(baseCase.Tube.NTubes, rated.Tube.NTubes)
+
+[<Fact>]
+let ``optimize variable application updates geometry deterministically`` () =
+    let baseCase = Defaults.referenceCase
+    let variables : Optimize.DesignVariable list =
+        [ { Key = Optimize.TubeCount
+            Name = "numero tubi"
+            Current = float baseCase.Tube.NTubes
+            Lower = 800.0
+            Upper = 900.0
+            Step = 1.0
+            Unit = "-" }
+          { Key = Optimize.DrumCenterlineHeightM
+            Name = "quota drum"
+            Current = baseCase.Loop.DzDrumWhb
+            Lower = 3.0
+            Upper = 6.0
+            Step = 0.1
+            Unit = "m" } ]
+    let updated = Optimize.applyVariables baseCase variables [| 847.6; 4.25 |]
+
+    Assert.Equal(848, updated.Tube.NTubes)
+    approx 4.25 1e-12 updated.Loop.DzDrumWhb
+
+[<Fact>]
+let ``rating mode evaluates load cases through the shared verification engine`` () =
+    let baseCase = compactCase Defaults.referenceCase
+    let input : Rating.RatingInput =
+        { BaseCase = baseCase
+          LoadCases =
+            [ LoadCases.baseCase "base"
+              { LoadCases.baseCase "110%" with GasMassFlowFactor = Some 1.10 } ]
+          Constraints = permissiveConstraints
+          RunSettings = deterministicSettings }
+    let result = Rating.run input
+
+    Assert.Equal(2, result.LoadCaseResults.Length)
+    Assert.True(result.Assessment.IsFeasible)
+    Assert.Contains(result.Assessment.ConstraintReadings, fun r -> r.Target.Key = ConstraintModel.WhbWeightKg)
+    Assert.Contains(result.Assessment.GoverningLoadCases, fun name -> name = "110%")
+
+[<Fact>]
+let ``greenfield design ranks discrete candidates through the shared verification engine`` () =
+    let templateCase = compactCase Defaults.referenceCase
+    let input : GreenfieldDesign.DesignInput =
+        { TemplateCase = templateCase
+          LoadCases = [ LoadCases.baseCase "base" ]
+          Constraints = permissiveConstraints
+          Objective = weightObjective
+          Space =
+            { TubeCounts = [ templateCase.Tube.NTubes - 40; templateCase.Tube.NTubes ]
+              TubeLengthsM = [ templateCase.Tube.Length * 0.95; templateCase.Tube.Length ]
+              FerruleLengthsMm = []
+              ShellInnerDiametersM = []
+              TubePitchesM = []
+              DrumCenterlineHeightsM = [] }
+          RunSettings = deterministicSettings }
+    let result = GreenfieldDesign.run input
+
+    Assert.Equal(4, result.Evaluations)
+    Assert.True(result.Best.Assessment.IsFeasible)
+    Assert.Equal(templateCase.Tube.NTubes - 40, result.Best.Case.Tube.NTubes)
+    Assert.Equal(templateCase.Tube.Length * 0.95, result.Best.Case.Tube.Length, 12)
+
+[<Fact>]
+let ``optimize mode evaluates bounded candidates through the shared verification engine`` () =
+    let baseCase = compactCase Defaults.referenceCase
+    let lowerTubeCount = baseCase.Tube.NTubes - 40
+    let candidateCounts = [ lowerTubeCount; baseCase.Tube.NTubes ]
+    let input : Optimize.OptimizeInput =
+        { BaseCase = baseCase
+          LoadCases = [ LoadCases.baseCase "base" ]
+          Constraints = permissiveConstraints
+          Variables =
+            [ { Key = Optimize.TubeCount
+                Name = "numero tubi"
+                Current = float baseCase.Tube.NTubes
+                Lower = float lowerTubeCount
+                Upper = float baseCase.Tube.NTubes
+                Step = 40.0
+                Unit = "-" } ]
+          Objective = weightObjective
+          RunSettings = deterministicSettings
+          MaxIterations = 6
+          Tolerance = 1e-3 }
+    let result = Optimize.run input
+    let recomputedLoads =
+        LoadCases.runAll deterministicSettings input.LoadCases result.Best.Case
+    let recomputedObjective =
+        Optimize.scoreObjective weightObjective recomputedLoads
+
+    Assert.True(result.Best.Assessment.IsFeasible)
+    Assert.Contains(result.Best.Case.Tube.NTubes, candidateCounts)
+    Assert.Equal(recomputedObjective, result.Best.ObjectiveValue, 12)
+    Assert.Contains(result.Best.Assessment.ConstraintReadings, fun r -> r.Target.Key = ConstraintModel.WhbWeightKg)
+
+[<Fact>]
+let ``shared verification and mode pipelines are deterministic and do not mutate their inputs`` () =
+    let baseCase = fastDeterministicCase Defaults.referenceCase
+    let before = caseSnapshot baseCase
+    let design1 = Design.runWithSettingsAndProgress deterministicSettings ignore baseCase
+    let middle = caseSnapshot baseCase
+    let design2 = Design.runWithSettingsAndProgress deterministicSettings ignore baseCase
+    let after = caseSnapshot baseCase
+
+    Assert.Equal(before, middle)
+    Assert.Equal(before, after)
+    Assert.Equal(designResultSnapshot design1, designResultSnapshot design2)
+
+    let ratingInput : Rating.RatingInput =
+        { BaseCase = baseCase
+          LoadCases = [ LoadCases.baseCase "base" ]
+          Constraints = permissiveConstraints
+          RunSettings = deterministicSettings }
+    let rating1 = Rating.run ratingInput
+    let rating2 = Rating.run ratingInput
+    Assert.Equal(rating1.Assessment.IsFeasible, rating2.Assessment.IsFeasible)
+    Assert.Equal(rating1.Assessment.TotalViolation, rating2.Assessment.TotalViolation, 12)
+    Assert.Equal(caseSnapshot ratingInput.BaseCase, before)
+
+    let optimizeInput : Optimize.OptimizeInput =
+        { BaseCase = baseCase
+          LoadCases = [ LoadCases.baseCase "base" ]
+          Constraints = permissiveConstraints
+          Variables =
+            [ { Key = Optimize.TubeCount
+                Name = "numero tubi"
+                Current = float baseCase.Tube.NTubes
+                Lower = float baseCase.Tube.NTubes
+                Upper = float baseCase.Tube.NTubes
+                Step = 1.0
+                Unit = "-" } ]
+          Objective = weightObjective
+          RunSettings = deterministicSettings
+          MaxIterations = 4
+          Tolerance = 1e-3 }
+    let optimize1 = Optimize.run optimizeInput
+    let optimize2 = Optimize.run optimizeInput
+    Assert.Equal(optimize1.Best.Case.Tube.NTubes, optimize2.Best.Case.Tube.NTubes)
+    Assert.Equal(optimize1.Best.ObjectiveValue, optimize2.Best.ObjectiveValue, 12)
+    Assert.Equal(caseSnapshot optimizeInput.BaseCase, before)
+
+    let designInput : GreenfieldDesign.DesignInput =
+        { TemplateCase = baseCase
+          LoadCases = [ LoadCases.baseCase "base" ]
+          Constraints = permissiveConstraints
+          Objective = weightObjective
+          Space =
+            { TubeCounts = [ baseCase.Tube.NTubes ]
+              TubeLengthsM = [ baseCase.Tube.Length ]
+              FerruleLengthsMm = []
+              ShellInnerDiametersM = []
+              TubePitchesM = []
+              DrumCenterlineHeightsM = [] }
+          RunSettings = deterministicSettings }
+    let scratch1 = GreenfieldDesign.run designInput
+    let scratch2 = GreenfieldDesign.run designInput
+    Assert.Equal(scratch1.Best.Case.Tube.NTubes, scratch2.Best.Case.Tube.NTubes)
+    Assert.Equal(scratch1.Best.ObjectiveValue, scratch2.Best.ObjectiveValue, 12)
+    Assert.Equal(caseSnapshot designInput.TemplateCase, before)
+
+[<Fact>]
 let ``open work list stays in step with the code`` () =
     // TODO.md is the entry point for the next session, so a claim made there that no
     // longer matches the code is worse than no list at all.
@@ -548,7 +800,7 @@ let ``open work list stays in step with the code`` () =
     // The interim step of T-25 is done, so DpGas must be tube-count weighted.
     let solver =
         System.IO.File.ReadAllText(
-            System.IO.Path.Combine(root, "src", "Whb.Core", "Solvers", "BundleSolver.fs"))
+            System.IO.Path.Combine(root, "src", "Whb.Core", "Solvers", "BundleSolver.Support.fs"))
     Assert.Contains("dpWeight", solver)
     Assert.DoesNotContain("dpAcc / float (ny * nc)", solver)
 
@@ -624,13 +876,17 @@ let ``kandlikar helpers classify the NBD regime and default stays on chen`` () =
     Assert.Equal(WaterSide.ChenSuperposition, Defaults.referenceCase.Water.FlowBoiling)
 
 [<Fact>]
-let ``dnb screening limits follow the 07 and 05 proposal criteria`` () =
-    approx 0.7 1e-12 (WaterSide.dnbAllowableFraction false false)
-    approx 0.5 1e-12 (WaterSide.dnbAllowableFraction true false)
-    approx 0.5 1e-12 (WaterSide.dnbAllowableFraction false true)
-    approx (1.0 / 0.7) 1e-12 (WaterSide.dnbrRequired false false)
-    approx 2.0 1e-12 (WaterSide.dnbrRequired true false)
-    approx 2.0 1e-12 (WaterSide.dnbrRequired false true)
+let ``dnb screening limits follow the case DNBR criterion`` () =
+    approx 0.5 1e-12 (WaterSide.dnbAllowableFraction 2.0)
+    approx 2.0 1e-12 (WaterSide.dnbrRequired 2.0 false false)
+    approx 2.0 1e-12 (WaterSide.dnbrRequired 2.0 true false)
+    approx 2.0 1e-12 (WaterSide.dnbrRequired 2.0 false true)
+    approx 0.4 1e-12 (WaterSide.dnbAllowableFraction 2.5)
+    approx 2.5 1e-12 (WaterSide.dnbrRequired 2.5 false false)
+
+[<Fact>]
+let ``reference case exposes the default DNBR project criterion`` () =
+    approx 2.0 1e-12 Defaults.referenceCase.Water.MinDNBR
 
 [<Fact>]
 let ``sulphur equilibrium constants and reaction heats stay on their anchors`` () =

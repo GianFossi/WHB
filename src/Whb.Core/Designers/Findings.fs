@@ -19,13 +19,14 @@ module Findings =
         let fs = ResizeArray<Finding>()
         let hot = cells |> List.filter (fun c -> not c.InFerrule)
         let qmax = hot |> List.maxBy (fun c -> c.QFluxOut)
-        let dnbReqOf (c: CellResult) = WaterSide.dnbrRequired (c.I = 0) c.InFerrule
+        let dnbReqOf (c: CellResult) = WaterSide.dnbrRequired case.Water.MinDNBR (c.I = 0) c.InFerrule
+        let dnbReqLabel = sprintf "%.2f" case.Water.MinDNBR
         let dnb = cells |> List.minBy (fun c -> c.DNBR / dnbReqOf c)
         let dnbReq = dnbReqOf dnb
         let dnbZone =
-            if dnb.InFerrule then "zona ferrula (DNBR richiesto 2.0)"
-            elif dnb.I = 0 then "prima fila al gas d'ingresso (DNBR richiesto 2.0)"
-            else "campo fascio (DNBR richiesto 1.43)"
+            if dnb.InFerrule then sprintf "zona ferrula (DNBR richiesto %s)" dnbReqLabel
+            elif dnb.I = 0 then sprintf "prima fila al gas d'ingresso (DNBR richiesto %s)" dnbReqLabel
+            else sprintf "campo fascio (DNBR richiesto %s)" dnbReqLabel
         let tmax = cells |> List.maxBy (fun c -> c.TMetalIn)
         let alphaC = cells |> List.maxBy (fun c -> c.Alpha)
         let dTdep = hot |> List.maxBy (fun c -> c.DTDeposit)

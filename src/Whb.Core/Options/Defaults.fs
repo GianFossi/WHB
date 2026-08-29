@@ -57,6 +57,7 @@ module Defaults =
               FlowBoiling = WaterSide.ChenSuperposition
               Csf = 0.013
               ChfModel = WaterSide.PalenBundle
+              MinDNBR = 2.0
               TFeed = cToK 250.0 }
           Loop =
             { DzDrumWhb = 6.0

@@ -66,6 +66,40 @@ module SulphurCondenser =
 
     let private sulphurAtomMolarMass = GasProps.molarMass GasProps.S8 / 8.0
 
+    [<Struct>]
+    type private PreparedSolve =
+        { SourceLabel: string
+          Spec: Spec
+          Feed: Feed
+          TOutTarget: float
+          DtTotal: float
+          DpStep: float
+          TauStep: float
+          InletState: Sulphur.ProcessState }
+
+    [<Struct>]
+    type private MarchState =
+        { Composition: GasProps.Composition
+          TNow: float
+          PNow: float
+          StateNow: Sulphur.ProcessState }
+
+    [<Struct>]
+    type private SegmentStep =
+        { Segment: Segment
+          Next: MarchState
+          Duty: float
+          DutyLatent: float
+          DutySensible: float
+          AreaRequired: float }
+
+    [<Struct>]
+    type private Totals =
+        { Duty: float
+          DutyLatent: float
+          DutySensible: float
+          AreaRequired: float }
+
     let sanitizeFeed (feed: Feed) =
         { Composition = GasProps.normalize feed.Composition
           MassFlow = max 0.0 feed.MassFlow
@@ -116,108 +150,160 @@ module SulphurCondenser =
     let private totalMolarFlow (massFlow: float) (composition: GasProps.Composition) =
         massFlow / max 1.0e-12 (GasProps.mixMolarMass (GasProps.normalize composition))
 
-    let solveWithFeed (sourceLabel: string) (specIn: Spec) (feedIn: Feed) =
+    let private prepareSolve (sourceLabel: string) (specIn: Spec) (feedIn: Feed) =
         let spec = sanitizeSpec { specIn with Feed = feedIn }
         let feed = sanitizeFeed feedIn
+        let inletState =
+            processStateAt feed feed.PIn (GasProps.normalize feed.Composition) feed.TIn
         let tOutTarget = min feed.TIn spec.TOutTarget
-        let dtTotal = feed.TIn - tOutTarget
-        let dpStep = spec.DpTotal / float spec.Sections
-        let tauStep = spec.ResidenceTime / float spec.Sections
-        let mutable comp = GasProps.normalize feed.Composition
-        let mutable tNow = feed.TIn
-        let mutable pNow = feed.PIn
-        let inletState = processStateAt feed pNow comp tNow
-        let segments = ResizeArray<Segment>()
-        let mutable dutyTotal = 0.0
-        let mutable latentTotal = 0.0
-        let mutable sensibleTotal = 0.0
-        let mutable areaTotal = 0.0
-        let mutable stateNow = inletState
-        for i in 1 .. spec.Sections do
-            let frac = float i / float spec.Sections
-            let tNext = feed.TIn - frac * dtTotal
-            let pNext = max 1.0e4 (feed.PIn - float i * dpStep)
-            let tRef = 0.5 * (tNow + tNext)
-            let compNext =
-                if feed.ClausMode = Claus.Frozen then comp
-                else Claus.advanceWith feed.ClausKinetics feed.ClausMode tRef tauStep comp
-            let stateNext = processStateAt feed pNext compNext tNext
-            let duty = feed.MassFlow * max 0.0 (stateNow.TotalSpecificEnthalpy - stateNext.TotalSpecificEnthalpy)
-            let nIn = totalMolarFlow feed.MassFlow comp
-            let nOut = totalMolarFlow feed.MassFlow compNext
-            let condensedAtomsIn = stateNow.CondensedAtoms * nIn
-            let condensedAtomsOut = stateNext.CondensedAtoms * nOut
-            let dCondensedAtoms = max 0.0 (condensedAtomsOut - condensedAtomsIn)
-            let dutyLatent = dCondensedAtoms * Sulphur.latentHeatPerAtom tRef
-            let dutySensible = max 0.0 (duty - dutyLatent)
-            let dt1 = tNow - spec.TCoolant
-            let dt2 = tNext - spec.TCoolant
-            let lm = lmtdPositive dt1 dt2
-            let area = duty / (spec.UAssumed * lm)
-            segments.Add
-                { Index = i
-                  TIn = tNow
-                  TOut = tNext
-                  PIn = pNow
-                  POut = pNext
-                  Duty = duty
-                  DutyLatent = dutyLatent
-                  DutySensible = dutySensible
-                  AreaRequired = area
-                  YElementalSulphurIn = stateNow.YElementalSulphurVapour
-                  YElementalSulphurOut = stateNext.YElementalSulphurVapour
-                  CondensedFractionIn = stateNow.CondensedFraction
-                  CondensedFractionOut = stateNext.CondensedFraction
-                  SulphurDewPointIn = stateNow.SulphurDewPoint
-                  SulphurDewPointOut = stateNext.SulphurDewPoint }
-            dutyTotal <- dutyTotal + duty
-            latentTotal <- latentTotal + dutyLatent
-            sensibleTotal <- sensibleTotal + dutySensible
-            areaTotal <- areaTotal + area
-            comp <- compNext
-            tNow <- tNext
-            pNow <- pNext
-            stateNow <- stateNext
-        let outletState = stateNow
-        let outletScreen = Sulphur.clausScreening pNow outletState.VapourComposition
-        let hasSulphurService =
-            inletState.PSulphur > 1e-6
-            || outletState.PSulphur > 1e-6
-            || Sulphur.hasElementalSulphur feed.Composition
-            || Claus.hasReactiveSpecies feed.Composition
-        let fog =
-            Sulphur.assessFog outletState.T (max inletState.PSulphur outletState.PSulphur) 1.2
-                (outletState.T - inletState.T) (outletState.PSulphur - inletState.PSulphur)
-        let checks =
-            [ if hasSulphurService then
-                  yield! Sulphur.condenserChecks spec.TWall outletState.T (max inletState.PSulphur outletState.PSulphur) fog
-              else
-                  yield
-                    { Severity = Sulphur.Watch
-                      Title = "Nessuno zolfo elementare disponibile per la condensazione"
-                      Value = "p(zolfo) ~ 0 lungo il tratto"
-                      Limit = "servizio Claus con zolfo elementare o conversione Claus attiva"
-                      Detail = "Il modulo dedicato gira comunque e calcola il solo raffreddamento sensibile, ma la parte di condensazione zolfo non e' rappresentativa su questo feed." }
-              yield Sulphur.checkSulphidation spec.TWall outletScreen.YH2S
-              match outletScreen.WaterDewPoint with
-              | Some tDew -> yield Sulphur.checkWetH2S spec.TWall tDew outletScreen.YH2S
-              | None -> () ]
         { SourceLabel = sourceLabel
-          SpecUsed = spec
-          FeedUsed = feed
-          InletState = inletState
+          Spec = spec
+          Feed = feed
+          TOutTarget = tOutTarget
+          DtTotal = feed.TIn - tOutTarget
+          DpStep = spec.DpTotal / float spec.Sections
+          TauStep = spec.ResidenceTime / float spec.Sections
+          InletState = inletState }
+
+    let private initialMarchState (prepared: PreparedSolve) =
+        { Composition = GasProps.normalize prepared.Feed.Composition
+          TNow = prepared.Feed.TIn
+          PNow = prepared.Feed.PIn
+          StateNow = prepared.InletState }
+
+    let private advanceComposition (feed: Feed) (tRef: float) (tauStep: float) (composition: GasProps.Composition) =
+        if feed.ClausMode = Claus.Frozen then composition
+        else Claus.advanceWith feed.ClausKinetics feed.ClausMode tRef tauStep composition
+
+    let private latentDuty (feed: Feed) (composition: GasProps.Composition) (nextComposition: GasProps.Composition)
+                           (stateNow: Sulphur.ProcessState) (stateNext: Sulphur.ProcessState) (tRef: float) =
+        let nIn = totalMolarFlow feed.MassFlow composition
+        let nOut = totalMolarFlow feed.MassFlow nextComposition
+        let condensedAtomsIn = stateNow.CondensedAtoms * nIn
+        let condensedAtomsOut = stateNext.CondensedAtoms * nOut
+        max 0.0 (condensedAtomsOut - condensedAtomsIn) * Sulphur.latentHeatPerAtom tRef
+
+    let private requiredArea (spec: Spec) (tIn: float) (tOut: float) (duty: float) =
+        let lm = lmtdPositive (tIn - spec.TCoolant) (tOut - spec.TCoolant)
+        duty / (spec.UAssumed * lm)
+
+    let private buildSegment (index: int) (state: MarchState) (stateNext: Sulphur.ProcessState)
+                             (pNext: float) (tNext: float) (duty: float) (dutyLatent: float)
+                             (area: float) =
+        { Index = index
+          TIn = state.TNow
+          TOut = tNext
+          PIn = state.PNow
+          POut = pNext
+          Duty = duty
+          DutyLatent = dutyLatent
+          DutySensible = max 0.0 (duty - dutyLatent)
+          AreaRequired = area
+          YElementalSulphurIn = state.StateNow.YElementalSulphurVapour
+          YElementalSulphurOut = stateNext.YElementalSulphurVapour
+          CondensedFractionIn = state.StateNow.CondensedFraction
+          CondensedFractionOut = stateNext.CondensedFraction
+          SulphurDewPointIn = state.StateNow.SulphurDewPoint
+          SulphurDewPointOut = stateNext.SulphurDewPoint }
+
+    let private stepSegment (prepared: PreparedSolve) (state: MarchState) (index: int) =
+        let frac = float index / float prepared.Spec.Sections
+        let tNext = prepared.Feed.TIn - frac * prepared.DtTotal
+        let pNext = max 1.0e4 (prepared.Feed.PIn - float index * prepared.DpStep)
+        let tRef = 0.5 * (state.TNow + tNext)
+        let nextComposition = advanceComposition prepared.Feed tRef prepared.TauStep state.Composition
+        let stateNext = processStateAt prepared.Feed pNext nextComposition tNext
+        let duty =
+            prepared.Feed.MassFlow
+            * max 0.0 (state.StateNow.TotalSpecificEnthalpy - stateNext.TotalSpecificEnthalpy)
+        let dutyLatent =
+            latentDuty prepared.Feed state.Composition nextComposition state.StateNow stateNext tRef
+        let area = requiredArea prepared.Spec state.TNow tNext duty
+        let segment = buildSegment index state stateNext pNext tNext duty dutyLatent area
+        { Segment = segment
+          Next =
+            { Composition = nextComposition
+              TNow = tNext
+              PNow = pNext
+              StateNow = stateNext }
+          Duty = duty
+          DutyLatent = dutyLatent
+          DutySensible = segment.DutySensible
+          AreaRequired = area }
+
+    let private addTotals (totals: Totals) (step: SegmentStep) =
+        { Duty = totals.Duty + step.Duty
+          DutyLatent = totals.DutyLatent + step.DutyLatent
+          DutySensible = totals.DutySensible + step.DutySensible
+          AreaRequired = totals.AreaRequired + step.AreaRequired }
+
+    let private marchSegments (prepared: PreparedSolve) =
+        let folder (segments, totals, state) index =
+            let step = stepSegment prepared state index
+            (step.Segment :: segments, addTotals totals step, step.Next)
+
+        [ 1 .. prepared.Spec.Sections ]
+        |> List.fold
+            folder
+            ([],
+             { Duty = 0.0; DutyLatent = 0.0; DutySensible = 0.0; AreaRequired = 0.0 },
+             initialMarchState prepared)
+        |> fun (segmentsRev, totals, state) -> (List.rev segmentsRev, totals, state)
+
+    let private hasSulphurService (feed: Feed) (inletState: Sulphur.ProcessState) (outletState: Sulphur.ProcessState) =
+        inletState.PSulphur > 1e-6
+        || outletState.PSulphur > 1e-6
+        || Sulphur.hasElementalSulphur feed.Composition
+        || Claus.hasReactiveSpecies feed.Composition
+
+    let private assessFog (inletState: Sulphur.ProcessState) (outletState: Sulphur.ProcessState) =
+        Sulphur.assessFog outletState.T (max inletState.PSulphur outletState.PSulphur) 1.2
+            (outletState.T - inletState.T) (outletState.PSulphur - inletState.PSulphur)
+
+    let private buildChecks (spec: Spec) (feed: Feed) (inletState: Sulphur.ProcessState)
+                            (outletPressure: float) (outletState: Sulphur.ProcessState) (fog: Sulphur.FogAssessment) =
+        let outletScreen = Sulphur.clausScreening outletPressure outletState.VapourComposition
+        [ if hasSulphurService feed inletState outletState then
+              yield! Sulphur.condenserChecks spec.TWall outletState.T (max inletState.PSulphur outletState.PSulphur) fog
+          else
+              yield
+                { Severity = Sulphur.Watch
+                  Title = "Nessuno zolfo elementare disponibile per la condensazione"
+                  Value = "p(zolfo) ~ 0 lungo il tratto"
+                  Limit = "servizio Claus con zolfo elementare o conversione Claus attiva"
+                  Detail = "Il modulo dedicato gira comunque e calcola il solo raffreddamento sensibile, ma la parte di condensazione zolfo non e' rappresentativa su questo feed." }
+          yield Sulphur.checkSulphidation spec.TWall outletScreen.YH2S
+          match outletScreen.WaterDewPoint with
+          | Some tDew -> yield Sulphur.checkWetH2S spec.TWall tDew outletScreen.YH2S
+          | None -> () ]
+
+    let private assembleResult (prepared: PreparedSolve) (segments: Segment list) (totals: Totals)
+                               (finalState: MarchState) =
+        let outletState = finalState.StateNow
+        let fog = assessFog prepared.InletState outletState
+        let checks = buildChecks prepared.Spec prepared.Feed prepared.InletState finalState.PNow outletState fog
+        let outletMolarFlow = totalMolarFlow prepared.Feed.MassFlow finalState.Composition
+        { SourceLabel = prepared.SourceLabel
+          SpecUsed = prepared.Spec
+          FeedUsed = prepared.Feed
+          InletState = prepared.InletState
           OutletState = outletState
-          OutletComposition = comp
-          Segments = List.ofSeq segments
-          Duty = dutyTotal
-          DutyLatent = latentTotal
-          DutySensible = sensibleTotal
-          AreaRequired = areaTotal
-          CondensedSulphurAtomsFlow = outletState.CondensedAtoms * totalMolarFlow feed.MassFlow comp
-          CondensedSulphurMassFlow = outletState.CondensedAtoms * totalMolarFlow feed.MassFlow comp * sulphurAtomMolarMass
-          SteamPressureForWall = Sulphur.steamPressureForWall spec.TWall
+          OutletComposition = finalState.Composition
+          Segments = segments
+          Duty = totals.Duty
+          DutyLatent = totals.DutyLatent
+          DutySensible = totals.DutySensible
+          AreaRequired = totals.AreaRequired
+          CondensedSulphurAtomsFlow = outletState.CondensedAtoms * outletMolarFlow
+          CondensedSulphurMassFlow = outletState.CondensedAtoms * outletMolarFlow * sulphurAtomMolarMass
+          SteamPressureForWall = Sulphur.steamPressureForWall prepared.Spec.TWall
           Fog = fog
           Checks = checks }
+
+    let solveWithFeed (sourceLabel: string) (specIn: Spec) (feedIn: Feed) =
+        let prepared = prepareSolve sourceLabel specIn feedIn
+        let (segments, totals, finalState) = marchSegments prepared
+        assembleResult prepared segments totals finalState
 
     let solve (spec: Spec) =
         solveWithFeed

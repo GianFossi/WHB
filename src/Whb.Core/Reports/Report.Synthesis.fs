@@ -35,8 +35,9 @@ module ReportSynthesis =
         kv2 "Flusso termico di picco" (sprintf "%s kW/m2" (f0 ((hot |> List.map (fun x -> x.QFluxOut) |> List.max) / 1000.0)))
         kv2 "T metallo massima (interna)" (sprintf "%s °C su limite %s °C" (f0 (kToC (r.Cells |> List.map (fun x -> x.TMetalIn) |> List.max))) (f0 c.Material.TmaxDesign))
         kv2 "DNBR locale minimo (INDICATORE, vedi 5d)"
-            (sprintf "%s  - il criterio di riferimento e' 2.0, ma nessun modello di CHF disponibile e' tarato su questa geometria: il valore va usato per confronti relativi, non in assoluto"
-                 (f2 (hot |> List.map (fun x -> x.DNBR) |> List.min)))
+            (sprintf "%s  - il criterio di riferimento di questo caso e' %.2f, ma nessun modello di CHF disponibile e' tarato su questa geometria: il valore va usato per confronti relativi, non in assoluto"
+                 (f2 (hot |> List.map (fun x -> x.DNBR) |> List.min))
+                 c.Water.MinDNBR)
         kv2 "Rapporto di circolazione" (sprintf "%s  su minimo 10.0" (f1 r.Circulation.CirculationRatio))
         kv2 "Frazione di vuoto massima" (sprintf "%s  su limite 0.70" (f3 (r.Cells |> List.map (fun x -> x.Alpha) |> List.max)))
         kv2 "Dilatazione differenziale tubo-mantello"
@@ -122,7 +123,7 @@ module ReportSynthesis =
          | nc -> kv2 "BOCCHELLI NON COLLEGATI" (nc |> List.map (fun l -> l.Tag) |> String.concat ", "))
         sb.AppendLine() |> ignore
 
-        definizioni sb
+        definizioni r.Case.Water.MinDNBR sb
 
         if r.Findings.IsEmpty then
             sb.AppendLine("  Nessuna criticita' rilevata dai criteri implementati.") |> ignore

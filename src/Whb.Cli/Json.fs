@@ -18,7 +18,7 @@ module Json =
     /// The path is a string of property names separated by dots, e.g. "gas.composizione".
     /// Example: tryPath root "gas.composizione"
     /// If the path is invalid or the property is not found, return None.
-    let private tryPath (root: JsonElement) (path: string) =
+    let tryPath (root: JsonElement) (path: string) =
         let parts = path.Split('.')
         let mutable cur = root
         let mutable ok = true
@@ -30,6 +30,13 @@ module Json =
                     | _ -> ok <- false
                 else ok <- false
         if ok then Some cur else None
+    let tryProperty (root: JsonElement) (name: string) =
+        if root.ValueKind = JsonValueKind.Object then
+            match root.TryGetProperty name with
+            | true, v -> Some v
+            | _ -> None
+        else
+            None
     let f (root: JsonElement) (path: string) (def: float) =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.Number -> v.GetDouble()
@@ -47,6 +54,57 @@ module Json =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.String -> v.GetString()
         | _ -> def
+    let tryF (root: JsonElement) (path: string) =
+        match tryPath root path with
+        | Some v when v.ValueKind = JsonValueKind.Number -> Some(v.GetDouble())
+        | _ -> None
+    let tryI (root: JsonElement) (path: string) =
+        match tryPath root path with
+        | Some v when v.ValueKind = JsonValueKind.Number -> Some(v.GetInt32())
+        | _ -> None
+    let tryS (root: JsonElement) (path: string) =
+        match tryPath root path with
+        | Some v when v.ValueKind = JsonValueKind.String -> Some(v.GetString())
+        | _ -> None
+    let tryB (root: JsonElement) (path: string) =
+        match tryPath root path with
+        | Some v when v.ValueKind = JsonValueKind.True -> Some true
+        | Some v when v.ValueKind = JsonValueKind.False -> Some false
+        | _ -> None
+    let fAt (root: JsonElement) (name: string) (def: float) =
+        match tryProperty root name with
+        | Some v when v.ValueKind = JsonValueKind.Number -> v.GetDouble()
+        | _ -> def
+    let iAt (root: JsonElement) (name: string) (def: int) =
+        match tryProperty root name with
+        | Some v when v.ValueKind = JsonValueKind.Number -> v.GetInt32()
+        | _ -> def
+    let bAt (root: JsonElement) (name: string) (def: bool) =
+        match tryProperty root name with
+        | Some v when v.ValueKind = JsonValueKind.True -> true
+        | Some v when v.ValueKind = JsonValueKind.False -> false
+        | _ -> def
+    let sAt (root: JsonElement) (name: string) (def: string) =
+        match tryProperty root name with
+        | Some v when v.ValueKind = JsonValueKind.String -> v.GetString()
+        | _ -> def
+    let tryFAt (root: JsonElement) (name: string) =
+        match tryProperty root name with
+        | Some v when v.ValueKind = JsonValueKind.Number -> Some(v.GetDouble())
+        | _ -> None
+    let tryIAt (root: JsonElement) (name: string) =
+        match tryProperty root name with
+        | Some v when v.ValueKind = JsonValueKind.Number -> Some(v.GetInt32())
+        | _ -> None
+    let trySAt (root: JsonElement) (name: string) =
+        match tryProperty root name with
+        | Some v when v.ValueKind = JsonValueKind.String -> Some(v.GetString())
+        | _ -> None
+    let tryBAt (root: JsonElement) (name: string) =
+        match tryProperty root name with
+        | Some v when v.ValueKind = JsonValueKind.True -> Some true
+        | Some v when v.ValueKind = JsonValueKind.False -> Some false
+        | _ -> None
     let compositionAt (root: JsonElement) (path: string) (def: GasProps.Composition) =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.Object ->
@@ -67,6 +125,21 @@ module Json =
         match tryPath root path with
         | Some v when v.ValueKind = JsonValueKind.Array ->
             Some(v.EnumerateArray() |> Seq.map (fun x -> x.GetDouble()) |> List.ofSeq)
+        | _ -> None
+    let tryArrayElements (root: JsonElement) (path: string) =
+        match tryPath root path with
+        | Some v when v.ValueKind = JsonValueKind.Array ->
+            Some(v.EnumerateArray() |> List.ofSeq)
+        | _ -> None
+    let tryStringArrayAt (root: JsonElement) (name: string) =
+        match tryProperty root name with
+        | Some v when v.ValueKind = JsonValueKind.Array ->
+            v.EnumerateArray()
+            |> Seq.choose (fun item ->
+                if item.ValueKind = JsonValueKind.String then Some(item.GetString())
+                else None)
+            |> List.ofSeq
+            |> Some
         | _ -> None
     let lengths (root: JsonElement) (path: string) =
         match tryPath root path with

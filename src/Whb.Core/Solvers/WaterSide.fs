@@ -163,10 +163,10 @@ module WaterSide =
         function
         | ChenSuperposition -> "Chen (superposizione con soppressione)"
         | KandlikarMax -> "Kandlikar (1990) - max(h_NBD, h_CBD)"
-    let dnbAllowableFraction (firstRow: bool) (inFerrule: bool) =
-        if firstRow || inFerrule then 0.5 else 0.7
-    let dnbrRequired (firstRow: bool) (inFerrule: bool) =
-        1.0 / dnbAllowableFraction firstRow inFerrule
+    let dnbAllowableFraction (requiredMinDNBR: float) =
+        1.0 / max 1e-9 requiredMinDNBR
+    let dnbrRequired (requiredMinDNBR: float) (_firstRow: bool) (_inFerrule: bool) =
+        max 1e-9 requiredMinDNBR
     let hZukauskas (reMax: float) (pr: float) (prW: float) (k: float) (d: float) (staggered: bool) (stOverSl: float) =
         let c, m =
             if staggered then

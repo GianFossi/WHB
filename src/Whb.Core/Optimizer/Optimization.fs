@@ -19,8 +19,8 @@ module Optimization =
           Objective: string
           MaxIterations: int
           Tolerance: float }
-    let defaultConstraints =
-        [ { Name = "DNBR"; Min = Some 2.0; Max = None; Unit = "-"; Weight = 1.0 }
+    let defaultConstraints (minDNBR: float) =
+        [ { Name = "DNBR"; Min = Some minDNBR; Max = None; Unit = "-"; Weight = 1.0 }
           { Name = "T metal max"; Min = None; Max = Some 450.0; Unit = "degC"; Weight = 1.0 }
           { Name = "Gas pressure drop"; Min = None; Max = Some 300.0; Unit = "mbar"; Weight = 0.5 }
           { Name = "FIV V/Vcrit"; Min = None; Max = Some 0.8; Unit = "-"; Weight = 1.0 } ]

@@ -53,6 +53,9 @@ module Types =
           /// factor is the conservative default; the alternatives exist so the same case can
           /// be re-run against a different limit and the DNBR map compared.
           ChfModel: WaterSide.ChfModel
+          /// Minimum project DNBR criterion used by the local boiling-crisis screening and as
+          /// the default DNBR constraint when a mode does not declare one explicitly.
+          MinDNBR: float
           TFeed: float }
     type LoopGeometry =
         { /// Steam-drum axis elevation minus WHB axis elevation [m]

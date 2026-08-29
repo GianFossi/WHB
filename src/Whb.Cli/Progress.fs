@@ -14,6 +14,46 @@ open Whb.Core.Options
 
 module Progress =
 
+    type StatusSnapshot =
+        { Description: string
+          Fraction: float option }
+
+    type ProgressEstimate =
+        { Fraction: float
+          Remaining: TimeSpan option }
+
+    let snapshot description fraction =
+        { Description = description
+          Fraction = fraction }
+
+    let mergeStatus (current: StatusSnapshot) (update: DesignRuntime.ProgressUpdate) =
+        { Description = update.Description
+          Fraction =
+            match update.Fraction with
+            | Some value -> Some value
+            | None -> current.Fraction }
+
+    let estimateProgress (estimatedSeconds: float) (elapsed: TimeSpan) (status: StatusSnapshot) =
+        let estimate = TimeSpan.FromSeconds(max 1.0 estimatedSeconds)
+        let reportedFraction =
+            status.Fraction
+            |> Option.map (fun value -> max 0.0 (min 1.0 value))
+        match reportedFraction with
+        | Some fraction when fraction >= 1.0 ->
+            { Fraction = 1.0
+              Remaining = Some TimeSpan.Zero }
+        | Some fraction when fraction > 0.0 ->
+            { Fraction = fraction
+              Remaining = Some(TimeSpan.FromSeconds(max 0.0 (elapsed.TotalSeconds * (1.0 - fraction) / fraction))) }
+        | _ ->
+            let fraction = min 0.98 (elapsed.TotalSeconds / estimate.TotalSeconds)
+            let remaining =
+                if elapsed <= estimate && fraction > 0.0 then
+                    Some(TimeSpan.FromSeconds(max 0.0 (estimate.TotalSeconds - elapsed.TotalSeconds)))
+                else None
+            { Fraction = fraction
+              Remaining = remaining }
+
     /// <summary>
     /// Formats a duration as a compact human-readable time value.
     /// </summary>
@@ -63,8 +103,7 @@ module Progress =
     /// <remarks>
     /// The calculation itself remains unchanged; the progress estimate is time based and intended as user feedback, not a solver convergence metric.
     /// </remarks>
-    let runWithStatusDynamic<'T> (description: unit -> string) (estimatedSeconds: float) (work: unit -> 'T) =
-        let estimate = TimeSpan.FromSeconds(max 1.0 estimatedSeconds)
+    let runWithStatusSnapshot<'T> (status: unit -> StatusSnapshot) (estimatedSeconds: float) (work: unit -> 'T) =
         use finished = new ManualResetEventSlim(false)
         let sw = Diagnostics.Stopwatch.StartNew()
         let task =
@@ -73,18 +112,22 @@ module Progress =
                 finally finished.Set()))
         while not task.IsCompleted do
             let elapsed = sw.Elapsed
-            let fraction = min 0.98 (elapsed.TotalSeconds / estimate.TotalSeconds)
-            let remaining =
-                if elapsed <= estimate && fraction > 0.0 then
-                    Some(TimeSpan.FromSeconds(max 0.0 (estimate.TotalSeconds - elapsed.TotalSeconds)))
-                else None
-            render "WHB status" (description()) fraction elapsed remaining
+            let current = status ()
+            let estimate = estimateProgress estimatedSeconds elapsed current
+            render "WHB status" current.Description estimate.Fraction elapsed estimate.Remaining
             finished.Wait(TimeSpan.FromMilliseconds(500.0)) |> ignore
         sw.Stop()
         if not Console.IsOutputRedirected then
             Console.SetCursorPosition(0, Console.CursorTop + 2)
-        render "WHB status" (description()) 1.0 sw.Elapsed (Some TimeSpan.Zero)
+        let final = status ()
+        render "WHB status" final.Description 1.0 sw.Elapsed (Some TimeSpan.Zero)
         task.GetAwaiter().GetResult()
+
+    let runWithStatusDynamic<'T> (description: unit -> string) (estimatedSeconds: float) (work: unit -> 'T) =
+        runWithStatusSnapshot
+            (fun () -> snapshot (description ()) None)
+            estimatedSeconds
+            work
 
     /// <summary>
     /// Runs a calculation while showing a fixed task description.

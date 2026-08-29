@@ -268,7 +268,7 @@ module ReportCommon =
               "TOTAL METAL", v.TotalMetal, "Estimated total metal weight" ] do
             sb.AppendLine(sprintf "metal,%s,kg,%s,%s" name (f0 value) note) |> ignore
         sb.ToString()
-    let internal definizioni (sb: StringBuilder) =
+    let internal definizioni (minDNBR: float) (sb: StringBuilder) =
         sb.AppendLine() |> ignore
         sb.AppendLine("  DEFINIZIONI ESSENZIALI") |> ignore
         sb.AppendLine("  " + String('-', 92)) |> ignore
@@ -302,7 +302,7 @@ module ReportCommon =
         sb.AppendLine("     DNBR = flusso termico critico locale / flusso termico effettivo locale.") |> ignore
         sb.AppendLine("     E' un MARGINE, adimensionale: DNBR = 3 vuol dire che si lavora a un terzo del") |> ignore
         sb.AppendLine("     limite, DNBR = 1 esattamente al limite, DNBR < 1 oltre il limite. La pratica di") |> ignore
-        sb.AppendLine("     progetto chiede almeno 2. Si calcola CELLA PER CELLA, perche' sia il flusso sia") |> ignore
+        sb.AppendLine(sprintf "     progetto di questo caso chiede almeno %.2f. Si calcola CELLA PER CELLA, perche' sia il flusso sia" minDNBR) |> ignore
         sb.AppendLine("     il valore critico cambiano lungo il tubo e da banda a banda: il minimo non cade") |> ignore
         sb.AppendLine("     dove il flusso e' massimo, ma dove il rapporto fra i due e' peggiore.") |> ignore
         sb.AppendLine("     AVVERTENZA: nessuno dei modelli di CHF disponibili in letteratura e' tarato su") |> ignore

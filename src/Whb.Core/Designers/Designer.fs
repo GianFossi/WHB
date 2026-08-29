@@ -77,7 +77,7 @@ module Designer =
     /// Reads the four default constraints off a finished design result.
     /// </summary>
     /// <remarks>
-    /// Order matches <see cref="Optimization.defaultConstraints"/>. Values are in the units
+    /// Order matches <see cref="Optimization.defaultConstraints(float)"/>. Values are in the units
     /// declared there, which are the units an engineer writes the criterion in - degrees
     /// Celsius and millibar, not kelvin and pascal.
     /// </remarks>
@@ -114,7 +114,7 @@ module Designer =
     let defaultProblem (case: DesignCase) : Optimization.OptimizationProblem =
         { Name = sprintf "Massimizzazione della potenza - %s" case.Name
           Variables = defaultVariables case
-          Constraints = Optimization.defaultConstraints
+          Constraints = Optimization.defaultConstraints case.Water.MinDNBR
           Objective = "massima potenza scambiata nel rispetto dei vincoli"
           MaxIterations = 40
           Tolerance = 1e-2 }

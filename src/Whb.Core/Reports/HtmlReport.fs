@@ -254,7 +254,7 @@ function heat(host,cfg){
                      (sprintf "minimo di progetto 10 - %.0f t/h circolanti" (r.Circulation.CircFlow * 3.6))
                      (cls (r.Circulation.CirculationRatio >= 12.0) (r.Circulation.CirculationRatio >= 10.0))
                 tile "Flusso termico max" (sprintf "%.0f kW/m²" (qMax / 1000.0)) "picco locale" (cls (qMax < 250e3) (qMax < 350e3))
-                tile "DNBR locale minimo" (sprintf "%.2f" dnbMin) "CHF fascio / q locale" (cls (dnbMin >= 2.0) (dnbMin >= 1.0))
+                tile "DNBR locale minimo" (sprintf "%.2f" dnbMin) "CHF fascio / q locale" (cls (dnbMin >= c.Water.MinDNBR) (dnbMin >= 0.5 * c.Water.MinDNBR))
                 tile "T metallo max" (sprintf "%.0f °C" (kToC tmMax)) (sprintf "limite %s: %.0f °C" c.Material.Name c.Material.TmaxDesign)
                      (cls (kToC tmMax < 0.92 * c.Material.TmaxDesign) (kToC tmMax < c.Material.TmaxDesign))
                 tile "Alpha max nel fascio" (sprintf "%.2f" alphaMax) "banda superiore" (cls (alphaMax < 0.7) (alphaMax < 0.8))
@@ -351,7 +351,7 @@ function heat(host,cfg){
             sb.Append("hmQ:").Append(mat "flusso termico [kW/m²]" 0 false 0.0 0.0
                                         ((r.Cells |> List.map (fun x -> x.QFluxOut) |> List.max) / 1000.0)
                                         (fun x -> x.QFluxOut / 1000.0)).Append(",") |> ignore
-            sb.Append("hmD:").Append(mat "DNBR locale" 2 true 2.0 0.0
+            sb.Append("hmD:").Append(mat "DNBR locale" 2 true c.Water.MinDNBR 0.0
                                         (min 6.0 (r.Cells |> List.map (fun x -> x.DNBR) |> List.max))
                                         (fun x -> min 6.0 x.DNBR)).Append(",") |> ignore
             let sTub = r.Stress.Cells |> List.filter (fun x -> x.Component = "TUBI")
@@ -408,7 +408,7 @@ function heat(host,cfg){
         card "h1" "Temperatura metallica interna" "ogni cella è una banda di tubi in una sezione assiale"
         card "h2" "Frazione di vuoto lato mantello" "cresce salendo nel fascio: la banda superiore è la critica"
         card "h3" "Flusso termico" "riferito alla superficie esterna del tubo"
-        card "h4" "DNBR locale" "blu = margine, rosso = margine insufficiente; il neutro è DNBR = 2"
+        card "h4" "DNBR locale" (sprintf "blu = margine, rosso = margine insufficiente; il neutro e' DNBR = %.2f" c.Water.MinDNBR)
         card "h5" "Tensione equivalente di von Mises" "combinazione di Lamé (pressione esterna prevalente), gradiente termico radiale e carico assiale"
         card "h6" "Utilizzo dello snervamento" "sigma di von Mises / Sy alla temperatura locale; il neutro è il 66 %"
         card "h7" "Tensione circonferenziale" "negativa = COMPRESSIONE: l'acqua a 118 bar preme dall'esterno, il gas dentro sta a 35 bar"
@@ -426,7 +426,8 @@ function heat(host,cfg){
             card "v4" "Vapore prodotto e potenza scambiata" "aprendo il by-pass si recupera meno calore"
             body.Append("</div>") |> ignore
 
-        let script = """
+        let script =
+            """
 lineChart($('#c1'),{x:D.z,xlab:'z lungo l’apparecchio [m]',ylab:'T gas [°C]',dec:0,
   band:{lo:D.tgasmin,hi:D.tgasmax},bandName:'dispersione fra bande',
   series:[{name:'T gas media',y:D.tgas,color:'var(--s1)'}],legend:true});
@@ -448,7 +449,7 @@ lineChart($('#c7'),{x:D.z,xlab:'z [m]',ylab:'w [kg/(s·m)]',dec:1,
   series:(Math.max(...D.wbyp.map(Math.abs))>1e-6
     ?[{name:'campo tubi',y:D.wfield,color:'var(--s1)'},{name:'canali liberi',y:D.wbyp,color:'var(--s2)'}]
     :[{name:'attraverso il fascio',y:D.wfield,color:'var(--s1)'}]),legend:true});
-lineChart($('#c8'),{x:D.z,xlab:'z [m]',ylab:'DNBR [-]',dec:2,href:2,hrefName:'soglia di progetto = 2',
+lineChart($('#c8'),{x:D.z,xlab:'z [m]',ylab:'DNBR [-]',dec:2,href:__DNBR_MIN__,hrefName:'soglia di progetto = __DNBR_MIN_TEXT__',
   series:[{name:'DNBR minimo nella sezione',y:D.dnbr,color:'var(--s1)'}],legend:true});
 heat($('#h1'),D.hmTmi);heat($('#h2'),D.hmAl);heat($('#h3'),D.hmQ);heat($('#h4'),D.hmD);
 heat($('#h5'),D.hmVM);heat($('#h6'),D.hmUse);heat($('#h7'),D.hmSth);
@@ -465,6 +466,8 @@ lineChart($('#v4'),{x:D.vang,xlab:'apertura della farfalla [°]',ylab:'vapore [t
   series:[{name:'vapore prodotto [t/h]',y:D.vsteam,color:'var(--s1)'},{name:'potenza scambiata [MW]',y:D.vduty,color:'var(--s2)'}]});
 }
 """
+                .Replace("__DNBR_MIN__", sprintf "%.2f" c.Water.MinDNBR)
+                .Replace("__DNBR_MIN_TEXT__", sprintf "%.2f" c.Water.MinDNBR)
 
         let html = StringBuilder()
         html.Append("<!DOCTYPE html><html lang=\"it\"><head><meta charset=\"utf-8\">") |> ignore

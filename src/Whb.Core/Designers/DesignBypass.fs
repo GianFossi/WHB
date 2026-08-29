@@ -1,6 +1,8 @@
 namespace Whb.Core
 
 open System
+open System.Collections.Concurrent
+open System.Threading
 open Constants
 open Types
 
@@ -39,10 +41,10 @@ module DesignBypass =
           TotalGasFlow: float
           MixtureMolarMass: float
           LinerArea: float
-          Phase: string -> unit
+          Phase: ExecutionProgress.ProgressUpdate -> unit
           AcquireWorker: unit -> unit
           ReleaseWorker: unit -> unit
-          MapPointAt: float -> MapPoint }
+          MapPointAt: float -> (ExecutionProgress.ProgressUpdate -> unit) -> MapPoint }
 
     type Result =
         { PMap: MapPoint list
@@ -77,6 +79,8 @@ module DesignBypass =
         fst (invertMapWithKind pts sel target)
 
     let run (input: Input) =
+        let phase fraction text =
+            input.Phase (ExecutionProgress.Reporting.step fraction text)
         let case = input.Case
         let bpSpec = case.Bypass
         let mode =
@@ -101,13 +105,57 @@ module DesignBypass =
                 | None ->
                     [ 0.0; 0.006; 0.010 ]
 
-        input.Phase "Evaluating bypass map and coupled thermal/circulation points"
+        phase 0.0 "Evaluating bypass map and coupled thermal/circulation points"
+        let adaptiveExtraCandidates =
+            if not case.Bypass.Enabled || mode <> "adaptive" || case.Bypass.Fraction.IsSome || case.Bypass.ValveOpenDeg.IsSome then
+                []
+            else
+                match case.Bypass.Fraction with
+                | Some _ -> []
+                | None -> [ 0.015; 0.021; 0.030; 0.045; 0.065; 0.090; 0.125; 0.170 ]
+        let totalPoints = max 1 (xGridBase.Length + adaptiveExtraCandidates.Length)
+        let pointKey x = sprintf "%.6f" x
+        let activePointFractions = ConcurrentDictionary<string, float>()
+        let completedPoints = ref 0
+        let mapProgressFraction completed =
+            let activeFraction =
+                activePointFractions.Values
+                |> Seq.sum
+            min 0.95 ((float completed + activeFraction) / float totalPoints)
+        let reportPointStarted x =
+            activePointFractions.[pointKey x] <- 0.05
+            let activeCount = activePointFractions.Count
+            let fraction = mapProgressFraction completedPoints.Value
+            phase fraction (sprintf "Evaluating bypass map point x = %.3f (%d/%d active)" x activeCount totalPoints)
+        let reportPointProgress x (update: ExecutionProgress.ProgressUpdate) =
+            let key = pointKey x
+            let previous =
+                match activePointFractions.TryGetValue key with
+                | true, value -> value
+                | _ -> 0.05
+            let pointFraction =
+                update.Fraction
+                |> Option.defaultValue previous
+                |> max previous
+                |> max 0.05
+                |> min 0.99
+            activePointFractions.[key] <- pointFraction
+            let fraction = mapProgressFraction completedPoints.Value
+            phase fraction (sprintf "Bypass point x = %.3f | %s" x update.Description)
+        let reportPointCompleted x elapsedSeconds =
+            let mutable removed = 0.99
+            activePointFractions.TryRemove(pointKey x, &removed) |> ignore
+            let done_ = Interlocked.Increment completedPoints
+            let fraction =
+                let provisional = mapProgressFraction done_
+                max provisional (min 0.95 ((float done_ + removed - 1.0) / float totalPoints))
+            phase fraction (sprintf "Bypass map point x = %.3f solved in %.2f s (%d/%d)" x elapsedSeconds done_ totalPoints)
         let mapPointWithPhase x =
-            input.Phase (sprintf "Evaluating bypass map point x = %.3f" x)
+            reportPointStarted x
             let sw = Diagnostics.Stopwatch.StartNew()
             try
-                let p = input.MapPointAt x
-                input.Phase (sprintf "Bypass map point x = %.3f solved in %.2f s" x sw.Elapsed.TotalSeconds)
+                let p = input.MapPointAt x (reportPointProgress x)
+                reportPointCompleted x sw.Elapsed.TotalSeconds
                 p
             with ex ->
                 raise (
@@ -139,7 +187,7 @@ module DesignBypass =
                 initial
             else
                 let points = ResizeArray(initial)
-                let mutable candidates = [ 0.015; 0.021; 0.030; 0.045; 0.065; 0.090; 0.125; 0.170 ]
+                let mutable candidates = adaptiveExtraCandidates
                 let closeEnough (p: MapPoint) = abs (p.TMix - case.Bypass.TargetMixOut) <= max 0.05 input.TargetToleranceK
                 let bracketsTarget () =
                     (snd points.[0]).TMix >= case.Bypass.TargetMixOut

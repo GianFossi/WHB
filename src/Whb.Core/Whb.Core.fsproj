@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <Compile Include="Options\Constants.fs" />
+    <Compile Include="Options\ProgressModel.fs" />
     <Compile Include="Materials\SteamIF97.fs" />
     <Compile Include="Materials\GasProps.fs" />
     <Compile Include="Options\Shift.fs" />
@@ -53,7 +54,14 @@
     <Compile Include="Components\Equipment\Bypass.fs" />
     <Compile Include="Loads\Vibration.fs" />
     <Compile Include="Options\Types.fs" />
+    <Compile Include="Solvers\BundleSolver.Contracts.fs" />
+    <Compile Include="Solvers\BundleSolver.Foundation.fs" />
+    <Compile Include="Solvers\BundleSolver.CellKernel.fs" />
+    <Compile Include="Solvers\BundleSolver.Support.fs" />
     <Compile Include="Solvers\BundleSolver.fs" />
+    <Compile Include="Solvers\Circulation.Contracts.fs" />
+    <Compile Include="Solvers\Circulation.Hydraulics.fs" />
+    <Compile Include="Solvers\Circulation.Pipeline.fs" />
     <Compile Include="Solvers\Circulation.fs" />
     <Compile Include="Loads\Mechanics.fs" />
     <Compile Include="Components\Equipment\Nozzles.fs" />
@@ -64,10 +72,25 @@
     <Compile Include="Designers\DesignVibration.fs" />
     <Compile Include="Designers\DesignSensitivity.fs" />
     <Compile Include="Designers\DesignTransient.fs" />
+    <Compile Include="Designers\DesignRuntime.fs" />
+    <Compile Include="Designers\MechanicalDesignContracts.fs" />
+    <Compile Include="Designers\DesignContracts.fs" />
+    <Compile Include="Designers\DesignThermalProcess.fs" />
+    <Compile Include="Designers\MechanicalDesignInterface.fs" />
+    <Compile Include="Designers\DesignMechanical.fs" />
     <Compile Include="Designers\Design.fs" />
+    <Compile Include="Modes\VerificationEngine.fs" />
+    <Compile Include="Modes\LoadCases.fs" />
+    <Compile Include="Modes\ConstraintModel.fs" />
+    <Compile Include="Modes\ConstraintReaders.fs" />
+    <Compile Include="Modes\PerformanceAssessment.fs" />
+    <Compile Include="Modes\Rating.fs" />
+    <Compile Include="Modes\Optimize.fs" />
+    <Compile Include="Modes\GreenfieldDesign.fs" />
     <Compile Include="Designers\Designer.fs" />
     <Compile Include="Reports\Report.Common.fs" />
     <Compile Include="Reports\Report.Sizing.fs" />
+    <Compile Include="Reports\Report.MechanicalInterface.fs" />
     <Compile Include="Reports\Report.Text.fs" />
     <Compile Include="Reports\Report.Synthesis.fs" />
     <Compile Include="Reports\Report.Csv.fs" />
