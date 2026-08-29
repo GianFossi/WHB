@@ -14,6 +14,7 @@ risultati/
 risultati_check/
 risultati_pds_check/
 tmp/
+temp/
 tmp_*.txt
 tmp_*.json
 logs/

@@ -10,7 +10,7 @@ file for this repository is in [`.ai/`](./.ai/).
 Quick pointers:
 
 - Solution: `WhbDesign.sln` (F# / .NET 10).
-- Build & test: `.\build.ps1` (PowerShell) or `dotnet build` +
+- Build & test: `.\macro\build.ps1` (PowerShell) or `dotnet build` +
   `dotnet test` on the solution.
 - CLI entry: `dotnet run --project src/Whb.Cli`.
 - Self-test: `dotnet run --project src/Whb.Cli -- --selftest`.

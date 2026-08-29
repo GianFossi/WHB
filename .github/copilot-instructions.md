@@ -13,7 +13,7 @@ Key points:
 - F# on .NET 10, solution `WhbDesign.sln`.
 - Projects: `src/Whb.Core` (library), `src/Whb.Cli` (CLI),
   `tests/Whb.Tests` (xUnit).
-- Build & test with `.\build.ps1` or `dotnet build` / `dotnet test`.
+- Build & test with `.\macro\build.ps1` or `dotnet build` / `dotnet test`.
 - Preserve engineering correlations, units, defaults and the reference
   case unless explicitly asked to change them.
 - Keep edits minimal and surgical; do not refactor unrelated code, do

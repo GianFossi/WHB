@@ -8,8 +8,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$Solution = Join-Path $PSScriptRoot "WhbDesign.sln"
-$RepoRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
+$RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+$Solution = Join-Path $RepoRoot "WhbDesign.sln"
 
 function Remove-RepoPath {
     param(
@@ -17,7 +17,7 @@ function Remove-RepoPath {
         [string] $RelativePath
     )
 
-    $fullPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $RelativePath))
+    $fullPath = [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $RelativePath))
     if (-not $fullPath.StartsWith($RepoRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "Refusing to remove path outside repository root: $RelativePath"
     }
@@ -52,6 +52,7 @@ function Invoke-Clean {
         "risultati_check",
         "risultati_pds_check",
         "tmp",
+        "temp",
         "logs",
         "artifacts/packages",
         "tmp_run_stdout.txt",
