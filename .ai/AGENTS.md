@@ -191,6 +191,12 @@ ISO date. Keep each entry short (what / why / where).
   while `snapshotOfDesignCase` / `ofDesignCase` rebuild WHB, steam-drum and
   riser/downcomer objects from solver-side inputs without pulling solver logic
   into the standalone project.
+- 2026-08-30 — Extended that adapter layer with `snapshotOfDesignResult` /
+  `ofDesignResult` so the physical package can be enriched from solved state:
+  resolved tube/bypass gas densities, riser mixture density, and derived liquid
+  hold-up objects for WHB shell side and steam drum now come from `DesignResult`
+  when available. Keep those enrichments in the adapter; do not push solved
+  thermal/hydraulic state into `Whb.Equipment` itself.
 - 2026-08-30 — Split the monolithic `src/Whb.Cli/Program.fs` into
   `CaseLoader.fs`, `ModeInputs.fs`, `CommandSupport.fs`,
   `CommandRunners.fs`, and a thin `Program.fs` entry point. Keep future

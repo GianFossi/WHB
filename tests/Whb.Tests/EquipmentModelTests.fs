@@ -10,6 +10,11 @@ module EquipmentModelTests =
     let private approxEqual tolerance expected actual =
         Assert.True(abs (expected - actual) <= tolerance, sprintf "Expected %.12f, got %.12f" expected actual)
 
+    let private deterministicSettings =
+        { Design.defaultRunSettings with
+            Parallelism = 1
+            GasPropertyCache = false }
+
     let private bom id description =
         let item : Bom.BomItem =
             { Id = id
@@ -42,6 +47,24 @@ module EquipmentModelTests =
         approxEqual 1e-12 expectedFluidVolume metrics.Volume.OfInternalFluid
         approxEqual 1e-9 (expectedMetalVolume * steel.Density) metrics.Weight.OfComponent
         approxEqual 1e-9 (expectedFluidVolume * water.Density) metrics.Weight.OfInternalFluid
+
+    [<Fact>]
+    let ``fluid-only regions contribute derived internal-fluid metrics without fake metal weight`` () =
+        let gas : Materials.FluidProperties = { Name = "Gas hold-up"; Density = 4.5 }
+        let region =
+            Component.createFluidRegion
+                "INV-001"
+                "Resolved gas hold-up"
+                (bom "BOM-INV-001" "Resolved gas hold-up")
+                (Geometry.CylinderShell (0.250, 0.250, 3.0))
+                gas
+
+        let expectedVolume = Math.PI * 0.250 * 0.250 / 4.0 * 3.0
+
+        approxEqual 1e-12 0.0 region.Metrics.Volume.OfComponent
+        approxEqual 1e-12 expectedVolume region.Metrics.Volume.OfInternalFluid
+        approxEqual 1e-12 0.0 region.Metrics.Weight.OfComponent
+        approxEqual 1e-9 (expectedVolume * gas.Density) region.Metrics.Weight.OfInternalFluid
 
     [<Fact>]
     let ``whb metrics include central bypass components`` () =
@@ -237,3 +260,28 @@ module EquipmentModelTests =
         Assert.Equal(Defaults.referenceCase.Loop.Risers.Length, package.Risers.Length)
         Assert.Equal(Defaults.referenceCase.Loop.Downcomers.Length, package.Downcomers.Length)
         Assert.Equal(Defaults.referenceCase.Loop.Drum.NormalLevel, package.SteamDrum.Levels.Normal, 12)
+
+    [<Fact>]
+    let ``equipment package can be enriched from a design result`` () =
+        let resolvedCase =
+            { Defaults.referenceCase with
+                NZ = 6
+                NY = 2 }
+
+        let basePackage = Package.ofDesignCase resolvedCase
+        let design = Design.runWithSettingsAndProgress deterministicSettings ignore resolvedCase
+        let package = Package.ofDesignResult design
+        let whb = package.Whbs |> List.exactlyOne
+        let allWhbIds =
+            whb.Components
+            |> Seq.collect Component.descendantsAndSelf
+            |> Seq.map (fun part -> part.Id)
+            |> Set.ofSeq
+
+        Assert.Contains("resolved", package.Notes)
+        Assert.Contains("WHB-TB-GAS-HOLDUP", allWhbIds)
+        Assert.Contains("WHB-BP-GAS-HOLDUP", allWhbIds)
+        Assert.Contains("WHB-SHELL-LIQUID-INVENTORY", whb.Components |> List.map (fun part -> part.Id))
+        Assert.Contains("STEAM-DRUM-LIQUID-INVENTORY", package.SteamDrum.Components |> List.map (fun part -> part.Id))
+        Assert.True(package.Risers |> List.sumBy (fun line -> line.Metrics.Weight.OfInternalFluid) > 0.0)
+        Assert.True(package.Metrics.Weight.OfInternalFluid > basePackage.Metrics.Weight.OfInternalFluid)

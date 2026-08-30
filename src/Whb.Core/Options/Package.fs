@@ -70,6 +70,10 @@ module Package =
         { Name = "Saturated water"
           Density = sat.RhoL }
 
+    let private twoPhaseFluid name density : EqMaterials.FluidProperties =
+        { Name = name
+          Density = max 0.0 density }
+
     let private inferPipeOdFromNps (nps: string) (id: float) =
         let normalized = nps.Replace("\"", "").Trim()
         let first =
@@ -121,6 +125,116 @@ module Package =
           Normal = drum.NormalLevel
           High = min drum.ShellId (drum.NormalLevel + band)
           HighHigh = min drum.ShellId (drum.NormalLevel + 2.0 * band) }
+
+    let private mapComponentTree (mapper: Component -> Component) =
+        let rec loop (part: Component) : Component =
+            let updated =
+                { part with
+                    Components = part.Components |> List.map loop }
+
+            mapper updated
+
+        loop
+
+    let private setComponentFluid componentId fluid =
+        mapComponentTree (fun part ->
+            if part.Id = componentId then
+                { part with InternalFluid = fluid }
+            else
+                part)
+
+    let private setComponentFluidWhere predicate fluid =
+        mapComponentTree (fun part ->
+            if predicate part then
+                { part with InternalFluid = fluid }
+            else
+                part)
+
+    let private appendChildren componentId extraChildren =
+        mapComponentTree (fun part ->
+            if part.Id = componentId then
+                { part with Components = part.Components @ extraChildren }
+            else
+                part)
+
+    let private equivalentFluidRegion
+        (id: string)
+        (name: string)
+        (description: string)
+        (diameter: float)
+        (volume: float)
+        (fluid: EqMaterials.FluidProperties)
+        =
+        let area = Math.PI * diameter * diameter / 4.0
+        let safeLength = if area > 0.0 then volume / area else 0.0
+
+        Component.createFluidRegion
+            id
+            name
+            (bom (sprintf "BOM-%s" id) description 1.0 "calc")
+            (EqGeometry.CylinderShell (diameter, diameter, safeLength))
+            fluid
+
+    let private averageOrElse fallback values =
+        match values with
+        | [] -> fallback
+        | _ -> values |> List.average
+
+    let private tubeSideGasFluidFromResult (design: DesignResult) =
+        let fallback = gasFluid design.Case
+        let densities =
+            design.Cells
+            |> List.map (fun cell ->
+                GasProps.mixReal
+                    design.Case.Gas.MixingRule
+                    design.Case.Gas.RealGas
+                    design.Case.Gas.Composition
+                    cell.TGas
+                    cell.PGas
+                    design.Case.Gas.Z)
+            |> List.map (fun gas -> gas.Rho)
+
+        twoPhaseFluid "Process gas (resolved tube side)" (averageOrElse fallback.Density densities)
+
+    let private bypassGasFluidFromResult (design: DesignResult) =
+        let fallback = gasFluid design.Case
+
+        match design.BypassResult with
+        | Some bypass when bypass.MassFlow > 0.0 && not bypass.Nodes.IsEmpty ->
+            let area = Math.PI * design.Case.Bypass.LinerId * design.Case.Bypass.LinerId / 4.0
+            let densities =
+                bypass.Nodes
+                |> List.choose (fun node ->
+                    let denominator = area * node.Vel
+                    if denominator > 0.0 then Some (bypass.MassFlow / denominator) else None)
+
+            twoPhaseFluid "Process gas (resolved bypass side)" (averageOrElse fallback.Density densities)
+        | _ -> fallback
+
+    let private riserFluidFromResult (design: DesignResult) =
+        twoPhaseFluid
+            "Water/steam mixture (resolved)"
+            (TwoPhase.homogeneousDensity design.Circulation.XOutRiser design.Sat)
+
+    let private whbShellLiquidFromResult (design: DesignResult) =
+        let volume = max 0.0 design.Transient.WaterInventory / max 1e-9 design.Sat.RhoL
+        equivalentFluidRegion
+            "WHB-SHELL-LIQUID-INVENTORY"
+            "WHB shell-side liquid inventory"
+            "WHB shell-side liquid inventory"
+            design.Case.Tube.ShellId
+            volume
+            (saturatedLiquid design.Sat)
+
+    let private drumLiquidFromResult (design: DesignResult) =
+        let volume = max 0.0 design.Transient.DrumInventory / max 1e-9 design.Sat.RhoL
+        equivalentFluidRegion
+            "STEAM-DRUM-LIQUID-INVENTORY"
+            "Steam drum liquid inventory"
+            "Steam drum liquid inventory"
+            design.Case.Loop.Drum.ShellId
+            volume
+            (saturatedLiquid design.Sat)
 
     let private ferruleComponents (coreCase: DesignCase) gas material =
         if not coreCase.Ferrule.Enabled then
@@ -442,5 +556,75 @@ module Package =
 
     let ofDesignCase (coreCase: DesignCase) =
         snapshotOfDesignCase coreCase |> fromWhbCore
+
+    let snapshotOfDesignResult (design: DesignResult) : Interop.IWhbCoreEquipmentSnapshot =
+        let baseSnapshot = snapshotOfDesignCase design.Case
+        let tubeGas = tubeSideGasFluidFromResult design
+        let bypassGas = bypassGasFluidFromResult design
+        let riserFluid = riserFluidFromResult design
+        let downcomerFluid = saturatedLiquid design.Sat
+        let whb =
+            baseSnapshot.Whbs
+            |> List.map (fun equipment ->
+                let components =
+                    equipment.Components
+                    |> List.map (
+                        setComponentFluid "WHB-TB-TUBES" (Some tubeGas)
+                        >> setComponentFluidWhere (fun part -> part.Id.StartsWith("WHB-TB-FERRULE-", StringComparison.Ordinal)) (Some tubeGas)
+                        >> setComponentFluid "WHB-BP-LINER" (Some bypassGas)
+                        >> setComponentFluid "WHB-BP-VALVE" (Some bypassGas)
+                        >> appendChildren "WHB-TUBE-BUNDLE" [ equivalentFluidRegion
+                                                                "WHB-TB-GAS-HOLDUP"
+                                                                "Tube-side gas hold-up"
+                                                                "Tube-side gas hold-up"
+                                                                design.Case.Tube.Di
+                                                                (Math.PI * design.Case.Tube.Di * design.Case.Tube.Di / 4.0
+                                                                 * design.Case.Tube.Length
+                                                                 * float design.Case.Tube.NTubes)
+                                                                tubeGas ]
+                        >> appendChildren "WHB-CENTRAL-BYPASS" (
+                            match design.BypassResult with
+                            | Some _ ->
+                                [ equivalentFluidRegion
+                                    "WHB-BP-GAS-HOLDUP"
+                                    "Central bypass gas hold-up"
+                                    "Central bypass gas hold-up"
+                                    design.Case.Bypass.LinerId
+                                    (Math.PI * design.Case.Bypass.LinerId * design.Case.Bypass.LinerId / 4.0
+                                     * design.Case.Tube.Length)
+                                    bypassGas ]
+                            | None -> []))
+
+                { equipment with
+                    Components = components @ [ whbShellLiquidFromResult design ] })
+
+        let drum =
+            let baseDrum = baseSnapshot.SteamDrum
+            { baseDrum with
+                Components = baseDrum.Components @ [ drumLiquidFromResult design ] }
+
+        let notes =
+            [ baseSnapshot.Notes
+              "Derived design-result enrichments:"
+              "tube-side gas density from resolved WHB cell temperatures/pressures;"
+              "bypass gas density from resolved bypass mass flow and node velocities;"
+              "riser mixture density from resolved circulation quality;"
+              "shell-side and steam-drum liquid inventories from resolved transient hold-up." ]
+            |> String.concat " "
+
+        { new Interop.IWhbCoreEquipmentSnapshot with
+            member _.PackageName = baseSnapshot.PackageName
+            member _.Whbs = whb
+            member _.Risers =
+                design.Case.Loop.Risers
+                |> List.map (pipelineEquipment "WHB-001" "STEAM-DRUM-001" riserFluid.Name (Some riserFluid.Density))
+            member _.Downcomers =
+                design.Case.Loop.Downcomers
+                |> List.map (pipelineEquipment "STEAM-DRUM-001" "WHB-001" downcomerFluid.Name (Some downcomerFluid.Density))
+            member _.SteamDrum = drum
+            member _.Notes = notes }
+
+    let ofDesignResult (design: DesignResult) =
+        snapshotOfDesignResult design |> fromWhbCore
 
 
