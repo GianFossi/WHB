@@ -13,11 +13,16 @@ open Types
 /// </remarks>
 module GreenfieldDesign =
 
+    type TubeSizeOption =
+        { OuterDiameterM: float
+          PitchM: float }
+
     type DesignSpace =
         { TubeCounts: int list
           TubeLengthsM: float list
           FerruleLengthsMm: float list
           ShellInnerDiametersM: float list
+          TubeSizeOptions: TubeSizeOption list
           TubePitchesM: float list
           DrumCenterlineHeightsM: float list }
 
@@ -52,16 +57,26 @@ module GreenfieldDesign =
     let private orCurrent current xs =
         if List.isEmpty xs then [ current ] else xs
 
+    let private tubeSizes (tube: TubeGeometry) (space: DesignSpace) =
+        if List.isEmpty space.TubeSizeOptions then
+            orCurrent tube.Pitch space.TubePitchesM
+            |> List.map (fun pitch ->
+                { OuterDiameterM = tube.Do
+                  PitchM = pitch })
+        else
+            space.TubeSizeOptions
+
     let private seedCases (input: DesignInput) =
         let c = input.TemplateCase
         let ferruleCurrent = (c.Ferrule.Lengths |> List.sumBy (fun (frac, l) -> frac * l)) * 1000.0
+        let explicitShellIds = input.Space.ShellInnerDiametersM
         [ for nT in orCurrent c.Tube.NTubes input.Space.TubeCounts do
             for len in orCurrent c.Tube.Length input.Space.TubeLengthsM do
                 for ferrule in orCurrent ferruleCurrent input.Space.FerruleLengthsMm do
-                    for shellId in orCurrent c.Tube.ShellId input.Space.ShellInnerDiametersM do
-                        for pitch in orCurrent c.Tube.Pitch input.Space.TubePitchesM do
+                    for shellId in orCurrent c.Tube.ShellId explicitShellIds do
+                        for tubeSize in tubeSizes c.Tube input.Space do
                             for dz in orCurrent c.Loop.DzDrumWhb input.Space.DrumCenterlineHeightsM do
-                                let vars : Optimize.DesignVariable list =
+                                let baseVars : Optimize.DesignVariable list =
                                     [ { Optimize.Key = Optimize.TubeCount
                                         Name = "numero tubi"
                                         Current = float nT
@@ -83,18 +98,18 @@ module GreenfieldDesign =
                                         Upper = ferrule
                                         Step = 1.0
                                         Unit = "mm" }
-                                      { Key = Optimize.ShellInnerDiameterM
-                                        Name = "diametro interno mantello"
-                                        Current = shellId
-                                        Lower = shellId
-                                        Upper = shellId
+                                      { Key = Optimize.TubeOuterDiameterM
+                                        Name = "diametro esterno tubi"
+                                        Current = tubeSize.OuterDiameterM
+                                        Lower = tubeSize.OuterDiameterM
+                                        Upper = tubeSize.OuterDiameterM
                                         Step = 1.0
                                         Unit = "m" }
                                       { Key = Optimize.TubePitchM
                                         Name = "passo tubi"
-                                        Current = pitch
-                                        Lower = pitch
-                                        Upper = pitch
+                                        Current = tubeSize.PitchM
+                                        Lower = tubeSize.PitchM
+                                        Upper = tubeSize.PitchM
                                         Step = 1.0
                                         Unit = "m" }
                                       { Key = Optimize.DrumCenterlineHeightM
@@ -104,6 +119,17 @@ module GreenfieldDesign =
                                         Upper = dz
                                         Step = 1.0
                                         Unit = "m" } ]
+                                let shellOverride : Optimize.DesignVariable list =
+                                    if List.isEmpty explicitShellIds then []
+                                    else
+                                        [ { Key = Optimize.ShellInnerDiameterM
+                                            Name = "diametro interno mantello"
+                                            Current = shellId
+                                            Lower = shellId
+                                            Upper = shellId
+                                            Step = 1.0
+                                            Unit = "m" } ]
+                                let vars = baseVars @ shellOverride
                                 yield Optimize.applyVariables c vars [||] ]
 
     let private buildSeedSet (input: DesignInput) : SeededCandidates =

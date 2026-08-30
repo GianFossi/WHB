@@ -676,6 +676,7 @@ let ``greenfield design ranks discrete candidates through the shared verificatio
               TubeLengthsM = [ templateCase.Tube.Length * 0.95; templateCase.Tube.Length ]
               FerruleLengthsMm = []
               ShellInnerDiametersM = []
+              TubeSizeOptions = []
               TubePitchesM = []
               DrumCenterlineHeightsM = [] }
           RunSettings = deterministicSettings }
@@ -774,6 +775,7 @@ let ``shared verification and mode pipelines are deterministic and do not mutate
               TubeLengthsM = [ baseCase.Tube.Length ]
               FerruleLengthsMm = []
               ShellInnerDiametersM = []
+              TubeSizeOptions = []
               TubePitchesM = []
               DrumCenterlineHeightsM = [] }
           RunSettings = deterministicSettings }
@@ -782,6 +784,50 @@ let ``shared verification and mode pipelines are deterministic and do not mutate
     Assert.Equal(scratch1.Best.Case.Tube.NTubes, scratch2.Best.Case.Tube.NTubes)
     Assert.Equal(scratch1.Best.ObjectiveValue, scratch2.Best.ObjectiveValue, 12)
     Assert.Equal(caseSnapshot designInput.TemplateCase, before)
+
+[<Fact>]
+let ``tube outer diameter variable preserves wall thickness while updating tube geometry`` () =
+    let baseCase = compactCase Defaults.referenceCase
+    let wall = 0.5 * (baseCase.Tube.Do - baseCase.Tube.Di)
+    let variables : Optimize.DesignVariable list =
+        [ { Key = Optimize.TubeOuterDiameterM
+            Name = "diametro esterno tubi"
+            Current = baseCase.Tube.Do
+            Lower = 0.0508
+            Upper = 0.0508
+            Step = 1.0
+            Unit = "m" } ]
+    let updated = Optimize.applyVariables baseCase variables [| 0.0508 |]
+
+    Assert.Equal(0.0508, updated.Tube.Do, 12)
+    Assert.Equal(wall, 0.5 * (updated.Tube.Do - updated.Tube.Di), 12)
+
+[<Fact>]
+let ``greenfield design can use coupled tube size options with matching pitch`` () =
+    let templateCase = compactCase Defaults.referenceCase
+    let input : GreenfieldDesign.DesignInput =
+        { TemplateCase = templateCase
+          LoadCases = [ LoadCases.baseCase "base" ]
+          Constraints = permissiveConstraints
+          Objective = weightObjective
+          Space =
+            { TubeCounts = [ templateCase.Tube.NTubes ]
+              TubeLengthsM = [ templateCase.Tube.Length ]
+              FerruleLengthsMm = []
+              ShellInnerDiametersM = []
+              TubeSizeOptions =
+                [ ({ OuterDiameterM = templateCase.Tube.Do
+                     PitchM = 0.07449 } : GreenfieldDesign.TubeSizeOption)
+                  { OuterDiameterM = 0.0508
+                    PitchM = 0.08719 } ]
+              TubePitchesM = [ 0.0508 ]
+              DrumCenterlineHeightsM = [] }
+          RunSettings = deterministicSettings }
+    let result = GreenfieldDesign.run input
+
+    Assert.Equal(2, result.Evaluations)
+    Assert.Contains(result.Shortlist, fun candidate -> abs (candidate.Case.Tube.Pitch - 0.07449) < 1e-12)
+    Assert.Contains(result.Shortlist, fun candidate -> abs (candidate.Case.Tube.Pitch - 0.08719) < 1e-12)
 
 [<Fact>]
 let ``open work list stays in step with the code`` () =

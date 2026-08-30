@@ -66,6 +66,9 @@ src/Whb.Core/
   Solvers/TwoPhase.fs        void fraction and two-phase friction
   Options/Shift.fs           water-gas shift equilibrium helpers
   Components/Equipment/*.fs  bundle, drum, bypass, valves, nozzles
+  Components/Equipment/BundleGeometry.fs
+                             pure bundle-envelope alignment helpers used by
+                             shared optimize/design geometry updates
   Solvers/BundleSolver*.fs   coupled gas/water bundle solve split into
                              contracts, low-level kernels, support and orchestration
   Solvers/Circulation*.fs    natural-circulation loop solve split into
@@ -152,6 +155,23 @@ ISO date. Keep each entry short (what / why / where).
   canonical layout now lists the separated thermal/process, mechanical and
   mode-orchestration modules. Keep future documentation aligned with the
   shared-engine `rating` / `optimize` / `design` scheme.
+- 2026-08-30 — Added `Components/Equipment/BundleGeometry.fs` as the shared
+  pure geometry-alignment module for the shared `optimize` / `design` variable
+  path. Changing tube count, OD, or pitch now recomputes `OTL`, shell ID, and
+  baffle OD top-down from the current-case calibration instead of leaving stale
+  envelope dimensions behind. The shell rebuild follows
+  `Shell.ID = OTL + 2 * (3 * Thk.Tubesheet + Rknuckle)` with `Rknuckle` fixed
+  at `120 mm`; the tubesheet-thickness proxy is inferred from the current
+  geometry so unchanged cases remain unchanged. An explicitly varied shell ID
+  still overrides the auto-derived one.
+- 2026-08-30 — Extended the shared geometry-variable path with tube outer
+  diameter and coupled tube-size options. `Optimize.VariableKey` now includes
+  `TubeOuterDiameterM`, keeping the original tube wall thickness when only the
+  OD is moved, and greenfield `design.spazio` now accepts `taglie_tubo`
+  entries with paired `do_mm` / `passo_mm` (or `od_mm` / `pitch_mm`) so
+  discrete studies can respect fixed pitch-vs-OD tables instead of generating
+  arbitrary pairings. `design.txt`, `README.md`, `docs/INPUT_SCHEMA.md`, and
+  tests were updated accordingly.
 - 2026-08-29 — Audited the DNBR thresholds against the repository documents.
   No repo-traceable external source was found for the old local `1.43`
   criterion (`1/0.7`), while the docs and default constraints already

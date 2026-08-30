@@ -505,6 +505,13 @@ let private variableInfos =
         Current = fun c -> float c.Tube.NTubes
         FromCli = idFloat
         ToCli = idFloat }
+      { Key = Optimize.TubeOuterDiameterM
+        Aliases = [ "TubeOuterDiameterM"; "tubeouterdiameterm"; "diametro_esterno_tubi"; "do_tubi_mm"; "do_mm" ]
+        Name = "diametro esterno tubi"
+        Unit = "mm"
+        Current = fun c -> c.Tube.Do * 1000.0
+        FromCli = fun x -> x / 1000.0
+        ToCli = fun x -> x * 1000.0 }
       { Key = Optimize.TubePitchM
         Aliases = [ "TubePitchM"; "tubepitchm"; "passo_tubi"; "passo_tubi_mm" ]
         Name = "passo tubi"
@@ -683,6 +690,15 @@ let private defaultVariableFor (caseIn: DesignCase) (key: Optimize.VariableKey) 
           Upper = max (currentCli + 1.0) (ceil (currentCli * 1.15))
           Step = max 1.0 (Math.Round(currentCli * 0.02))
           Unit = info.Unit }
+    | Optimize.TubeOuterDiameterM ->
+        let current = info.FromCli currentCli
+        { Key = key
+          Name = info.Name
+          Current = current
+          Lower = max 0.010 (current * 0.75)
+          Upper = max (current + 0.005) (current * 1.50)
+          Step = 0.001
+          Unit = info.Unit }
     | Optimize.TubePitchM ->
         let current = info.FromCli currentCli
         { Key = key
@@ -753,6 +769,22 @@ let private readOptimizeVariables (root: JsonElement) (caseIn: DesignCase) =
     | _ -> Optimize.defaultVariables caseIn
 
 let private readDesignSpace (root: JsonElement) : GreenfieldDesign.DesignSpace =
+    let tubeSizes =
+        match Json.tryArrayElements root "design.spazio.taglie_tubo" with
+        | Some items ->
+            items
+            |> List.choose (fun item ->
+                match Json.tryFAt item "do_mm", Json.tryFAt item "passo_mm" with
+                | Some doMm, Some pitchMm ->
+                    Some ({ OuterDiameterM = doMm / 1000.0
+                            PitchM = pitchMm / 1000.0 } : GreenfieldDesign.TubeSizeOption)
+                | _ ->
+                    match Json.tryFAt item "od_mm", Json.tryFAt item "pitch_mm" with
+                    | Some doMm, Some pitchMm ->
+                        Some ({ OuterDiameterM = doMm / 1000.0
+                                PitchM = pitchMm / 1000.0 } : GreenfieldDesign.TubeSizeOption)
+                    | _ -> None)
+        | None -> []
     let tubeCounts =
         tryNumberArrayAtPath root [ "design.spazio.numero_tubi"; "design.spazio.tube_count" ]
         |> Option.defaultValue []
@@ -778,6 +810,7 @@ let private readDesignSpace (root: JsonElement) : GreenfieldDesign.DesignSpace =
       TubeLengthsM = tubeLengths
       FerruleLengthsMm = ferruleLengths
       ShellInnerDiametersM = shellIds
+      TubeSizeOptions = tubeSizes
       TubePitchesM = pitches
       DrumCenterlineHeightsM = drumHeights }
 
@@ -1689,6 +1722,7 @@ let runDesignMode (options: Options.ProjectOptions) (casePath: string option) (c
                TubeLengthsM = []
                FerruleLengthsMm = []
                ShellInnerDiametersM = []
+               TubeSizeOptions = []
                TubePitchesM = []
                DrumCenterlineHeightsM = [] } : GreenfieldDesign.DesignSpace)
             readDesignSpace
@@ -1718,6 +1752,7 @@ let runDesignMode (options: Options.ProjectOptions) (casePath: string option) (c
     sb.AppendLine() |> ignore
     sb.AppendLine("  MIGLIOR GEOMETRIA") |> ignore
     sb.AppendLine(sprintf "    numero tubi                %d" best.Case.Tube.NTubes) |> ignore
+    sb.AppendLine(sprintf "    diametro esterno tubi      %s mm" (formatNumber (best.Case.Tube.Do * 1000.0))) |> ignore
     sb.AppendLine(sprintf "    lunghezza tubi             %s m" (formatNumber best.Case.Tube.Length)) |> ignore
     sb.AppendLine(sprintf "    lunghezza ferrula          %s mm" (formatNumber ((best.Case.Ferrule.Lengths |> List.sumBy (fun (frac, l) -> frac * l)) * 1000.0))) |> ignore
     sb.AppendLine(sprintf "    diametro interno mantello  %s mm" (formatNumber (best.Case.Tube.ShellId * 1000.0))) |> ignore
@@ -1738,11 +1773,12 @@ let runDesignMode (options: Options.ProjectOptions) (casePath: string option) (c
     sb.AppendLine("  SHORTLIST") |> ignore
     for candidate in result.Shortlist do
         sb.AppendLine(
-            sprintf "    %s | obj %.6f | viol %.6f | tubi %d | L %.3f m | ferrula %.1f mm | mantello %.1f mm"
+            sprintf "    %s | obj %.6f | viol %.6f | tubi %d | OD %.1f mm | L %.3f m | ferrula %.1f mm | mantello %.1f mm"
                 (if candidate.Assessment.IsFeasible then "OK " else "NO ")
                 candidate.ObjectiveValue
                 candidate.Assessment.TotalViolation
                 candidate.Case.Tube.NTubes
+                (candidate.Case.Tube.Do * 1000.0)
                 candidate.Case.Tube.Length
                 ((candidate.Case.Ferrule.Lengths |> List.sumBy (fun (frac, l) -> frac * l)) * 1000.0)
                 (candidate.Case.Tube.ShellId * 1000.0)) |> ignore

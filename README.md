@@ -145,6 +145,9 @@ Run a custom case and store outputs in a dedicated folder:
 dotnet run --project src/Whb.Cli -- my-case.json --options whb.options.json --out results/my-case
 ```
 
+Curated study inputs used during design/optimization work are kept under
+`demo/cases/` so the repository root stays reserved for the main project files.
+
 Generate partial-load curves from a case file:
 
 ```bash
@@ -168,6 +171,18 @@ Explore a discrete greenfield design space:
 ```bash
 dotnet run --project src/Whb.Cli -- --design my-case.json --out results/design
 ```
+
+For greenfield studies where tube pitch depends on tube OD, use
+`design.spazio.taglie_tubo` to pass explicit `(do_mm, passo_mm)` pairs instead
+of separate OD and pitch lists.
+
+When `numero_tubi`, `do_mm`, or `passo_tubi_mm` move through the shared
+`--optimize` / `--design` geometry path, the dependent envelope is now
+realigned automatically. `OTL` is recomputed from tube count, pitch, and the
+current `ITL`, then the WHB shell ID is rebuilt from
+`OTL + 2 * (3 * Thk.Tubesheet + Rknuckle)` with `Rknuckle = 120 mm`, while the
+current shell-to-baffle gap is preserved. If `mantello_id_mm` is also varied
+explicitly, that manual shell ID still overrides the auto-derived one.
 
 Generate the automatic sizing report:
 

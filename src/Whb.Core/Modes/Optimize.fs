@@ -14,6 +14,7 @@ module Optimize =
         | FerruleLengthMm
         | TubeLengthM
         | TubeCount
+        | TubeOuterDiameterM
         | TubePitchM
         | ShellInnerDiameterM
         | DrumCenterlineHeightM
@@ -129,17 +130,53 @@ module Optimize =
         | TubeLengthM ->
             { caseIn with Tube = { caseIn.Tube with Length = value } }
         | TubeCount ->
-            { caseIn with Tube = { caseIn.Tube with NTubes = max 1 (int (Math.Round value)) } }
+            let calibration = BundleGeometry.calibrate caseIn.Tube
+            { caseIn with
+                Tube =
+                    { caseIn.Tube with
+                        NTubes = max 1 (int (Math.Round value)) }
+                    |> BundleGeometry.realignTubeEnvelopeWith calibration }
+        | TubeOuterDiameterM ->
+            let tube = caseIn.Tube
+            let calibration = BundleGeometry.calibrate tube
+            let wall = max 1e-4 (0.5 * (tube.Do - tube.Di))
+            let do' = max 1e-3 value
+            let di' = max 1e-4 (do' - 2.0 * wall)
+            { caseIn with
+                Tube =
+                    { tube with
+                        Do = do'
+                        Di = di' }
+                    |> BundleGeometry.realignTubeEnvelopeWith calibration }
         | TubePitchM ->
-            { caseIn with Tube = { caseIn.Tube with Pitch = value } }
+            let calibration = BundleGeometry.calibrate caseIn.Tube
+            { caseIn with
+                Tube =
+                    { caseIn.Tube with Pitch = value }
+                    |> BundleGeometry.realignTubeEnvelopeWith calibration }
         | ShellInnerDiameterM ->
             let tube = caseIn.Tube
-            { caseIn with Tube = { tube with ShellId = value; BaffleOd = min tube.BaffleOd (value - 0.01) } }
+            let gap = max 0.0 (tube.ShellId - tube.BaffleOd)
+            { caseIn with
+                Tube =
+                    { tube with
+                        ShellId = value
+                        BaffleOd = max 1e-6 (value - gap) } }
         | DrumCenterlineHeightM ->
             { caseIn with Loop = { caseIn.Loop with DzDrumWhb = value } }
 
+    let private variablePriority key =
+        match key with
+        | ShellInnerDiameterM -> 2
+        | DrumCenterlineHeightM -> 3
+        | _ -> 1
+
     let applyVariables (caseIn: DesignCase) (variables: DesignVariable list) (values: float[]) =
-        (caseIn, List.indexed variables)
+        let ordered =
+            variables
+            |> List.indexed
+            |> List.sortBy (fun (i, variable) -> variablePriority variable.Key, i)
+        (caseIn, ordered)
         ||> List.fold (fun acc (i, variable) ->
             let value =
                 if i < values.Length then values.[i] else variable.Current

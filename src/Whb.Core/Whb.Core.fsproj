@@ -54,6 +54,7 @@
     <Compile Include="Components\Equipment\Bypass.fs" />
     <Compile Include="Loads\Vibration.fs" />
     <Compile Include="Options\Types.fs" />
+    <Compile Include="Components\Equipment\BundleGeometry.fs" />
     <Compile Include="Solvers\BundleSolver.Contracts.fs" />
     <Compile Include="Solvers\BundleSolver.Foundation.fs" />
     <Compile Include="Solvers\BundleSolver.CellKernel.fs" />

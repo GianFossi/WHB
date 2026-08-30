@@ -90,6 +90,7 @@ let ``design mode tight required constraints displace the unconstrained lightest
           TubeLengthsM = []
           FerruleLengthsMm = []
           ShellInnerDiametersM = []
+          TubeSizeOptions = []
           TubePitchesM = []
           DrumCenterlineHeightsM = [] }
     let baseInput constraints : GreenfieldDesign.DesignInput =

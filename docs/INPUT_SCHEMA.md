@@ -222,6 +222,7 @@ Supported variable aliases:
 - `lunghezza_ferrula_mm`
 - `lunghezza_tubi_m`
 - `numero_tubi`
+- `do_mm`
 - `passo_tubi_mm`
 - `mantello_id_mm`
 - `quota_drum_m`
@@ -273,6 +274,40 @@ context), while `design.spazio` enumerates the geometry choices to test.
 
 Every list under `design.spazio` is optional. If one list is omitted, the
 current value from the template case is reused for that dimension.
+
+When tube OD and pitch must move together, prefer the paired `taglie_tubo`
+list instead of independent `do_mm` and `passo_tubi_mm` arrays:
+
+```json
+{
+  "design": {
+    "spazio": {
+      "taglie_tubo": [
+        { "do_mm": 38.10, "passo_mm": 74.49 },
+        { "do_mm": 50.80, "passo_mm": 87.19 }
+      ]
+    }
+  }
+}
+```
+
+If `taglie_tubo` is present, each entry is treated as one coupled geometry
+choice `(OD, pitch)`. This avoids generating invalid pairings when the pitch is
+a function of the tube size.
+
+When `numero_tubi`, `do_mm`, or `passo_tubi_mm` change through the shared
+`optimize` / `design` variable path, the dependent envelope geometry is also
+updated automatically:
+
+- `OTL` is recomputed from the new tube count and pitch while preserving the
+  template case's current `ITL` and tube-field packing factor.
+- `mantello_id_mm` is rebuilt from `OTL + 2 * (3 * Thk.Tubesheet + Rknuckle)`,
+  with `Rknuckle = 120 mm` and the tubesheet-thickness proxy inferred from the
+  current template geometry so unchanged cases stay unchanged.
+- `diaframma_od_mm` keeps the current shell-to-baffle gap.
+
+If `mantello_id_mm` is also supplied explicitly as a varied optimize/design
+variable, that explicit shell diameter overrides the auto-derived value.
 
 ## Project Options File
 

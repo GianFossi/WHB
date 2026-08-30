@@ -1,0 +1,126 @@
+{
+  "nome": "WHB reformer secondario - verifica finale design H=6m L=6m shell=2025",
+  "materiale": "T11",
+  "materiale_mantello": "SA-516",
+  "campata_non_supportata_m": 1.20,
+  "t_montaggio_C": 20.0,
+  "sezioni_assiali": 90,
+  "bande_verticali": 12,
+  "infittimento_imbocco": 10.0,
+  "ricircolo_interno": false,
+
+  "bypass": {
+    "presente": true,
+    "frazione": -1,
+    "t_uscita_target_C": 355.0,
+    "liner_id_mm": 275.0,
+    "liner_od_mm": 281.0,
+    "liner_materiale": "601",
+    "isolante_od_mm": 284.0,
+    "isolante": "saffil",
+    "tubo_od_mm": 300.0,
+    "tubo_materiale": "SA-192",
+    "fouling_m2KW": 0.00050
+  },
+
+  "bypass_frazione_aperta": 0.10,
+
+  "tubi": {
+    "numero": 848,
+    "di_mm": 32.0,
+    "do_mm": 38.1,
+    "lunghezza_m": 6.0,
+    "passo_mm": 50.8,
+    "sfalsato": true,
+    "mantello_id_mm": 2025.0,
+    "otl_mm": 1711.11,
+    "itl_mm": 571.0,
+    "diaframma_od_mm": 2015.0,
+    "mantello_wt_mm": 58.0,
+    "rugosita_mm": 0.045
+  },
+
+  "ferrula": {
+    "presente": true,
+    "lunghezza_mm": 200.0,
+    "lunghezze": [ { "frazione": 1.0, "lunghezza_mm": 200.0 } ],
+    "bore_mm": 26.7,
+    "manicotto_od_mm": 30.0,
+    "manicotto_materiale": "800",
+    "isolante": "saffil"
+  },
+
+  "gas": {
+    "composizione": { "H2": 0.3707, "N2": 0.1577, "CO": 0.0863, "CO2": 0.0546, "CH4": 0.0027, "AR": 0.0020, "H2O": 0.3260 },
+    "portata_kgs": 85.42,
+    "maggiorazione": 1.0,
+    "t_ingresso_C": 967.5,
+    "p_ingresso_bara": 34.74,
+    "z": 1.0,
+    "fouling_m2KW": 0.00050,
+    "emissivita_parete": 0.85,
+    "irraggiamento": true,
+    "coeff_imbocco": 1.4,
+    "correlazione": "gnielinski",
+    "miscelazione": "wilke",
+    "shift": "congelata",
+    "shift_t_freeze_C": 700.0,
+    "shift_frazione": 0.3
+  },
+
+  "vapore": {
+    "pressione_bara": 117.84,
+    "dnbr_min": 2.0,
+    "fouling_m2KW": 0.00015,
+    "rugosita_um": 1.0,
+    "fattore_fascio": 1.5,
+    "correlazione": "mostinski",
+    "csf": 0.013,
+    "t_alimento_C": 250.0
+  },
+
+  "circuito": {
+    "dz_drum_whb_m": 6.0,
+    "offset_livello_m": 0.0,
+    "interne_drum_mbar": 50.0,
+    "modello_vuoto": "zuber",
+    "modello_attrito": "friedel",
+
+    "riser": [
+      { "tag": "R1", "nps": "24\" Sch.120", "id_mm": 518.0, "n": 1, "diritti_mm": [2700], "curve": [], "z_m": 0.90, "angolo_gradi": 0 },
+      { "tag": "R2", "nps": "24\" Sch.120", "id_mm": 518.0, "n": 1, "diritti_mm": [2700], "curve": [], "z_m": 2.60, "angolo_gradi": 0 },
+      { "tag": "R3", "nps": "24\" Sch.120", "id_mm": 518.0, "n": 1, "diritti_mm": [2700], "curve": [], "z_m": 5.50, "angolo_gradi": 0 },
+      { "tag": "R4", "nps": "24\" Sch.120", "id_mm": 518.0, "n": 1, "diritti_mm": [2700], "curve": [], "z_m": 9.30, "angolo_gradi": 0 },
+      { "tag": "R5", "nps": "6\" Sch.120",  "id_mm": 139.7, "n": 1, "diritti_mm": [2700], "curve": [], "z_m": 12.70, "angolo_gradi": 0, "nota": "estremita' fredda" }
+    ],
+
+    "downcomer": [
+      { "tag": "DC1", "nps": "18\" Sch.120", "id_mm": 387.2, "n": 1, "diritti_mm": [250,2623,2376],
+        "curve": [ {"gradi":90,"r_su_d":1.5,"n":1}, {"gradi":30,"r_su_d":1.5,"n":2} ], "z_m": 0.80, "angolo_gradi": 150 },
+      { "tag": "DC2", "nps": "18\" Sch.120", "id_mm": 387.2, "n": 1, "diritti_mm": [250,2623,2376],
+        "curve": [ {"gradi":90,"r_su_d":1.5,"n":1}, {"gradi":30,"r_su_d":1.5,"n":2} ], "z_m": 0.80, "angolo_gradi": 210 },
+      { "tag": "DC3", "nps": "16\" Sch.120", "id_mm": 344.6, "n": 1, "diritti_mm": [250,3040,2621],
+        "curve": [ {"gradi":60,"r_su_d":1.5,"n":1}, {"gradi":90,"r_su_d":1.5,"n":1}, {"gradi":30,"r_su_d":1.5,"n":1} ], "z_m": 2.50, "angolo_gradi": 150 },
+      { "tag": "DC4", "nps": "16\" Sch.120", "id_mm": 344.6, "n": 1, "diritti_mm": [250,3040,2621],
+        "curve": [ {"gradi":60,"r_su_d":1.5,"n":1}, {"gradi":90,"r_su_d":1.5,"n":1}, {"gradi":30,"r_su_d":1.5,"n":1} ], "z_m": 2.50, "angolo_gradi": 210 },
+      { "tag": "DC5", "nps": "16\" Sch.120", "id_mm": 344.6, "n": 1, "diritti_mm": [500,2873,1159,1377],
+        "curve": [ {"gradi":90,"r_su_d":1.5,"n":2}, {"gradi":30,"r_su_d":1.5,"n":3} ], "z_m": 4.50, "angolo_gradi": 180 },
+      { "tag": "DC6", "nps": "16\" Sch.120", "id_mm": 344.6, "n": 1, "diritti_mm": [500,2873,1159,1377],
+        "curve": [ {"gradi":90,"r_su_d":1.5,"n":2}, {"gradi":30,"r_su_d":1.5,"n":3} ], "z_m": 6.80, "angolo_gradi": 180 },
+      { "tag": "DC7", "nps": "16\" Sch.120", "id_mm": 344.6, "n": 1, "diritti_mm": [500,2873,1159,1377],
+        "curve": [ {"gradi":90,"r_su_d":1.5,"n":2}, {"gradi":30,"r_su_d":1.5,"n":3} ], "z_m": 9.00, "angolo_gradi": 180 },
+      { "tag": "DC8", "nps": "16\" Sch.120", "id_mm": 344.6, "n": 1, "diritti_mm": [500,2873,1159,1377],
+        "curve": [ {"gradi":90,"r_su_d":1.5,"n":2}, {"gradi":30,"r_su_d":1.5,"n":3} ], "z_m": 11.00, "angolo_gradi": 180 },
+      { "tag": "DC9", "nps": "4\" Sch.120", "id_mm": 92.1, "n": 1, "diritti_mm": [500,3000,1500],
+        "curve": [ {"gradi":90,"r_su_d":1.5,"n":2} ], "z_m": 12.70, "angolo_gradi": 180, "nota": "estremita' fredda" }
+    ]
+  },
+
+  "bocchelli": {
+    "n_riser": 0,
+    "n_downcomer": 0,
+    "v_downcomer_ms": 2.0,
+    "rhov2_max_riser": 6000.0,
+    "rhov2_max_downcomer": 3000.0
+  }
+}
