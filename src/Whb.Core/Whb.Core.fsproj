@@ -29,11 +29,6 @@
     <Compile Include="Process\Claus.fs" />
     <Compile Include="Process\Sulphur.fs" />
     <Compile Include="Process\SulphurCondenser.fs" />
-    <Compile Include="Components\Geometry\Geometry.fs" />
-    <Compile Include="Components\Catalog\WhbComponents.fs" />
-    <Compile Include="Components\Catalog\SteamDrumComponents.fs" />
-    <Compile Include="Components\Catalog\PipingComponents.fs" />
-    <Compile Include="Materials\PropertyDatabase.fs" />
     <Compile Include="Materials\Water\WaterProperties.fs" />
     <Compile Include="Materials\Gas\GasPropertySets.fs" />
     <Compile Include="Solvers\SolverCatalog.fs" />
@@ -102,6 +97,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Whb.Equipment\Whb.Equipment.fsproj" />
     <PackageReference Include="Ganfoss.ROP" Version="1.0.2" />
     <PackageReference Update="FSharp.Core" Version="10.1.301" />
   </ItemGroup>

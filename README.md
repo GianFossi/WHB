@@ -42,6 +42,8 @@ dotnet --info
 
 ## Projects
 
+- `Whb.Equipment`: shared physical model for components, assembled equipment,
+  piping routes, BOM items and material-property lookup.
 - `Whb.Core`: calculation library and domain model.
 - `Whb.Cli`: command-line application, JSON input loader and report generator.
 - `Whb.Tests`: xUnit test project for core numerical and utility behavior.
@@ -423,12 +425,13 @@ The built-in `--selftest` command checks:
 - selected gas-property values for air and the reference syngas mixture;
 - real-gas virial correction traces used by the gas model.
 
-The repository test suite currently covers 85 tests across core numerical
+The repository test suite currently covers 103 tests across core numerical
 utilities and root finders, unit conversions, grid generation, piping geometry
 helpers, material lookup, heat-transfer behavior, two-phase multipliers, the
 enthalpy inversion, the constrained search and its optimum classification,
 validation tables, options-file merging, Claus/sulphur behavior, and the
-dedicated sulphur-condenser path.
+dedicated sulphur-condenser path, plus the standalone equipment/component
+model.
 
 Run:
 
@@ -506,6 +509,22 @@ checked against the available client PDS data.
 ## Repository Layout
 
 ```text
+src/Whb.Equipment/
+  Common/Bom.fs              `BomItem = { Id; Description; Quantity; Unit }`
+  Common/Metrics.fs          derived weight/volume/area breakdowns
+  Materials/MaterialCatalog.fs
+                             material-property lookup abstraction and built-in data
+  Components/Geometry.fs     reusable primitive/composite geometries
+  Components/ComponentModel.fs
+                             common recursive component record for leaves and assemblies
+  Components/PressureParts.fs
+                             standard component builders for shells, tubes, heads, nozzles
+  Components/Piping.fs       pipeline segments and nozzle-to-nozzle route model
+  Equipment/Assemblies.fs    WHB/steam-drum assemblies and component groupings such as tube bundle and central bypass
+  Interop/WhbCoreContracts.fs
+                             interface describing the equipment snapshot `Whb.Core` can expose
+  Equipment/Package.fs       package-level aggregation of WHB, drum and pipelines
+
 src/Whb.Core/
   Options/Constants.fs       constants, unit conversions, bisection, fixed point
   Materials/SteamIF97.fs     IAPWS-IF97 helper properties
@@ -515,11 +534,13 @@ src/Whb.Core/
   Solvers/WaterSide.fs       boiling and CHF correlations
   Solvers/TwoPhase.fs        void fraction and two-phase friction
   Options/Shift.fs           water-gas shift equilibrium helpers
-  Components/Equipment/*.fs  bundle, drum, bypass, valves, nozzles
+  Components/Equipment/*.fs  solver-side bundle, drum, bypass, valve and nozzle calculations
   Solvers/BundleSolver*.fs   coupled gas/water bundle solve split into
                              contracts, low-level kernels, support and orchestration
   Solvers/Circulation*.fs    natural-circulation loop solve split into
                              contracts, hydraulics, pipeline and orchestration
+  Components/Piping/Piping.fs
+                             hydraulic line geometry and loss helpers used by the solver
   Designers/Design.fs        top-level composition and result assembly
   Designers/DesignThermalProcess.fs
                              shared thermal/process verification stage
@@ -530,6 +551,7 @@ src/Whb.Core/
   Designers/DesignRuntime.fs shared run settings and progress contracts
   Modes/*.fs                 rating / optimize / design shared-engine modes
   Reports/*.fs               text, CSV and HTML reports
+  Options/Package.fs         thin bridge to the standalone equipment package model
   Options/Defaults.fs        built-in reference case
 
 src/Whb.Cli/

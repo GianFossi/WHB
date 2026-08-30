@@ -26,6 +26,7 @@ add a row to "Declared exceptions" below.
 | Concern | Decision |
 |---|---|
 | Calculation core | F# |
+| Physical equipment model | separate F# project `src/Whb.Equipment` |
 | Target framework | **.NET 10 LTS**, single target, SDK pinned in `global.json` |
 | Application shell | CLI (`src/Whb.Cli`) - JSON input, text/CSV reports |
 | Desktop UI (future) | C# + WPF + MVVM + CommunityToolkit.Mvvm |
@@ -47,16 +48,16 @@ business rule goes into it - those stay in `Whb.Core`.
 
 ## 3. Modules (fills `ARCH-4`)
 
-`Whb.Core` is a single assembly whose folders carry the standard's module
-boundaries:
+`Whb.Core` and `Whb.Equipment` together carry the engineering-domain boundaries:
 
 | Standard module | Here |
 |---|---|
-| Domain / Calculations | `Components/`, `Process/`, `Loads/`, `Solvers/` |
+| Equipment / Component model | `src/Whb.Equipment` (components, piping, equipment assemblies, material lookup) |
+| Domain / Calculations | `Whb.Core/Components/`, `Process/`, `Loads/`, `Solvers/` |
 | Materials | `Materials/` (gas properties, IF97 steam) |
-| Sizing / Optimization | `Designers/`, `Optimizer/` |
+| Sizing / Optimization | `Whb.Core/Designers/`, `Whb.Core/Optimizer/` |
 | Configuration | `Options/` (`whb.options.json` merged onto defaults) |
-| Reporting | `Reports/` |
+| Reporting | `Whb.Core/Reports/` |
 | Application / Infrastructure | `src/Whb.Cli` (JSON loading, preflight, progress, logging) |
 
 Not yet created: `Desktop`, `Validation` as a separate module, `registry/`.
@@ -85,7 +86,7 @@ Format: rule id, what is done instead, why, and when it will be resolved.
 
 | Rule | Exception | Reason | Review |
 |---|---|---|---|
-| `ARCH-4` | one `Whb.Core` assembly instead of separate module projects | small codebase; boundaries kept as folders (see section 3) | if the UI or a second consumer is added |
+| `ARCH-4` | the domain is only partially split into module projects: `Whb.Equipment` is separate, but calculations/reporting still live together in `Whb.Core` | keeps the current codebase manageable while isolating the physical component/equipment model behind a clean project boundary | review when UI or persistence gains a second direct consumer |
 | `REL-3` | package versions inline in `.fsproj`, no `Directory.Packages.props` | only five packages, all pinned to exact versions | when a UI project adds a second consumer |
 | `PERS-2` | project input JSON carries no schema version | current inputs are hand-written engineering cases, not a persisted project format | before a UI or a saved project format exists |
 | `DOC-1` | documentation tree is `docs/`, not `doc/` | pre-existing convention, also holds vendor PDFs | not planned |

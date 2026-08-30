@@ -11,8 +11,8 @@ Every AI instruction file for this repository is in `.ai/`.
 Key points:
 
 - F# on .NET 10, solution `WhbDesign.sln`.
-- Projects: `src/Whb.Core` (library), `src/Whb.Cli` (CLI),
-  `tests/Whb.Tests` (xUnit).
+- Projects: `src/Whb.Equipment` (physical component/equipment model),
+  `src/Whb.Core` (library), `src/Whb.Cli` (CLI), `tests/Whb.Tests` (xUnit).
 - Build & test with `.\macro\build.ps1`; use `macro/test.ps1` as the official
   test frontend over raw `dotnet test`.
 - Preserve engineering correlations, units, defaults and the reference

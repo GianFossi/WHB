@@ -16,6 +16,8 @@ this file in the same commit so the memory stays accurate.
 - Language / runtime: F# on .NET 10.
 - Solution: `WhbDesign.sln`.
 - Projects:
+  - `src/Whb.Equipment` — physical component/equipment model, piping routes,
+    BOM items and material-property lookup.
   - `src/Whb.Core` — calculation library and domain model.
   - `src/Whb.Cli` — CLI, JSON input loader, report generator.
   - `tests/Whb.Tests` — xUnit test project.
@@ -57,6 +59,23 @@ engine only).
 ## Repository Layout (canonical)
 
 ```text
+src/Whb.Equipment/
+  Common/Bom.fs              `BomItem = { Id; Description; Quantity; Unit }`
+  Common/Metrics.fs          derived component/equipment weight-volume breakdowns
+  Materials/MaterialCatalog.fs
+                             material-property lookup abstraction and built-in data
+  Components/Geometry.fs     reusable primitive/composite geometries
+  Components/ComponentModel.fs
+                             recursive component model with geometry/material/fluid
+  Components/PressureParts.fs
+                             standard pressure-part component builders
+  Components/Piping.fs       piping segments and nozzle-to-nozzle route model
+  Equipment/Assemblies.fs    WHB/steam-drum assemblies plus component groupings such as tube bundle and central bypass
+  Interop/WhbCoreContracts.fs
+                             interface that states the equipment snapshot `Whb.Core`
+                             can expose without leaking solver internals
+  Equipment/Package.fs       package-level aggregation and metrics
+
 src/Whb.Core/
   Options/Constants.fs       constants, unit conversions, bisection, fixed point
   Materials/SteamIF97.fs     IAPWS-IF97 helper properties
@@ -66,10 +85,12 @@ src/Whb.Core/
   Solvers/WaterSide.fs       boiling and CHF correlations
   Solvers/TwoPhase.fs        void fraction and two-phase friction
   Options/Shift.fs           water-gas shift equilibrium helpers
-  Components/Equipment/*.fs  bundle, drum, bypass, valves, nozzles
+  Components/Equipment/*.fs  solver-side bundle, drum, bypass, valve and nozzle calculations
   Components/Equipment/BundleGeometry.fs
                              pure bundle-envelope alignment helpers used by
                              shared optimize/design geometry updates
+  Components/Piping/Piping.fs
+                             hydraulic line geometry/loss helpers used by the solver
   Solvers/BundleSolver*.fs   coupled gas/water bundle solve split into
                              contracts, low-level kernels, support and orchestration
   Solvers/Circulation*.fs    natural-circulation loop solve split into
@@ -84,6 +105,7 @@ src/Whb.Core/
   Designers/DesignRuntime.fs shared run settings and progress contracts
   Modes/*.fs                 rating / optimize / design shared-engine modes
   Reports/*.fs               text, CSV and HTML reports
+  Options/Package.fs         bridge to the standalone equipment package model
   Options/Defaults.fs        built-in reference case
 
 src/Whb.Cli/
@@ -169,6 +191,18 @@ ISO date. Keep each entry short (what / why / where).
   catch-all file: case JSON parsing, shared mode-input readers, support
   text/helpers, and command execution/report writing now each have their
   own file.
+- 2026-08-30 — Refined `src/Whb.Equipment` so `Component` is recursive and can
+  represent both leaves and composite subassemblies. Model `TubeBundle` and
+  `CentralBypass` as components inside `WhbEquipment.Components`, alongside
+  ferrules, liners, valves and diaphragms, instead of as parallel top-level
+  equipment types. Keep analysis/sizing logic separate in `Whb.Core`.
+- 2026-08-30 — Added the standalone `src/Whb.Equipment` project and moved the
+  descriptive physical package model there: BOM items, material-property
+  lookup, reusable component geometry, piping routes, and assembled `WHB` /
+  `SteamDrum` objects now live outside `Whb.Core`. Keep solver-side
+  hydraulics/thermal logic in `Whb.Core`, and use the new
+  `Interop.IWhbCoreEquipmentSnapshot` boundary when the calculation core needs
+  to expose a physical package description.
 - 2026-08-30 — Updated `.github/workflows/ci.yml` to run tests through
   `macro/test.ps1` instead of invoking `dotnet test` directly. Treat the
   script as the repository-standard test frontend locally and in CI so

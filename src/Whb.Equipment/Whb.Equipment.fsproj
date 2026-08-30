@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Authors>Ganfoss</Authors>
+    <Description>Component, equipment, piping and material-property models for WHB packages.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Common\Bom.fs" />
+    <Compile Include="Common\Metrics.fs" />
+    <Compile Include="Materials\MaterialCatalog.fs" />
+    <Compile Include="Components\Geometry.fs" />
+    <Compile Include="Components\ComponentModel.fs" />
+    <Compile Include="Components\PressureParts.fs" />
+    <Compile Include="Components\Piping.fs" />
+    <Compile Include="Equipment\Assemblies.fs" />
+    <Compile Include="Interop\WhbCoreContracts.fs" />
+    <Compile Include="Equipment\Package.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="10.1.301" />
+  </ItemGroup>
+
+</Project>

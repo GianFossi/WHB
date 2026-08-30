@@ -13,6 +13,7 @@
     <Compile Include="RecentFilesStoreTests.fs" />
     <Compile Include="MechanicalDesignInterfaceTests.fs" />
     <Compile Include="ProgressTests.fs" />
+    <Compile Include="EquipmentModelTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,6 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Whb.Equipment\Whb.Equipment.fsproj" />
     <ProjectReference Include="..\..\src\Whb.Core\Whb.Core.fsproj" />
     <ProjectReference Include="..\..\src\Whb.Cli\Whb.Cli.fsproj" />
   </ItemGroup>
