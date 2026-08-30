@@ -24,4 +24,4 @@ jobs:
         run: dotnet build WhbDesign.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test WhbDesign.sln --configuration Release --no-build
+        run: pwsh ./macro/test.ps1 -Target ./WhbDesign.sln -Configuration Release -NoBuild -NoRestore

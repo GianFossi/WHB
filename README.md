@@ -436,16 +436,18 @@ Run:
 .\macro\build.ps1 -Task Test
 ```
 
-Or with the live test wrapper:
+Or with the official live test frontend:
 
 ```bash
 dotnet build WhbDesign.sln -c Release
-pwsh ./macro/test.ps1 -Target ./WhbDesign.sln -Configuration Release
+pwsh ./macro/test.ps1 -Target ./WhbDesign.sln -Configuration Release -NoRestore
 ```
 
-`macro/test.ps1` keeps `dotnet test` output live and prints a periodic
-heartbeat with elapsed time, related `dotnet` / `testhost` counts, other
-concurrent test processes, and a possible-stall warning when the run goes quiet.
+`macro/test.ps1` is the repository's official test frontend. It keeps the
+underlying `dotnet test` output live and prints a periodic heartbeat with
+elapsed time, related `dotnet` / `testhost` counts, other concurrent test
+processes, and a possible-stall warning when the run goes quiet. CI also uses
+this script instead of calling `dotnet test` directly.
 
 ## Reference Case Check
 
@@ -531,8 +533,19 @@ src/Whb.Core/
   Options/Defaults.fs        built-in reference case
 
 src/Whb.Cli/
-  Program.fs                 CLI, mode dispatch, reports and self-test
-  Json.fs                    JSON readers and input helpers
+  Input/Json.fs              JSON readers and input helpers
+  Input/CaseLoader.fs        case JSON -> DesignCase loader
+  Input/ModeInputs.fs        rating/optimize/design input readers and formatting
+  Runtime/OutputPaths.fs     results-root path policy and path normalization
+  Runtime/RecentFilesStore.fs
+                             machine-local recent case/options history
+  Runtime/PhaseLogger.fs     timestamped CLI phase logging
+  Runtime/Preflight.fs       input/output preflight checks
+  Runtime/Progress.fs        CLI progress/ETA rendering
+  Reports/PdsComparison.fs   client datasheet comparison output
+  Commands/CommandSupport.fs template/help/self-test and small CLI helpers
+  Commands/CommandRunners.fs command execution and report writing
+  Program.fs                 thin CLI entry point and dispatch
 
 tests/Whb.Tests/
   Tests.fs                   xUnit tests
@@ -541,8 +554,10 @@ tests/Whb.Tests/
 ## CI
 
 The repository includes a GitHub Actions workflow at
-`.github/workflows/ci.yml`. It restores, builds and tests the solution on
-`windows-latest` using .NET 10.
+`.github/workflows/ci.yml`. It restores and builds the solution, then runs
+tests through `macro/test.ps1` on `windows-latest` using .NET 10. `dotnet
+test` remains the underlying engine, but the script is the user-facing and
+CI-facing entry point.
 
 ## License
 

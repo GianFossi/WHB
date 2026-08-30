@@ -51,7 +51,8 @@ dotnet run --project src/Whb.Cli -- --selftest
 ```
 
 CI runs on `windows-latest` via `.github/workflows/ci.yml` (.NET 10,
-restore + build + test).
+restore + build + `macro/test.ps1`, with `dotnet test` as the underlying
+engine only).
 
 ## Repository Layout (canonical)
 
@@ -86,8 +87,19 @@ src/Whb.Core/
   Options/Defaults.fs        built-in reference case
 
 src/Whb.Cli/
-  Program.fs                 CLI, mode dispatch, reports and self-test
-  Json.fs                    JSON readers and input helpers
+  Input/Json.fs              JSON readers and input helpers
+  Input/CaseLoader.fs        case JSON -> DesignCase loader
+  Input/ModeInputs.fs        rating/optimize/design input readers and formatting
+  Runtime/OutputPaths.fs     results-root path policy and path normalization
+  Runtime/RecentFilesStore.fs
+                             machine-local recent case/options history
+  Runtime/PhaseLogger.fs     timestamped CLI phase logging
+  Runtime/Preflight.fs       input/output preflight checks
+  Runtime/Progress.fs        CLI progress/ETA rendering
+  Reports/PdsComparison.fs   client datasheet comparison output
+  Commands/CommandSupport.fs template/help/self-test and small CLI helpers
+  Commands/CommandRunners.fs command execution and report writing
+  Program.fs                 thin CLI entry point and dispatch
 
 tests/Whb.Tests/
   Tests.fs                   xUnit tests
@@ -150,6 +162,22 @@ Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
 
+- 2026-08-30 — Split the monolithic `src/Whb.Cli/Program.fs` into
+  `CaseLoader.fs`, `ModeInputs.fs`, `CommandSupport.fs`,
+  `CommandRunners.fs`, and a thin `Program.fs` entry point. Keep future
+  CLI work flowing through those sections instead of regrowing a single
+  catch-all file: case JSON parsing, shared mode-input readers, support
+  text/helpers, and command execution/report writing now each have their
+  own file.
+- 2026-08-30 — Updated `.github/workflows/ci.yml` to run tests through
+  `macro/test.ps1` instead of invoking `dotnet test` directly. Treat the
+  script as the repository-standard test frontend locally and in CI so
+  long xUnit runs keep emitting heartbeats while `dotnet test` stays the
+  underlying engine.
+- 2026-08-30 — Grouped `src/Whb.Cli` physically by responsibility:
+  `Input/`, `Runtime/`, `Reports/`, and `Commands/`, while keeping the
+  public module names unchanged. Future CLI file additions should land in
+  those folders and be registered in `Whb.Cli.fsproj` in dependency order.
 - 2026-08-29 — Refreshed the repository maps and backlog wording after the
   shared-verification split so the docs no longer conflate the new
   `--optimize` geometry optimizer with `--optimize-legacy`, and the
