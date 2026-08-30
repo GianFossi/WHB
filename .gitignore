@@ -19,6 +19,7 @@ tmp_*.txt
 tmp_*.json
 logs/
 .vscode/
+.user/
 
 *.user
 *.suo

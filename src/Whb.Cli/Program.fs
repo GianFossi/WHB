@@ -1800,9 +1800,15 @@ let runDesignMode (options: Options.ProjectOptions) (casePath: string option) (c
 let writeDefaultOptions path =
     let dir = Path.GetDirectoryName(Path.GetFullPath path)
     if not (String.IsNullOrWhiteSpace dir) then Directory.CreateDirectory dir |> ignore
-    Options.save path Options.defaultOptions
+    Options.saveTemplate path Options.defaultOptions
     printfn "Project options written to: %s" (Path.GetFullPath path)
     0
+
+let private rememberRecentFiles (optionsPath: string option) (casePath: string option) =
+    try
+        RecentFilesStore.persistUpdate RecentFilesStore.defaultPath optionsPath casePath
+    with ex ->
+        eprintfn "Recent files store update skipped: %s" ex.Message
 let githubPlan optionsPath =
     let opts = Options.load optionsPath
     let plan = GitHubTransfer.plan opts
@@ -2039,8 +2045,8 @@ let main argv =
         printfn "  calculation.dutyToleranceFraction"
         printfn "                                  Duty tolerance for acceptance checks."
         printfn ""
-        printfn "  github.*                        Repository, branch and commit settings"
-        printfn "                                  used by --github-plan / --github-push."
+        printfn "  .user/recent-files.json         Machine-local recent case/options history."
+        printfn "                                  This state is kept outside whb.options.json."
         printfn ""
         printfn "%s" rule
         printfn "CASE FILE"
@@ -2116,6 +2122,8 @@ let main argv =
         go args
     let optionsPath = getOpt "--options" "whb.options.json"
     let projectOptions = Options.load optionsPath
+    let existingOptionsPath =
+        if File.Exists optionsPath then Some(Path.GetFullPath optionsPath) else None
     let reportRoot =
         OutputPaths.reportDirectory resultsRoot projectOptions.Folders.ResultsFolder
     let outDir = OutputPaths.reportDirectory reportRoot (getOpt "--out" "")
@@ -2123,6 +2131,7 @@ let main argv =
         match args with
         | [] | "--out" :: _ | "--options" :: _ ->
             printfn "No case file provided: running the reference case.\n"
+            rememberRecentFiles existingOptionsPath None
             runCase projectOptions None Defaults.referenceCase outDir
         | "--help" :: _ | "-h" :: _ ->
             printHelp ()
@@ -2186,43 +2195,59 @@ let main argv =
             writeSulphurTable f pressureBara sAtoms inertMols tMin tMax step
         | "--sulphur-condenser" :: rest ->
             match filteredArgs rest with
-            | f :: _ when File.Exists f -> runSulphurCondenserCase projectOptions (Some f) (loadCase f) outDir
+            | f :: _ when File.Exists f ->
+                let fullCasePath = Path.GetFullPath f
+                rememberRecentFiles existingOptionsPath (Some fullCasePath)
+                runSulphurCondenserCase projectOptions (Some fullCasePath) (loadCase fullCasePath) outDir
             | f :: _ when not (f.StartsWith("--")) ->
                     eprintfn "Case file not found: %s" f
                     raise (FileNotFoundException("Case file not found", f))
-            | _ -> runSulphurCondenserCase projectOptions None Defaults.referenceCase outDir
+            | _ ->
+                rememberRecentFiles existingOptionsPath None
+                runSulphurCondenserCase projectOptions None Defaults.referenceCase outDir
         | "--options-template" :: rest ->
             let f = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "whb.options.json"
             writeDefaultOptions f
         | "--github-plan" :: rest ->
             let f = match rest with | x :: _ when File.Exists x -> x | _ -> "whb.options.json"
+            if File.Exists f then rememberRecentFiles (Some(Path.GetFullPath f)) None
             githubPlan f
         | "--github-push" :: rest ->
             let f = match rest with | x :: _ when File.Exists x -> x | _ -> "whb.options.json"
+            if File.Exists f then rememberRecentFiles (Some(Path.GetFullPath f)) None
             githubPush f
         | "--rating" :: rest ->
             let casePath, c = resolveCaseArg rest
+            rememberRecentFiles existingOptionsPath casePath
             runRatingMode projectOptions casePath c outDir
         | "--optimize" :: rest ->
             let casePath, c = resolveCaseArg rest
+            rememberRecentFiles existingOptionsPath casePath
             optimizeCase projectOptions casePath c outDir
         | "--design" :: rest ->
             let casePath, c = resolveCaseArg rest
+            rememberRecentFiles existingOptionsPath casePath
             runDesignMode projectOptions casePath c outDir
         | "--optimize-legacy" :: rest ->
-            let _, c = resolveCaseArg rest
+            let casePath, c = resolveCaseArg rest
+            rememberRecentFiles existingOptionsPath casePath
             optimizeCaseLegacy projectOptions c outDir
         | "--sizing" :: rest ->
-            let _, c = resolveCaseArg rest
+            let casePath, c = resolveCaseArg rest
+            rememberRecentFiles existingOptionsPath casePath
             sizingOnly projectOptions c outDir
         | "--loads" :: rest ->
-            let _, c = resolveCaseArg rest
+            let casePath, c = resolveCaseArg rest
+            rememberRecentFiles existingOptionsPath casePath
             loadCurves projectOptions c outDir
         | opt :: _ when opt.StartsWith("--") ->
             eprintfn "Unknown option: %s" opt
             printUsage ()
             2
-        | file :: _ when File.Exists file -> runCase projectOptions (Some file) (loadCase file) outDir
+        | file :: _ when File.Exists file ->
+            let fullCasePath = Path.GetFullPath file
+            rememberRecentFiles existingOptionsPath (Some fullCasePath)
+            runCase projectOptions (Some fullCasePath) (loadCase fullCasePath) outDir
         | x :: _ ->
             eprintfn "File not found: %s" x
             printUsage ()

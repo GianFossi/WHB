@@ -65,8 +65,14 @@ module Options =
           Logging: LoggingOptions
           Reporting: ReportingOptions
           Calculation: CalculationOptions
-          Github: GithubOptions
-          RecentFiles: string list }
+          Github: GithubOptions }
+
+    [<CLIMutable>]
+    type PublicProjectOptionsTemplate =
+        { Folders: FolderOptions
+          Logging: LoggingOptions
+          Reporting: ReportingOptions
+          Calculation: CalculationOptions }
     let private serializerOptions =
         JsonSerializerOptions(WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
     let defaultOptions =
@@ -100,17 +106,17 @@ module Options =
               Branch = "main"
               CommitMessage = "Update WHB project"
               PushOnSave = false
-              CreatePullRequest = false }
-          RecentFiles = [] }
-    let rememberFile path options =
-        let full = Path.GetFullPath path
-        let recent =
-            full :: (options.RecentFiles |> List.filter (fun x -> not (String.Equals(Path.GetFullPath x, full, StringComparison.OrdinalIgnoreCase))))
-            |> List.truncate 20
-        { options with RecentFiles = recent }
-    let save path options =
+              CreatePullRequest = false } }
+
+    let private toPublicTemplate (options: ProjectOptions) : PublicProjectOptionsTemplate =
+        { Folders = options.Folders
+          Logging = options.Logging
+          Reporting = options.Reporting
+          Calculation = options.Calculation }
+
+    let saveTemplate path options =
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath path)) |> ignore
-        File.WriteAllText(path, JsonSerializer.Serialize(options, serializerOptions))
+        File.WriteAllText(path, JsonSerializer.Serialize(toPublicTemplate options, serializerOptions))
     /// <summary>
     /// Overlays the values present in <paramref name="over"/> onto <paramref name="baseObj"/>,
     /// descending into nested objects.
@@ -143,5 +149,4 @@ module Options =
                 overlay merged fileObj
                 JsonSerializer.Deserialize<ProjectOptions>(merged.ToJsonString(), serializerOptions)
             | _ -> defaultOptions
-
 

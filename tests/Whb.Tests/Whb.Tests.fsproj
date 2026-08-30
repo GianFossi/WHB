@@ -10,6 +10,7 @@
     <Compile Include="ModeConstraintAuditTests.fs" />
     <Compile Include="GeometryAlignmentTests.fs" />
     <Compile Include="OutputPathTests.fs" />
+    <Compile Include="RecentFilesStoreTests.fs" />
     <Compile Include="MechanicalDesignInterfaceTests.fs" />
     <Compile Include="ProgressTests.fs" />
   </ItemGroup>

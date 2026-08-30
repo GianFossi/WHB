@@ -127,9 +127,9 @@ appear before dependents).
      public surface. Adding a flag is allowed; removing or renaming one
      is a breaking change and must be flagged explicitly.
 7. Options file.
-   - Respect the keys already used in `whb.options.json` (logging,
-     reporting, calculation, preflight, github). New keys must have
-     documented defaults.
+   - Respect the stable project keys already used in `whb.options.json`
+     (`folders`, `logging`, `reporting`, `calculation`). New keys must
+     have documented defaults.
 8. Documentation.
    - When behavior visible to a user changes, update the relevant file
      under `docs/` and, if applicable, `README.md`.
@@ -140,8 +140,9 @@ appear before dependents).
     - Do not add NuGet packages unless strictly required. Prefer the
       standard library and the code already present.
 11. Secrets and credentials.
-    - Never commit API keys, tokens or credentials. `whb.options.json`
-      `github` section must remain a template.
+    - Never commit API keys, tokens or credentials. Keep any local
+      machine/user state such as recent-file history outside the
+      versioned project options file.
 
 ## Modification Memory Log
 
@@ -161,6 +162,12 @@ ISO date. Keep each entry short (what / why / where).
   and `--steamtable` / `--sulphur` positional file paths are folded back under
   it too if they point elsewhere. Keep future report artifacts on that same
   path policy instead of writing ad-hoc files beside the repo root.
+- 2026-08-30 — Removed `RecentFiles` from `Options.ProjectOptions` and moved
+  local history into `Whb.Cli/RecentFilesStore.fs`, persisted as
+  `.user/recent-files.json`. `whb.options.json` is now reserved for stable
+  project/runtime configuration (`folders`, `logging`, `reporting`,
+  `calculation`), while volatile machine-local state stays outside the
+  versioned options template.
 - 2026-08-30 — Added `Components/Equipment/BundleGeometry.fs` as the shared
   pure geometry-alignment module for the shared `optimize` / `design` variable
   path. Changing tube count, OD, or pitch now recomputes `OTL`, shell ID, and

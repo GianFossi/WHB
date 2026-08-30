@@ -92,6 +92,10 @@ temporary/service files should be placed under `temp/` (`tmp/` remains ignored
 for backward compatibility), and preflight checks verify active runs,
 read/write access and disk space before the calculation starts.
 
+Recent case/options history is not kept inside `whb.options.json`: it is stored
+locally in `.user/recent-files.json`, which is intended as machine-local state
+and is ignored by Git.
+
 Bypass-map points are solved concurrently (see `calculation.parallelism`), so
 the log records the completion and elapsed time of each point rather than only
 its start.

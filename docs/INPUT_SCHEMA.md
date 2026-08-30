@@ -337,6 +337,10 @@ diagnostics for CLI runs:
 | `calculation.gasPropertyCache` | Reuses repeated gas-property evaluations during one design run. |
 | `calculation.correlationValidityWarnings` | Adds findings when common correlation validity ranges are exceeded. |
 
+Recent-file history is not part of `whb.options.json`. The CLI keeps that
+machine-local state in `.user/recent-files.json`, outside the versioned project
+configuration.
+
 Before a normal run, the CLI performs preflight checks for active `whb.exe`
 processes, case-file readability, output/temp/log write access, and available
 disk space.

@@ -26,14 +26,5 @@
     "dutyToleranceFraction": 0.002,
     "gasPropertyCache": true,
     "correlationValidityWarnings": true
-  },
-  "github": {
-    "enabled": false,
-    "repositoryUrl": "",
-    "branch": "main",
-    "commitMessage": "Update WHB project",
-    "pushOnSave": false,
-    "createPullRequest": false
-  },
-  "recentFiles": []
+  }
 }
