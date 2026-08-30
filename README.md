@@ -436,12 +436,16 @@ Run:
 .\macro\build.ps1 -Task Test
 ```
 
-Or directly with `dotnet`:
+Or with the live test wrapper:
 
 ```bash
 dotnet build WhbDesign.sln -c Release
-dotnet test WhbDesign.sln -c Release
+pwsh ./macro/test.ps1 -Target ./WhbDesign.sln -Configuration Release
 ```
+
+`macro/test.ps1` keeps `dotnet test` output live and prints a periodic
+heartbeat with elapsed time, related `dotnet` / `testhost` counts, other
+concurrent test processes, and a possible-stall warning when the run goes quiet.
 
 ## Reference Case Check
 

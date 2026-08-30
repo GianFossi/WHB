@@ -10,6 +10,7 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $Solution = Join-Path $RepoRoot "WhbDesign.sln"
+$TestScript = Join-Path $PSScriptRoot "test.ps1"
 
 function Remove-RepoPath {
     param(
@@ -75,12 +76,12 @@ switch ($Task) {
     "Test" {
         dotnet restore $Solution
         dotnet build $Solution --configuration $Configuration --no-restore
-        dotnet test $Solution --configuration $Configuration --no-build
+        & $TestScript -Target $Solution -Configuration $Configuration -NoBuild -NoRestore
     }
     "Rebuild" {
         Invoke-Clean
         dotnet restore $Solution
         dotnet build $Solution --configuration $Configuration --no-restore
-        dotnet test $Solution --configuration $Configuration --no-build
+        & $TestScript -Target $Solution -Configuration $Configuration -NoBuild -NoRestore
     }
 }

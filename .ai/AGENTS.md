@@ -168,6 +168,11 @@ ISO date. Keep each entry short (what / why / where).
   project/runtime configuration (`folders`, `logging`, `reporting`,
   `calculation`), while volatile machine-local state stays outside the
   versioned options template.
+- 2026-08-30 — Added `macro/test.ps1` as the shared live test runner for the
+  solution. `macro/build.ps1 -Task Test|Rebuild` and the VS Code `test` task
+  now route through it so long xUnit runs emit periodic heartbeats (elapsed
+  time, related `dotnet`/`testhost`, other concurrent test processes, and a
+  possible-stall signal) instead of staying silent until completion.
 - 2026-08-30 — Added `Components/Equipment/BundleGeometry.fs` as the shared
   pure geometry-alignment module for the shared `optimize` / `design` variable
   path. Changing tube count, OD, or pitch now recomputes `OTL`, shell ID, and
