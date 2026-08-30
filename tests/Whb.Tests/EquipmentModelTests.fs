@@ -2,6 +2,7 @@ namespace Whb.Tests
 
 open System
 open Whb.Equipment
+open Whb.Core
 open Xunit
 
 module EquipmentModelTests =
@@ -216,3 +217,23 @@ module EquipmentModelTests =
 
         Assert.Equal("Reference package", package.Name)
         Assert.Equal("DRUM-001", package.SteamDrum.Id)
+
+    [<Fact>]
+    let ``equipment package can be derived from a design case`` () =
+        let package = Package.ofDesignCase Defaults.referenceCase
+        let whb = package.Whbs |> List.exactlyOne
+        let topLevelIds = whb.Components |> List.map (fun part -> part.Id)
+        let allIds =
+            whb.Components
+            |> Seq.collect Component.descendantsAndSelf
+            |> Seq.map (fun part -> part.Id)
+            |> Set.ofSeq
+
+        Assert.Contains("WHB-TUBE-BUNDLE", topLevelIds)
+        Assert.Contains("WHB-CENTRAL-BYPASS", topLevelIds)
+        Assert.Contains("WHB-BP-LINER", allIds)
+        Assert.Contains("WHB-BP-VALVE", allIds)
+        Assert.Contains("WHB-TB-DIAPHRAGMS", allIds)
+        Assert.Equal(Defaults.referenceCase.Loop.Risers.Length, package.Risers.Length)
+        Assert.Equal(Defaults.referenceCase.Loop.Downcomers.Length, package.Downcomers.Length)
+        Assert.Equal(Defaults.referenceCase.Loop.Drum.NormalLevel, package.SteamDrum.Levels.Normal, 12)

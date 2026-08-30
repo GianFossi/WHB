@@ -36,7 +36,6 @@
     <Compile Include="Optimizer\Optimization.fs" />
     <Compile Include="Loads\Loads.fs" />
     <Compile Include="Options\Options.fs" />
-    <Compile Include="Options\Package.fs" />
     <Compile Include="Options\Persistence.fs" />
     <Compile Include="Options\GitHubTransfer.fs" />
     <Compile Include="Solvers\GasSide.fs" />
@@ -49,6 +48,7 @@
     <Compile Include="Components\Equipment\Bypass.fs" />
     <Compile Include="Loads\Vibration.fs" />
     <Compile Include="Options\Types.fs" />
+    <Compile Include="Options\Package.fs" />
     <Compile Include="Components\Equipment\BundleGeometry.fs" />
     <Compile Include="Solvers\BundleSolver.Contracts.fs" />
     <Compile Include="Solvers\BundleSolver.Foundation.fs" />

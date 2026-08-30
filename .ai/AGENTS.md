@@ -184,6 +184,13 @@ Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
 
+- 2026-08-30 — `Whb.Core/Options/Package.fs` now contains the concrete
+  pure adapter from `Types.DesignCase` to the standalone
+  `Whb.Equipment.EquipmentPackage` model. Keep the physical package mapping in
+  `Whb.Core` as an adapter layer: `Whb.Equipment` defines the component model,
+  while `snapshotOfDesignCase` / `ofDesignCase` rebuild WHB, steam-drum and
+  riser/downcomer objects from solver-side inputs without pulling solver logic
+  into the standalone project.
 - 2026-08-30 — Split the monolithic `src/Whb.Cli/Program.fs` into
   `CaseLoader.fs`, `ModeInputs.fs`, `CommandSupport.fs`,
   `CommandRunners.fs`, and a thin `Program.fs` entry point. Keep future
