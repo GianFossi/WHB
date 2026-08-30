@@ -191,6 +191,13 @@ ISO date. Keep each entry short (what / why / where).
   while `snapshotOfDesignCase` / `ofDesignCase` rebuild WHB, steam-drum and
   riser/downcomer objects from solver-side inputs without pulling solver logic
   into the standalone project.
+- 2026-08-30 — Replaced the old monolithic `Whb.Equipment/Components/Geometry`
+  shape union with explicit geometry families (`Cylinder`, `Pipe`,
+  `TransitionCone`, `DishedHead`, `Tubesheet`, `Baffle`, `CylindricalLiner`,
+  `ImpingementPlate`, `Nozzle`, and piping elbow/reducer types) split across
+  dedicated geometry files. Keep new physical-shape growth flowing through
+  those typed families while leaving metric evaluation centralized in
+  `Geometry.evaluate` / `Geometry.referenceLength`.
 - 2026-08-30 — Extended that adapter layer with `snapshotOfDesignResult` /
   `ofDesignResult` so the physical package can be enriched from solved state:
   resolved tube/bypass gas densities, riser mixture density, and derived liquid

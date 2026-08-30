@@ -48,8 +48,20 @@ type PipelineEquipment =
 [<RequireQualifiedAccess>]
 module Piping =
 
+    let private wallThickness innerDiameter outerDiameter =
+        max 0.0 (outerDiameter - innerDiameter) / 2.0
+
     let straightPipeSpool id name bom innerDiameter outerDiameter length material internalFluid =
-        PressureParts.shellBarrel id name bom innerDiameter outerDiameter length material internalFluid
+        PressureParts.create
+            id
+            name
+            bom
+            (Geometry.Pipe
+                { OuterDiameter = outerDiameter
+                  WallThickness = wallThickness innerDiameter outerDiameter
+                  Length = length })
+            material
+            internalFluid
         |> StraightPipeSpool
 
     let elbow id name bom innerDiameter outerDiameter angleDeg centerlineRadiusOverDiameter material internalFluid =
@@ -57,7 +69,12 @@ module Piping =
             id
             name
             bom
-            (Geometry.PipeElbow (innerDiameter, outerDiameter, angleDeg, centerlineRadiusOverDiameter))
+            (Geometry.PipeElbow
+                { OuterDiameter = outerDiameter
+                  WallThickness = wallThickness innerDiameter outerDiameter
+                  AngleDeg = angleDeg
+                  CenterlineRadiusOverDiameter = centerlineRadiusOverDiameter
+                  CoverageFraction = 1.0 })
             material
             internalFluid
         |> Elbow
@@ -67,7 +84,12 @@ module Piping =
             id
             name
             bom
-            (Geometry.ConicalReducer (innerDiameterIn, outerDiameterIn, innerDiameterOut, outerDiameterOut, length))
+            (Geometry.ConicalReducer
+                { OuterDiameterIn = outerDiameterIn
+                  OuterDiameterOut = outerDiameterOut
+                  WallThicknessIn = wallThickness innerDiameterIn outerDiameterIn
+                  WallThicknessOut = wallThickness innerDiameterOut outerDiameterOut
+                  Length = length })
             material
             internalFluid
         |> Reducer

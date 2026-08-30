@@ -56,7 +56,10 @@ module EquipmentModelTests =
                 "INV-001"
                 "Resolved gas hold-up"
                 (bom "BOM-INV-001" "Resolved gas hold-up")
-                (Geometry.CylinderShell (0.250, 0.250, 3.0))
+                (Geometry.Cylinder
+                    { InnerDiameter = 0.250
+                      WallThickness = 0.0
+                      Length = 3.0 })
                 gas
 
         let expectedVolume = Math.PI * 0.250 * 0.250 / 4.0 * 3.0
@@ -65,6 +68,27 @@ module EquipmentModelTests =
         approxEqual 1e-12 expectedVolume region.Metrics.Volume.OfInternalFluid
         approxEqual 1e-12 0.0 region.Metrics.Weight.OfComponent
         approxEqual 1e-9 (expectedVolume * gas.Density) region.Metrics.Weight.OfInternalFluid
+
+    [<Fact>]
+    let ``cylinder and pipe geometries stay equivalent when describing the same spool`` () =
+        let cylinder =
+            Geometry.Cylinder
+                { InnerDiameter = 0.100
+                  WallThickness = 0.005
+                  Length = 2.0 }
+
+        let pipe =
+            Geometry.Pipe
+                { OuterDiameter = 0.110
+                  WallThickness = 0.005
+                  Length = 2.0 }
+
+        let cylinderMetrics = Geometry.evaluate cylinder
+        let pipeMetrics = Geometry.evaluate pipe
+
+        approxEqual 1e-12 cylinderMetrics.ComponentVolume pipeMetrics.ComponentVolume
+        approxEqual 1e-12 cylinderMetrics.InternalFluidVolume pipeMetrics.InternalFluidVolume
+        approxEqual 1e-12 (Geometry.referenceLength cylinder) (Geometry.referenceLength pipe)
 
     [<Fact>]
     let ``whb metrics include central bypass components`` () =

@@ -172,7 +172,10 @@ module Package =
             id
             name
             (bom (sprintf "BOM-%s" id) description 1.0 "calc")
-            (EqGeometry.CylinderShell (diameter, diameter, safeLength))
+            (EqGeometry.Cylinder
+                { InnerDiameter = diameter
+                  WallThickness = 0.0
+                  Length = safeLength })
             fluid
 
     let private averageOrElse fallback values =
@@ -478,7 +481,12 @@ module Package =
                         (sprintf "%s straight spool %d" line.Tag (index + 1))
                         (float line.Count)
                         "ea")
-                    (EqGeometry.Repeated (line.Count, EqGeometry.CylinderShell (line.Id, outerDiameter, length)))
+                    (EqGeometry.Repeated
+                        (line.Count,
+                         EqGeometry.Pipe
+                             { OuterDiameter = outerDiameter
+                               WallThickness = max 0.0 (outerDiameter - line.Id) / 2.0
+                               Length = length }))
                     material
                     fluid
                 |> StraightPipeSpool)
@@ -494,7 +502,14 @@ module Package =
                         (sprintf "%s elbow %.0f deg" line.Tag elbow.AngleDeg)
                         (float (line.Count * elbow.Count))
                         "ea")
-                    (EqGeometry.Repeated (line.Count * elbow.Count, EqGeometry.PipeElbow (line.Id, outerDiameter, elbow.AngleDeg, elbow.ROverD)))
+                    (EqGeometry.Repeated
+                        (line.Count * elbow.Count,
+                         EqGeometry.PipeElbow
+                             { OuterDiameter = outerDiameter
+                               WallThickness = max 0.0 (outerDiameter - line.Id) / 2.0
+                               AngleDeg = elbow.AngleDeg
+                               CenterlineRadiusOverDiameter = elbow.ROverD
+                               CoverageFraction = 1.0 }))
                     material
                     fluid
                 |> Elbow)
