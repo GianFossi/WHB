@@ -316,7 +316,7 @@ diagnostics for CLI runs:
 
 | Field | Meaning |
 |---|---|
-| `folders.resultsFolder` | Default output folder when `--out` is not supplied. |
+| `folders.resultsFolder` | Root output folder for generated reports. `--out` selects a subpath under this root; external paths are folded back under the same tree. |
 | `folders.tempFolder` | Folder for temporary/service files and preflight probes. |
 | `folders.casesFolder` | Default folder convention for case files used by local workflow. |
 | `folders.databasesFolder` | Folder convention for local property/reference databases. |

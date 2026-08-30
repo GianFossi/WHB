@@ -853,11 +853,16 @@ let private reportStructuredProgress (logger: PhaseLogger.Logger) (state: Progre
     state.Value <- Progress.mergeStatus state.Value update
     logger update.Description
 
-let private filteredArgs (rest: string list) (outDir: string) (optionsPath: string) =
-    rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath)
+let private filteredArgs (rest: string list) =
+    let rec loop acc remaining =
+        match remaining with
+        | ("--out" | "--options") :: _ :: tail -> loop acc tail
+        | head :: tail -> loop (head :: acc) tail
+        | [] -> List.rev acc
+    loop [] rest
 
-let private resolveCaseArg (rest: string list) (outDir: string) (optionsPath: string) =
-    match filteredArgs rest outDir optionsPath with
+let private resolveCaseArg (rest: string list) =
+    match filteredArgs rest with
     | f :: _ when File.Exists f -> Some f, loadCase f
     | f :: _ when not (f.StartsWith("--")) ->
         eprintfn "Case file not found: %s" f
@@ -1861,6 +1866,7 @@ let private writeSulphurTable (path: string) (pressureBara: float) (sAtoms: floa
 [<EntryPoint>]
 let main argv =
     let args = List.ofArray argv
+    let resultsRoot = OutputPaths.reportDirectory "results" ""
     /// Short form printed on a usage error, where the user needs the shape of the
     /// command line and not the manual.
     let printUsage () =
@@ -1984,8 +1990,8 @@ let main argv =
         printfn "%s" rule
         printfn "OPTIONS"
         printfn "%s" rule
-        printfn "  --out <folder>          Output folder. Overrides folders.resultsFolder"
-        printfn "                          from the options file. Created if missing."
+        printfn "  --out <folder>          Output subfolder under results/. Created if missing."
+        printfn "                          Absolute or external paths are folded back under results/."
         printfn ""
         printfn "  --options <file>        Project options file to read."
         printfn "                          Default: whb.options.json in the current folder."
@@ -2087,7 +2093,7 @@ let main argv =
         printfn "EXAMPLES"
         printfn "%s" rule
         printfn "  whb                                    Run the reference case."
-        printfn "  whb my-case.json --out results/run1     Run a case into a folder."
+        printfn "  whb my-case.json --out run1             Run a case into results/run1."
         printfn "  whb --template my-case.json            Start a new case file."
         printfn "  whb my-case.json --options prj.json    Use a specific options file."
         printfn "  whb --rating my-case.json              Rate one geometry on configured loads."
@@ -2097,7 +2103,7 @@ let main argv =
         printfn "  whb --optimize-legacy my-case.json     Legacy maximize-duty search."
         printfn "  whb --selftest                         Verify the installation."
         printfn "  whb --sulphur sulphur.csv --pressure-bara 1.7 --s-atoms-mols 8 --inert-mols 100"
-        printfn "  whb --sulphur-condenser claus-case.json --out results/condenser"
+        printfn "  whb --sulphur-condenser claus-case.json --out condenser"
         printfn ""
         printfn "This software is a design aid. It is not a certified pressure-vessel or"
         printfn "boiler-code tool and does not replace code calculations or vendor"
@@ -2110,7 +2116,9 @@ let main argv =
         go args
     let optionsPath = getOpt "--options" "whb.options.json"
     let projectOptions = Options.load optionsPath
-    let outDir = getOpt "--out" projectOptions.Folders.ResultsFolder
+    let reportRoot =
+        OutputPaths.reportDirectory resultsRoot projectOptions.Folders.ResultsFolder
+    let outDir = OutputPaths.reportDirectory reportRoot (getOpt "--out" "")
     try
         match args with
         | [] | "--out" :: _ | "--options" :: _ ->
@@ -2128,7 +2136,9 @@ let main argv =
             0
         | "--selftest" :: _ -> selfTest ()
         | "--steamtable" :: rest ->
-            let f = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "steam_saturation_table.csv"
+            let f =
+                let requested = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "steam_saturation_table.csv"
+                OutputPaths.reportFile reportRoot requested "steam_saturation_table.csv"
             let num name def =
                 match getOpt name "" with
                 | "" -> def
@@ -2157,7 +2167,9 @@ let main argv =
             printfn "Tabella di saturazione %g-%g C (passo %g C) scritta in %s" tMin tMax step (Path.GetFullPath f)
             0
         | "--sulphur" :: rest ->
-            let f = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "sulphur_table.csv"
+            let f =
+                let requested = match rest with | x :: _ when not (x.StartsWith("--")) -> x | _ -> "sulphur_table.csv"
+                OutputPaths.reportFile reportRoot requested "sulphur_table.csv"
             let num name def =
                 match getOpt name "" with
                 | "" -> def
@@ -2173,7 +2185,7 @@ let main argv =
             let step = num "--step" 10.0
             writeSulphurTable f pressureBara sAtoms inertMols tMin tMax step
         | "--sulphur-condenser" :: rest ->
-            match rest |> List.filter (fun x -> x <> "--out" && x <> outDir && x <> "--options" && x <> optionsPath) with
+            match filteredArgs rest with
             | f :: _ when File.Exists f -> runSulphurCondenserCase projectOptions (Some f) (loadCase f) outDir
             | f :: _ when not (f.StartsWith("--")) ->
                     eprintfn "Case file not found: %s" f
@@ -2189,22 +2201,22 @@ let main argv =
             let f = match rest with | x :: _ when File.Exists x -> x | _ -> "whb.options.json"
             githubPush f
         | "--rating" :: rest ->
-            let casePath, c = resolveCaseArg rest outDir optionsPath
+            let casePath, c = resolveCaseArg rest
             runRatingMode projectOptions casePath c outDir
         | "--optimize" :: rest ->
-            let casePath, c = resolveCaseArg rest outDir optionsPath
+            let casePath, c = resolveCaseArg rest
             optimizeCase projectOptions casePath c outDir
         | "--design" :: rest ->
-            let casePath, c = resolveCaseArg rest outDir optionsPath
+            let casePath, c = resolveCaseArg rest
             runDesignMode projectOptions casePath c outDir
         | "--optimize-legacy" :: rest ->
-            let _, c = resolveCaseArg rest outDir optionsPath
+            let _, c = resolveCaseArg rest
             optimizeCaseLegacy projectOptions c outDir
         | "--sizing" :: rest ->
-            let _, c = resolveCaseArg rest outDir optionsPath
+            let _, c = resolveCaseArg rest
             sizingOnly projectOptions c outDir
         | "--loads" :: rest ->
-            let _, c = resolveCaseArg rest outDir optionsPath
+            let _, c = resolveCaseArg rest
             loadCurves projectOptions c outDir
         | opt :: _ when opt.StartsWith("--") ->
             eprintfn "Unknown option: %s" opt

@@ -9,6 +9,7 @@
     <Compile Include="Tests.fs" />
     <Compile Include="ModeConstraintAuditTests.fs" />
     <Compile Include="GeometryAlignmentTests.fs" />
+    <Compile Include="OutputPathTests.fs" />
     <Compile Include="MechanicalDesignInterfaceTests.fs" />
     <Compile Include="ProgressTests.fs" />
   </ItemGroup>

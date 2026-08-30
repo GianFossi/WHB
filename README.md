@@ -380,6 +380,9 @@ The code can estimate:
 ## Output Files
 
 Default output is written to `results/` unless `--out` is provided.
+When `--out` is provided, the requested path is still normalized under
+`results/`: `--out run1` writes to `results/run1`, while an external or
+absolute path is folded back under the same `results/` tree.
 
 | File | Content |
 |---|---|

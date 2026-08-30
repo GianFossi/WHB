@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <Compile Include="Json.fs" />
+    <Compile Include="OutputPaths.fs" />
     <Compile Include="PhaseLogger.fs" />
     <Compile Include="Preflight.fs" />
     <Compile Include="Progress.fs" />
@@ -44,4 +45,3 @@
   </ItemGroup>
 
 </Project>
-

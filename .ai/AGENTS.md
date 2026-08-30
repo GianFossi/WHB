@@ -155,6 +155,12 @@ ISO date. Keep each entry short (what / why / where).
   canonical layout now lists the separated thermal/process, mechanical and
   mode-orchestration modules. Keep future documentation aligned with the
   shared-engine `rating` / `optimize` / `design` scheme.
+- 2026-08-30 — Centralized CLI output-path normalization in
+  `Whb.Cli/OutputPaths.fs`. Report-producing commands now always write under
+  the configured `results` root: `--out` chooses a subpath beneath that root,
+  and `--steamtable` / `--sulphur` positional file paths are folded back under
+  it too if they point elsewhere. Keep future report artifacts on that same
+  path policy instead of writing ad-hoc files beside the repo root.
 - 2026-08-30 — Added `Components/Equipment/BundleGeometry.fs` as the shared
   pure geometry-alignment module for the shared `optimize` / `design` variable
   path. Changing tube count, OD, or pitch now recomputes `OTL`, shell ID, and
