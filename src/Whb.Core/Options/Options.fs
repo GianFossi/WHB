@@ -4,8 +4,20 @@ open System
 open System.IO
 open System.Text.Json
 open System.Text.Json.Nodes
+
+/// <summary>
+/// Represents the configuration options for a WHB project, including folder paths, logging settings, reporting
+/// options, calculation parameters, and GitHub integration settings.
+/// </summary>
 module Options =
 
+    /// <summary>
+    /// Represents GitHub integration options for WHB command-line runs.
+    /// </summary>
+    /// <remarks>
+    /// These options control whether to push changes to a GitHub repository, create pull requests,
+    /// and specify the repository URL, branch, and commit message.
+    /// </remarks>
     [<CLIMutable>]
     type GithubOptions =
         { Enabled: bool
@@ -24,24 +36,24 @@ module Options =
           ReportsFolder: string
           PackagesFolder: string }
 
-    [<CLIMutable>]
     /// <summary>
     /// Represents phase logging options for WHB command-line runs.
     /// </summary>
     /// <remarks>
     /// Phase logging is intended for operational diagnostics before and during long calculations.
     /// </remarks>
+    [<CLIMutable>]
     type LoggingOptions =
         { Enabled: bool
           LogFile: string }
 
-    [<CLIMutable>]
     /// <summary>
     /// Represents report generation options for WHB command-line runs.
     /// </summary>
     /// <remarks>
     /// Summary and criticality outputs are always written; these options control additional full engineering reports.
     /// </remarks>
+    [<CLIMutable>]
     type ReportingOptions =
         { GenerateFullReport: bool
           GenerateHtmlReport: bool }

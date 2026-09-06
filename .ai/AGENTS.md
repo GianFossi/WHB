@@ -184,6 +184,26 @@ Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
 
+- 2026-08-31 — `src/Whb.Equipment/Components/ComponentModel.fs` now models
+  `Component` as a property-based type instead of an F# record. Keep creating
+  and updating components through the `Component` module helpers
+  (`create*`, `withComponents`, `withInternalFluid`) rather than record
+  literals or record-copy syntax; `Whb.Core/Options/Package.fs` already follows
+  that pattern for recursive tree rewrites.
+- 2026-08-31 — Started splitting `src/Whb.Equipment/Components/Geometry.fs`
+  into `Components/Geometry/*.fs` property-based classes. The first migrated
+  family is `Cylinder`, `Pipe`, `TransitionCone`, plus distinct
+  `HemisphericalHead`, `EllipticalHead`, and `TorisphericalHead` shape cases.
+  Keep new uses building those through object-property initializers, and route
+  future geometry-family extractions through the same folder + `.fsproj`
+  compile-order pattern instead of regrowing one monolithic geometry file.
+- 2026-08-31 — Completed the property-based geometry migration for the
+  remaining standalone physical shapes too: `Tubesheet`, `Baffle`,
+  `CylindricalLiner`, `ImpingementPlate`, `Nozzle`, `PipeElbow`,
+  `ConicalReducer`, `RectangularShell`, and `PorousPad` now each have their own
+  file under `src/Whb.Equipment/Components/Geometry/`. Keep future additions in
+  that folder and preserve the current split between class-based geometry data
+  files and metric evaluation centralized in `Components/Geometry.fs`.
 - 2026-08-30 — `Whb.Core/Options/Package.fs` now contains the concrete
   pure adapter from `Types.DesignCase` to the standalone
   `Whb.Equipment.EquipmentPackage` model. Keep the physical package mapping in

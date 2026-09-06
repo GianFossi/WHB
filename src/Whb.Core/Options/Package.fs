@@ -129,8 +129,7 @@ module Package =
     let private mapComponentTree (mapper: Component -> Component) =
         let rec loop (part: Component) : Component =
             let updated =
-                { part with
-                    Components = part.Components |> List.map loop }
+                Component.withComponents (part.Components |> List.map loop) part
 
             mapper updated
 
@@ -139,21 +138,21 @@ module Package =
     let private setComponentFluid componentId fluid =
         mapComponentTree (fun part ->
             if part.Id = componentId then
-                { part with InternalFluid = fluid }
+                Component.withInternalFluid fluid part
             else
                 part)
 
     let private setComponentFluidWhere predicate fluid =
         mapComponentTree (fun part ->
             if predicate part then
-                { part with InternalFluid = fluid }
+                Component.withInternalFluid fluid part
             else
                 part)
 
     let private appendChildren componentId extraChildren =
         mapComponentTree (fun part ->
             if part.Id = componentId then
-                { part with Components = part.Components @ extraChildren }
+                Component.withComponents (part.Components @ extraChildren) part
             else
                 part)
 
@@ -173,9 +172,11 @@ module Package =
             name
             (bom (sprintf "BOM-%s" id) description 1.0 "calc")
             (EqGeometry.Cylinder
-                { InnerDiameter = diameter
-                  WallThickness = 0.0
-                  Length = safeLength })
+                (CylinderGeometry(
+                    InnerDiameter = diameter,
+                    WallThickness = 0.0,
+                    Length = safeLength
+                )))
             fluid
 
     let private averageOrElse fallback values =
@@ -484,9 +485,11 @@ module Package =
                     (EqGeometry.Repeated
                         (line.Count,
                          EqGeometry.Pipe
-                             { OuterDiameter = outerDiameter
-                               WallThickness = max 0.0 (outerDiameter - line.Id) / 2.0
-                               Length = length }))
+                             (PipeGeometry(
+                                OuterDiameter = outerDiameter,
+                                WallThickness = max 0.0 (outerDiameter - line.Id) / 2.0,
+                                Length = length
+                             ))))
                     material
                     fluid
                 |> StraightPipeSpool)
@@ -505,11 +508,13 @@ module Package =
                     (EqGeometry.Repeated
                         (line.Count * elbow.Count,
                          EqGeometry.PipeElbow
-                             { OuterDiameter = outerDiameter
-                               WallThickness = max 0.0 (outerDiameter - line.Id) / 2.0
-                               AngleDeg = elbow.AngleDeg
-                               CenterlineRadiusOverDiameter = elbow.ROverD
-                               CoverageFraction = 1.0 }))
+                             (PipeElbowGeometry(
+                                OuterDiameter = outerDiameter,
+                                WallThickness = max 0.0 (outerDiameter - line.Id) / 2.0,
+                                AngleDeg = elbow.AngleDeg,
+                                CenterlineRadiusOverDiameter = elbow.ROverD,
+                                CoverageFraction = 1.0
+                             ))))
                     material
                     fluid
                 |> Elbow)

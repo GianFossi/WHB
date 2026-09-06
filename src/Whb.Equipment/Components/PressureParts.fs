@@ -16,9 +16,11 @@ module PressureParts =
             (Geometry.Repeated
                 (count,
                  Geometry.Cylinder
-                     { InnerDiameter = innerDiameter
-                       WallThickness = wallThickness innerDiameter outerDiameter
-                       Length = length }))
+                     (CylinderGeometry(
+                        InnerDiameter = innerDiameter,
+                        WallThickness = wallThickness innerDiameter outerDiameter,
+                        Length = length
+                     ))))
             material
             internalFluid
 
@@ -30,9 +32,11 @@ module PressureParts =
             (Geometry.Repeated
                 (count,
                  Geometry.Baffle
-                     { Diameter = diameter
-                       Thickness = thickness
-                       CutFraction = 0.0 }))
+                     (BaffleGeometry(
+                        Diameter = diameter,
+                        Thickness = thickness,
+                        CutFraction = 0.0
+                     ))))
             material
             None
 
@@ -42,9 +46,11 @@ module PressureParts =
             name
             bom
             (Geometry.Cylinder
-                { InnerDiameter = innerDiameter
-                  WallThickness = wallThickness innerDiameter outerDiameter
-                  Length = length })
+                (CylinderGeometry(
+                    InnerDiameter = innerDiameter,
+                    WallThickness = wallThickness innerDiameter outerDiameter,
+                    Length = length
+                )))
             material
             internalFluid
 
@@ -56,10 +62,12 @@ module PressureParts =
             (Geometry.Repeated
                 (count,
                  Geometry.Tubesheet
-                     { Diameter = diameter
-                       HoleDiameter = holeDiameter
-                       HoleCount = holeCount
-                       Profile = Geometry.Flat thickness }))
+                     (TubesheetGeometry(
+                        Diameter = diameter,
+                        HoleDiameter = holeDiameter,
+                        HoleCount = holeCount,
+                        Profile = Flat thickness
+                     ))))
             material
             None
 
@@ -68,9 +76,11 @@ module PressureParts =
             Geometry.Repeated
                 (count,
                  Geometry.Nozzle
-                     { InnerDiameter = innerDiameter
-                       WallThickness = wallThickness innerDiameter outerDiameter
-                       Projection = projection })
+                     (NozzleGeometry(
+                        InnerDiameter = innerDiameter,
+                        WallThickness = wallThickness innerDiameter outerDiameter,
+                        Projection = projection
+                     )))
 
         create id $"{name} ({service})" bom geometry material internalFluid
 
@@ -80,9 +90,11 @@ module PressureParts =
             name
             bom
             (Geometry.Cylinder
-                { InnerDiameter = bore
-                  WallThickness = wallThickness bore bodyOuterDiameter
-                  Length = faceToFace })
+                (CylinderGeometry(
+                    InnerDiameter = bore,
+                    WallThickness = wallThickness bore bodyOuterDiameter,
+                    Length = faceToFace
+                )))
             material
             internalFluid
 
@@ -94,9 +106,11 @@ module PressureParts =
             (Geometry.Repeated
                 (count,
                  Geometry.Cylinder
-                     { InnerDiameter = innerDiameter
-                       WallThickness = wallThickness innerDiameter outerDiameter
-                       Length = length }))
+                     (CylinderGeometry(
+                        InnerDiameter = innerDiameter,
+                        WallThickness = wallThickness innerDiameter outerDiameter,
+                        Length = length
+                     ))))
             material
             internalFluid
 
@@ -106,9 +120,11 @@ module PressureParts =
             name
             bom
             (Geometry.CylindricalLiner
-                { InnerDiameter = innerDiameter
-                  WallThickness = wallThickness innerDiameter outerDiameter
-                  Length = length })
+                (CylindricalLinerGeometry(
+                    InnerDiameter = innerDiameter,
+                    WallThickness = wallThickness innerDiameter outerDiameter,
+                    Length = length
+                )))
             material
             internalFluid
 
@@ -120,26 +136,32 @@ module PressureParts =
             (Geometry.Repeated
                 (count,
                  Geometry.Baffle
-                     { Diameter = diameter
-                       Thickness = thickness
-                       CutFraction = 0.0 }))
+                     (BaffleGeometry(
+                        Diameter = diameter,
+                        Thickness = thickness,
+                        CutFraction = 0.0
+                     ))))
             material
             None
 
-    let dishedHead id name bom innerDiameter thickness crownDepth count material internalFluid =
+    let ellipticalHead id name bom innerDiameter thickness cylindricalSkirtLength count material internalFluid =
         create
             id
             name
             bom
             (Geometry.Repeated
                 (count,
-                 Geometry.DishedHead
-                     { InnerDiameter = innerDiameter
-                       WallThickness = thickness
-                       Profile = Geometry.Elliptical crownDepth
-                       CylindricalSkirtLength = 0.0 }))
+                 Geometry.EllipticalHead
+                     (EllipticalHeadGeometry(
+                        InnerDiameter = innerDiameter,
+                        WallThickness = thickness,
+                        CylindricalSkirtLength = cylindricalSkirtLength
+                     ))))
             material
             internalFluid
+
+    let dishedHead id name bom innerDiameter thickness _crownDepth count material internalFluid =
+        ellipticalHead id name bom innerDiameter thickness None count material internalFluid
 
     let expansionBox id name bom width height length thickness count material internalFluid =
         create
@@ -149,10 +171,12 @@ module PressureParts =
             (Geometry.Repeated
                 (count,
                  Geometry.RectangularShell
-                     { Width = width
-                       Height = height
-                       Length = length
-                       Thickness = thickness }))
+                     (RectangularShellGeometry(
+                        Width = width,
+                        Height = height,
+                        Length = length,
+                        Thickness = thickness
+                     ))))
             material
             internalFluid
 
@@ -163,7 +187,9 @@ module PressureParts =
             name
             bom
             (Geometry.PorousPad
-                { Area = area
-                  Thickness = thickness })
+                (PorousPadGeometry(
+                    Area = area,
+                    Thickness = thickness
+                )))
             porousMaterial
             None

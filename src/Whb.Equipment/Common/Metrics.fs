@@ -1,5 +1,11 @@
 namespace Whb.Equipment
 
+/// <summary>
+/// Common metrics used by components and assembled equipment.
+/// </summary>
+/// <remarks>
+/// This module is intended to be used by both the Whb.Equipment and Whb.
+/// </remarks>
 module Metrics =
 
     /// <summary>
@@ -28,12 +34,30 @@ module Metrics =
           InternalArea: float
           ExternalArea: float }
 
+    /// <summary>
+    /// Provides a zeroed-out instance of <c>ComponentMetrics</c>.
+    /// </summary>
+    /// <returns>A <c>ComponentMetrics</c> instance with all fields set to zero.</returns>
+    /// <remarks>
+    /// This function is useful for initializing accumulators or default values in calculations.
+    /// </remarks>
     let empty =
         { Weight = { OfComponent = 0.0; OfInternalFluid = 0.0 }
           Volume = { OfComponent = 0.0; OfInternalFluid = 0.0 }
           InternalArea = 0.0
           ExternalArea = 0.0 }
 
+    /// <summary>
+    /// Combines a sequence of <c>ComponentMetrics</c> instances into a single
+    /// <c>ComponentMetrics</c> instance by summing their respective fields.
+    /// </summary>
+    /// <param name="items">A sequence of <c>ComponentMetrics</c>
+    /// instances to be combined.</param>
+    /// <returns>A single <c>ComponentMetrics</c> instance representing the combined metrics
+    /// of all input items.</returns>   
+    /// <remarks>
+    /// This function is useful for aggregating metrics from multiple components or equipment items.
+    /// </remarks>
     let combine (items: ComponentMetrics seq) =
         items
         |> Seq.fold

@@ -57,9 +57,11 @@ module EquipmentModelTests =
                 "Resolved gas hold-up"
                 (bom "BOM-INV-001" "Resolved gas hold-up")
                 (Geometry.Cylinder
-                    { InnerDiameter = 0.250
-                      WallThickness = 0.0
-                      Length = 3.0 })
+                    (CylinderGeometry(
+                        InnerDiameter = 0.250,
+                        WallThickness = 0.0,
+                        Length = 3.0
+                    )))
                 gas
 
         let expectedVolume = Math.PI * 0.250 * 0.250 / 4.0 * 3.0
@@ -73,15 +75,19 @@ module EquipmentModelTests =
     let ``cylinder and pipe geometries stay equivalent when describing the same spool`` () =
         let cylinder =
             Geometry.Cylinder
-                { InnerDiameter = 0.100
-                  WallThickness = 0.005
-                  Length = 2.0 }
+                (CylinderGeometry(
+                    InnerDiameter = 0.100,
+                    WallThickness = 0.005,
+                    Length = 2.0
+                ))
 
         let pipe =
             Geometry.Pipe
-                { OuterDiameter = 0.110
-                  WallThickness = 0.005
-                  Length = 2.0 }
+                (PipeGeometry(
+                    OuterDiameter = 0.110,
+                    WallThickness = 0.005,
+                    Length = 2.0
+                ))
 
         let cylinderMetrics = Geometry.evaluate cylinder
         let pipeMetrics = Geometry.evaluate pipe
@@ -89,6 +95,105 @@ module EquipmentModelTests =
         approxEqual 1e-12 cylinderMetrics.ComponentVolume pipeMetrics.ComponentVolume
         approxEqual 1e-12 cylinderMetrics.InternalFluidVolume pipeMetrics.InternalFluidVolume
         approxEqual 1e-12 (Geometry.referenceLength cylinder) (Geometry.referenceLength pipe)
+
+    [<Fact>]
+    let ``hemispherical head negative cut trims retained internal volume`` () =
+        let fullHead =
+            Geometry.HemisphericalHead
+                (HemisphericalHeadGeometry(
+                    InnerRadius = 0.500,
+                    WallThickness = 0.010
+                ))
+
+        let cutHead =
+            Geometry.HemisphericalHead
+                (HemisphericalHeadGeometry(
+                    InnerRadius = 0.500,
+                    WallThickness = 0.010,
+                    NegativeCutDepth = Some 0.200
+                ))
+
+        let fullMetrics = Geometry.evaluate fullHead
+        let cutMetrics = Geometry.evaluate cutHead
+        let depth = 0.500 - 0.200
+        let expectedCutVolume = Math.PI * depth * depth * (3.0 * 0.500 - depth) / 3.0
+
+        Assert.True(cutMetrics.InternalFluidVolume < fullMetrics.InternalFluidVolume)
+        approxEqual 1e-12 expectedCutVolume cutMetrics.InternalFluidVolume
+
+    [<Fact>]
+    let ``elliptical and torispherical heads expose optional skirt length as reference length`` () =
+        let elliptical =
+            Geometry.EllipticalHead
+                (EllipticalHeadGeometry(
+                    InnerDiameter = 1.200,
+                    WallThickness = 0.016,
+                    CylindricalSkirtLength = Some 0.180
+                ))
+
+        let torispherical =
+            Geometry.TorisphericalHead
+                (TorisphericalHeadGeometry(
+                    InnerDiameter = 1.200,
+                    WallThickness = 0.016,
+                    CrownRadius = 1.200,
+                    KnuckleRadius = 0.072,
+                    CylindricalSkirtLength = Some 0.220,
+                    CylindricalSkirtInnerDiameter = Some 1.180,
+                    CylindricalSkirtWallThickness = Some 0.018
+                ))
+
+        approxEqual 1e-12 0.180 (Geometry.referenceLength elliptical)
+        approxEqual 1e-12 0.220 (Geometry.referenceLength torispherical)
+
+    [<Fact>]
+    let ``baffle cut fraction reduces retained metal volume`` () =
+        let fullPlate =
+            Geometry.Baffle
+                (BaffleGeometry(
+                    Diameter = 1.000,
+                    Thickness = 0.020,
+                    CutFraction = 0.0
+                ))
+
+        let cutPlate =
+            Geometry.Baffle
+                (BaffleGeometry(
+                    Diameter = 1.000,
+                    Thickness = 0.020,
+                    CutFraction = 0.35
+                ))
+
+        let fullMetrics = Geometry.evaluate fullPlate
+        let cutMetrics = Geometry.evaluate cutPlate
+
+        Assert.True(cutMetrics.ComponentVolume < fullMetrics.ComponentVolume)
+        approxEqual 1e-12 0.0 cutMetrics.InternalFluidVolume
+
+    [<Fact>]
+    let ``pipe elbows and reducers keep positive developed length when geometry is valid`` () =
+        let elbow =
+            Geometry.PipeElbow
+                (PipeElbowGeometry(
+                    OuterDiameter = 0.273,
+                    WallThickness = 0.008,
+                    AngleDeg = 90.0,
+                    CenterlineRadiusOverDiameter = 1.5,
+                    CoverageFraction = 1.0
+                ))
+
+        let reducer =
+            Geometry.ConicalReducer
+                (ConicalReducerGeometry(
+                    OuterDiameterIn = 0.3239,
+                    OuterDiameterOut = 0.2191,
+                    WallThicknessIn = 0.0095,
+                    WallThicknessOut = 0.0071,
+                    Length = 0.300
+                ))
+
+        Assert.True(Geometry.referenceLength elbow > 0.0)
+        approxEqual 1e-12 0.300 (Geometry.referenceLength reducer)
 
     [<Fact>]
     let ``whb metrics include central bypass components`` () =

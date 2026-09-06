@@ -15,154 +15,15 @@ module Geometry =
           ExternalArea: float }
 
     /// <summary>
-    /// Cylindrical shell defined by internal diameter and wall thickness.
-    /// </summary>
-    [<CLIMutable>]
-    type CylinderGeometry =
-        { InnerDiameter: float
-          WallThickness: float
-          Length: float }
-
-    /// <summary>
-    /// Pipe-like shell defined by outer diameter and wall thickness.
-    /// </summary>
-    [<CLIMutable>]
-    type PipeGeometry =
-        { OuterDiameter: float
-          WallThickness: float
-          Length: float }
-
-    /// <summary>
-    /// Conical transition defined by inlet/outlet inner diameters and local wall thickness.
-    /// </summary>
-    [<CLIMutable>]
-    type TransitionConeGeometry =
-        { InnerDiameterIn: float
-          InnerDiameterOut: float
-          WallThicknessIn: float
-          WallThicknessOut: float
-          Length: float }
-
-    /// <summary>
-    /// Head profile families supported by the physical equipment model.
-    /// </summary>
-    type DishedHeadProfile =
-        | Hemispherical of capDepth: float option
-        | Elliptical of crownDepth: float
-        | Torispherical of crownRadius: float * knuckleRadius: float
-
-    /// <summary>
-    /// Dished head with optional cylindrical skirt.
-    /// </summary>
-    [<CLIMutable>]
-    type DishedHeadGeometry =
-        { InnerDiameter: float
-          WallThickness: float
-          Profile: DishedHeadProfile
-          CylindricalSkirtLength: float }
-
-    /// <summary>
-    /// Mechanical variants supported for a tubesheet.
-    /// </summary>
-    type TubesheetProfile =
-        | Flat of thickness: float
-        | FlatWithExternalReinforcement of thickness: float * reinforcementOuterDiameter: float * reinforcementThickness: float
-        | WithKnucklesAndFlares of thickness: float * knuckleRadius: float * flareLength: float * flareWallThickness: float option
-
-    /// <summary>
-    /// Perforated tubesheet geometry.
-    /// </summary>
-    [<CLIMutable>]
-    type TubesheetGeometry =
-        { Diameter: float
-          HoleDiameter: float
-          HoleCount: int
-          Profile: TubesheetProfile }
-
-    /// <summary>
-    /// Flat baffle plate with an optional cut fraction for segmental openings.
-    /// </summary>
-    [<CLIMutable>]
-    type BaffleGeometry =
-        { Diameter: float
-          Thickness: float
-          CutFraction: float }
-
-    /// <summary>
-    /// Cylindrical liner controlled by internal diameter and wall thickness.
-    /// </summary>
-    [<CLIMutable>]
-    type CylindricalLinerGeometry =
-        { InnerDiameter: float
-          WallThickness: float
-          Length: float }
-
-    /// <summary>
-    /// Flat impingement plate.
-    /// </summary>
-    [<CLIMutable>]
-    type ImpingementPlateGeometry =
-        { Width: float
-          Height: float
-          Thickness: float }
-
-    /// <summary>
-    /// Nozzle neck defined by bore and wall thickness.
-    /// </summary>
-    [<CLIMutable>]
-    type NozzleGeometry =
-        { InnerDiameter: float
-          WallThickness: float
-          Projection: float }
-
-    /// <summary>
-    /// Piping elbow. `CoverageFraction = 1.0` means a full elbow, smaller values represent cut pieces.
-    /// </summary>
-    [<CLIMutable>]
-    type PipeElbowGeometry =
-        { OuterDiameter: float
-          WallThickness: float
-          AngleDeg: float
-          CenterlineRadiusOverDiameter: float
-          CoverageFraction: float }
-
-    /// <summary>
-    /// Piping conical reducer defined by outer diameters and wall thickness at both ends.
-    /// </summary>
-    [<CLIMutable>]
-    type ConicalReducerGeometry =
-        { OuterDiameterIn: float
-          OuterDiameterOut: float
-          WallThicknessIn: float
-          WallThicknessOut: float
-          Length: float }
-
-    /// <summary>
-    /// Supporting rectangular shell shape kept for existing equipment details such as conveyor boxes.
-    /// </summary>
-    [<CLIMutable>]
-    type RectangularShellGeometry =
-        { Width: float
-          Height: float
-          Length: float
-          Thickness: float }
-
-    /// <summary>
-    /// Supporting porous insert shape kept for demister-style internals.
-    /// </summary>
-    [<CLIMutable>]
-    type PorousPadGeometry =
-        { Area: float
-          Thickness: float }
-
-    /// <summary>
     /// Primitive and composite shapes used to derive component metrics.
     /// </summary>
     type Shape =
         | Cylinder of CylinderGeometry
         | Pipe of PipeGeometry
         | TransitionCone of TransitionConeGeometry
-        | DishedHead of DishedHeadGeometry
+        | HemisphericalHead of HemisphericalHeadGeometry
+        | EllipticalHead of EllipticalHeadGeometry
+        | TorisphericalHead of TorisphericalHeadGeometry
         | Tubesheet of TubesheetGeometry
         | Baffle of BaffleGeometry
         | CylindricalLiner of CylindricalLinerGeometry
@@ -259,10 +120,11 @@ module Geometry =
         fromCylinder (PipeOps.innerDiameter shape) shape.OuterDiameter shape.Length
 
     let private transitionConeMetrics (shape: TransitionConeGeometry) =
-        let di1 = max 0.0 shape.InnerDiameterIn
-        let di2 = max 0.0 shape.InnerDiameterOut
-        let do1 = max di1 (di1 + 2.0 * max 0.0 shape.WallThicknessIn)
-        let do2 = max di2 (di2 + 2.0 * max 0.0 shape.WallThicknessOut)
+        let di1 = max 0.0 shape.LeftInnerDiameter
+        let di2 = max 0.0 shape.RightInnerDiameter
+        let thickness = max 0.0 shape.WallThickness
+        let do1 = max di1 (di1 + 2.0 * thickness)
+        let do2 = max di2 (di2 + 2.0 * thickness)
         let length = max 0.0 shape.Length
         let inner = frustumVolume di1 di2 length
         let outer = frustumVolume do1 do2 length
@@ -282,10 +144,9 @@ module Geometry =
           InternalArea = area
           ExternalArea = area }
 
-    let private sphericalCapMetrics innerDiameter wallThickness capDepth : ShapeMetrics =
-        let di = max 0.0 innerDiameter
+    let private sphericalCapMetrics innerRadius wallThickness capDepth : ShapeMetrics =
+        let radius = max 0.0 innerRadius
         let thickness = max 0.0 wallThickness
-        let radius = di / 2.0
         let depth = min radius (max 0.0 capDepth)
         let meanRadius = radius + thickness / 2.0
         let meanDepth = min meanRadius (depth + thickness / 2.0)
@@ -308,26 +169,53 @@ module Geometry =
 
         max crownRise knuckleRadius
 
-    let private dishedHeadMetrics (shape: DishedHeadGeometry) =
-        let headOnly =
-            match shape.Profile with
-            | Hemispherical capDepth ->
-                let depth = defaultArg capDepth (shape.InnerDiameter / 2.0)
-                sphericalCapMetrics shape.InnerDiameter shape.WallThickness depth
-            | Elliptical crownDepth ->
-                equivalentHeadMetrics shape.InnerDiameter shape.WallThickness crownDepth
-            | Torispherical (crownRadius, knuckleRadius) ->
-                equivalentHeadMetrics
-                    shape.InnerDiameter
-                    shape.WallThickness
-                    (torisphericalDepth shape.InnerDiameter crownRadius knuckleRadius)
+    let private withOptionalSkirt innerDiameter wallThickness cylindricalSkirtLength headOnly =
+        let skirtLength = cylindricalSkirtLength |> Option.defaultValue 0.0
 
-        if shape.CylindricalSkirtLength > 0.0 then
+        if skirtLength > 0.0 then
             let skirt =
                 cylinderMetrics
-                    { InnerDiameter = shape.InnerDiameter
-                      WallThickness = shape.WallThickness
-                      Length = shape.CylindricalSkirtLength }
+                    (CylinderGeometry(
+                        InnerDiameter = innerDiameter,
+                        WallThickness = wallThickness,
+                        Length = skirtLength
+                    ))
+
+            { ComponentVolume = headOnly.ComponentVolume + skirt.ComponentVolume
+              InternalFluidVolume = headOnly.InternalFluidVolume + skirt.InternalFluidVolume
+              InternalArea = headOnly.InternalArea + skirt.InternalArea
+              ExternalArea = headOnly.ExternalArea + skirt.ExternalArea }
+        else
+            headOnly
+
+    let private hemisphericalHeadMetrics (shape: HemisphericalHeadGeometry) =
+        let cutDepth = shape.NegativeCutDepth |> Option.defaultValue 0.0 |> max 0.0
+        let effectiveDepth = max 0.0 (max 0.0 shape.InnerRadius - cutDepth)
+        sphericalCapMetrics shape.InnerRadius shape.WallThickness effectiveDepth
+
+    let private ellipticalHeadMetrics (shape: EllipticalHeadGeometry) =
+        equivalentHeadMetrics shape.InnerDiameter shape.WallThickness (shape.InnerDiameter / 4.0)
+        |> withOptionalSkirt shape.InnerDiameter shape.WallThickness shape.CylindricalSkirtLength
+
+    let private torisphericalHeadMetrics (shape: TorisphericalHeadGeometry) =
+        let headOnly =
+            equivalentHeadMetrics
+                shape.InnerDiameter
+                shape.WallThickness
+                (torisphericalDepth shape.InnerDiameter shape.CrownRadius shape.KnuckleRadius)
+
+        let skirtLength = shape.CylindricalSkirtLength |> Option.defaultValue 0.0
+
+        if skirtLength > 0.0 then
+            let skirtInnerDiameter = shape.CylindricalSkirtInnerDiameter |> Option.defaultValue shape.InnerDiameter
+            let skirtWallThickness = shape.CylindricalSkirtWallThickness |> Option.defaultValue shape.WallThickness
+            let skirt =
+                cylinderMetrics
+                    (CylinderGeometry(
+                        InnerDiameter = skirtInnerDiameter,
+                        WallThickness = skirtWallThickness,
+                        Length = skirtLength
+                    ))
 
             { ComponentVolume = headOnly.ComponentVolume + skirt.ComponentVolume
               InternalFluidVolume = headOnly.InternalFluidVolume + skirt.InternalFluidVolume
@@ -363,9 +251,11 @@ module Geometry =
             let flareWallThickness = defaultArg flareWallThickness thickness
             let flare =
                 cylinderMetrics
-                    { InnerDiameter = shape.Diameter
-                      WallThickness = flareWallThickness
-                      Length = flareLength }
+                    (CylinderGeometry(
+                        InnerDiameter = shape.Diameter,
+                        WallThickness = flareWallThickness,
+                        Length = flareLength
+                    ))
 
             let knuckleArea =
                 2.0
@@ -451,7 +341,9 @@ module Geometry =
         | Cylinder x -> cylinderMetrics x
         | Pipe x -> pipeMetrics x
         | TransitionCone x -> transitionConeMetrics x
-        | DishedHead x -> dishedHeadMetrics x
+        | HemisphericalHead x -> hemisphericalHeadMetrics x
+        | EllipticalHead x -> ellipticalHeadMetrics x
+        | TorisphericalHead x -> torisphericalHeadMetrics x
         | Tubesheet x -> tubesheetMetrics x
         | Baffle x -> baffleMetrics x
         | CylindricalLiner x -> cylindricalLinerMetrics x
@@ -480,7 +372,9 @@ module Geometry =
         | Cylinder x -> max 0.0 x.Length
         | Pipe x -> max 0.0 x.Length
         | TransitionCone x -> max 0.0 x.Length
-        | DishedHead x -> max 0.0 x.CylindricalSkirtLength
+        | HemisphericalHead _ -> 0.0
+        | EllipticalHead x -> x.CylindricalSkirtLength |> Option.defaultValue 0.0 |> max 0.0
+        | TorisphericalHead x -> x.CylindricalSkirtLength |> Option.defaultValue 0.0 |> max 0.0
         | Tubesheet _
         | Baffle _
         | ImpingementPlate _

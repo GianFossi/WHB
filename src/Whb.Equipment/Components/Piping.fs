@@ -57,9 +57,11 @@ module Piping =
             name
             bom
             (Geometry.Pipe
-                { OuterDiameter = outerDiameter
-                  WallThickness = wallThickness innerDiameter outerDiameter
-                  Length = length })
+                (PipeGeometry(
+                    OuterDiameter = outerDiameter,
+                    WallThickness = wallThickness innerDiameter outerDiameter,
+                    Length = length
+                )))
             material
             internalFluid
         |> StraightPipeSpool
@@ -70,11 +72,13 @@ module Piping =
             name
             bom
             (Geometry.PipeElbow
-                { OuterDiameter = outerDiameter
-                  WallThickness = wallThickness innerDiameter outerDiameter
-                  AngleDeg = angleDeg
-                  CenterlineRadiusOverDiameter = centerlineRadiusOverDiameter
-                  CoverageFraction = 1.0 })
+                (PipeElbowGeometry(
+                    OuterDiameter = outerDiameter,
+                    WallThickness = wallThickness innerDiameter outerDiameter,
+                    AngleDeg = angleDeg,
+                    CenterlineRadiusOverDiameter = centerlineRadiusOverDiameter,
+                    CoverageFraction = 1.0
+                )))
             material
             internalFluid
         |> Elbow
@@ -85,11 +89,13 @@ module Piping =
             name
             bom
             (Geometry.ConicalReducer
-                { OuterDiameterIn = outerDiameterIn
-                  OuterDiameterOut = outerDiameterOut
-                  WallThicknessIn = wallThickness innerDiameterIn outerDiameterIn
-                  WallThicknessOut = wallThickness innerDiameterOut outerDiameterOut
-                  Length = length })
+                (ConicalReducerGeometry(
+                    OuterDiameterIn = outerDiameterIn,
+                    OuterDiameterOut = outerDiameterOut,
+                    WallThicknessIn = wallThickness innerDiameterIn outerDiameterIn,
+                    WallThicknessOut = wallThickness innerDiameterOut outerDiameterOut,
+                    Length = length
+                )))
             material
             internalFluid
         |> Reducer
