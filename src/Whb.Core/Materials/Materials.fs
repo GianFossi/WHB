@@ -1,5 +1,8 @@
 namespace Whb.Core
 module Materials =
+    /// <summary>
+    /// Describes a metallic material with its thermal, mechanical, and corrosion properties.
+    /// </summary>
     type Material =
         { Name: string
           K: float -> float
@@ -9,7 +12,16 @@ module Materials =
           Sy: float -> float
           MetalDusting: (float * float) option
           Note: string }
+    /// <summary>
+    /// Builds a linear thermal-conductivity model from a reference value and a slope.
+    /// </summary>
+    /// <param name="k0">Thermal conductivity at 0 °C in W/(m·K).</param>
+    /// <param name="slope">Temperature slope in W/(m·K²).</param>
+    /// <returns>A conductivity function of temperature.</returns>
     let private lin (k0: float) (slope: float) = fun (t: float) -> k0 + slope * t
+    /// <summary>
+    /// Carbon steel material profile typically used for low-temperature sections and shell components.
+    /// </summary>
     let carbonSteel =
         { Name = "SA-192 / SA-210 A1 (acciaio al carbonio)"
           K = lin 52.0 -0.028
@@ -19,6 +31,9 @@ module Materials =
           TmaxDesign = 450.0
           MetalDusting = Some(400.0, 800.0)
           Note = "Limite pratico 450 °C (creep + grafitizzazione oltre 425 °C)." }
+    /// <summary>
+    /// 0.5Mo steel used for moderate-temperature heat-transfer sections.
+    /// </summary>
     let t1Mo =
         { Name = "SA-209 T1 (0.5Mo)"
           K = lin 49.0 -0.024
@@ -28,6 +43,9 @@ module Materials =
           TmaxDesign = 480.0
           MetalDusting = Some(400.0, 800.0)
           Note = "Grafitizzazione possibile oltre 450 °C in esercizio prolungato." }
+    /// <summary>
+    /// 1.25Cr-0.5Mo alloy profile used in hot gas-side sections.
+    /// </summary>
     let t11 =
         { Name = "SA-213 T11 (1.25Cr-0.5Mo)"
           K = lin 42.0 -0.014
@@ -37,6 +55,9 @@ module Materials =
           TmaxDesign = 550.0
           MetalDusting = Some(430.0, 820.0)
           Note = "Buon compromesso per zone calde di WHB syngas." }
+    /// <summary>
+    /// 2.25Cr-1Mo steel profile for hot, highly stressed service.
+    /// </summary>
     let t22 =
         { Name = "SA-213 T22 (2.25Cr-1Mo)"
           K = lin 38.0 -0.010
@@ -46,6 +67,9 @@ module Materials =
           TmaxDesign = 580.0
           MetalDusting = Some(430.0, 850.0)
           Note = "Standard per tubi caldi di WHB reforming." }
+    /// <summary>
+    /// Austenitic stainless steel profile for corrosive hot-gas service.
+    /// </summary>
     let ss321h =
         { Name = "SA-213 TP321H (austenitico)"
           K = fun t -> 14.5 + 0.0155 * t
@@ -55,6 +79,9 @@ module Materials =
           TmaxDesign = 700.0
           MetalDusting = Some(450.0, 900.0)
           Note = "Suscettibile a SCC da cloruri lato acqua: da evitare a contatto con BFW." }
+    /// <summary>
+    /// Alloy 800 profile for ferrule and high-temperature insert applications.
+    /// </summary>
     let alloy800 =
         { Name = "Alloy 800H/800HT"
           K = fun t -> 11.5 + 0.0165 * t
@@ -64,6 +91,9 @@ module Materials =
           TmaxDesign = 800.0
           MetalDusting = Some(450.0, 900.0)
           Note = "Tipico per ferrule/inserti e boccole in zona ingresso gas." }
+    /// <summary>
+    /// Alloy 601 profile for high-temperature liner and oxidation-resistant applications.
+    /// </summary>
     let alloy601 =
         { Name = "Alloy 601 / 602 CA (liner by-pass)"
           K = fun t -> 11.3 + 0.0163 * t
@@ -73,6 +103,9 @@ module Materials =
           TmaxDesign = 1100.0
           MetalDusting = Some(450.0, 900.0)
           Note = "Alto Cr-Al, resistente a ossidazione e carburizzazione ad alta temperatura." }
+    /// <summary>
+    /// SA-533 Grade B profile for pressure-vessel shell constructions and boned plate service.
+    /// </summary>
     let sa533b2 =
         { Name = "SA-533 Gr.B Cl.2 (Mn-Mo-Ni bonificato)"
           K = lin 41.0 -0.017
@@ -82,6 +115,9 @@ module Materials =
           TmaxDesign = 400.0
           MetalDusting = None
           Note = "Lamiera per recipienti a pressione, bonificata. Limite pratico ASME VIII ~371 °C." }
+    /// <summary>
+    /// Alloy 602 profile for very high-temperature liner service.
+    /// </summary>
     let alloy602 =
         { Name = "SB-168 UNS N06025 (Alloy 602 CA)"
           K = lin 10.5 0.0160
@@ -91,6 +127,9 @@ module Materials =
           TmaxDesign = 1200.0
           MetalDusting = Some(450.0, 900.0)
           Note = "Lega per liner ad altissima temperatura: resistenza alla carburazione data dal 2.2 % di Al." }
+    /// <summary>
+    /// SA-516 Grade 70 profile for shell and non-process-exposed sections.
+    /// </summary>
     let sa516 =
         { Name = "SA-516 Gr.70 (lamiera mantello)"
           K = lin 52.0 -0.028
@@ -100,17 +139,57 @@ module Materials =
           TmaxDesign = 425.0
           MetalDusting = None
           Note = "Materiale di mantello tipico; non esposto al gas di processo." }
+    /// <summary>
+    /// Returns the complete catalog of supported alloy profiles.
+    /// </summary>
+    /// <returns>The full list of material definitions.</returns>
     let all = [ carbonSteel; t1Mo; t11; t22; ss321h; alloy800; alloy601; alloy602; sa516; sa533b2 ]
+    /// <summary>
+    /// Finds the closest material record by a name fragment.
+    /// </summary>
+    /// <param name="n">A material name fragment or abbreviation.</param>
+    /// <returns>The matching material or the default carbon steel profile.</returns>
     let byName (n: string) =
         all
         |> List.tryFind (fun m -> m.Name.ToLowerInvariant().Contains(n.ToLowerInvariant()))
         |> Option.defaultValue carbonSteel
+    /// <summary>
+    /// Calculates the thermal elongation of a material between room temperature and the target condition.
+    /// </summary>
+    /// <param name="m">The material definition.</param>
+    /// <param name="tRoom">Reference temperature in °C.</param>
+    /// <param name="l">Original length in meters.</param>
+    /// <param name="t">Target temperature in °C.</param>
+    /// <returns>The thermal elongation in meters.</returns>
     let elongation (m: Material) (tRoom: float) (l: float) (t: float) =
         m.Alpha t * (t - tRoom) * l
+    /// <summary>
+    /// Provides thermal conductivity models for common refractory layers.
+    /// </summary>
     module Refractory =
+        /// <summary>
+        /// Light castable refractory conductivity model.
+        /// </summary>
+        /// <param name="t">Temperature in °C.</param>
+        /// <returns>Conductivity in W/(m·K).</returns>
         let castableLight (t: float) = 0.35 + 0.00025 * t
+        /// <summary>
+        /// Ceramic fiber conductivity model.
+        /// </summary>
+        /// <param name="t">Temperature in °C.</param>
+        /// <returns>Conductivity in W/(m·K).</returns>
         let ceramicFibre (t: float) = 0.12 + 0.00035 * t
+        /// <summary>
+        /// Dense castable refractory conductivity model.
+        /// </summary>
+        /// <param name="t">Temperature in °C.</param>
+        /// <returns>Conductivity in W/(m·K).</returns>
         let castableDense (t: float) = 1.2 + 0.0003 * t
+        /// <summary>
+        /// Saffil paper conductivity model.
+        /// </summary>
+        /// <param name="t">Temperature in °C.</param>
+        /// <returns>Conductivity in W/(m·K).</returns>
         let saffilPaper (t: float) = 0.07 + 0.00015 * t
 
 

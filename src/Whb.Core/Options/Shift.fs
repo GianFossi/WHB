@@ -11,16 +11,19 @@ open GasProps
 /// Models water-gas shift equilibrium or frozen-composition behavior for process calculations. The selected mode affects gas composition, enthalpy inversion, and thermal balance; confirm equilibrium assumptions against process chemistry requirements.
 /// </remarks>
 module Shift =
+    /// <summary>Defines how water-gas shift chemistry is applied with temperature.</summary>
     type Mode =
         | Frozen
         | EquilibriumAbove of tFreezeK: float
         | FractionalApproach of frac: float * tFreezeK: float
+    /// <summary>Returns the display name of a shift-chemistry mode.</summary>
     let modeName =
         function
         | Frozen -> "congelata (nessuna reazione)"
         | EquilibriumAbove t -> sprintf "equilibrio sopra %.0f °C, poi congelata" (kToC t)
         | FractionalApproach(f, t) ->
             sprintf "approccio %.0f%% all'equilibrio sopra %.0f °C" (100.0 * f) (kToC t)
+    /// <summary>Computes the equilibrium constant for the water-gas shift reaction.</summary>
     let kp (tK: float) = exp (4577.8 / tK - 4.33)
     let private extent (nCO: float) (nH2O: float) (nCO2: float) (nH2: float) (k: float) =
         let a = k - 1.0
@@ -53,6 +56,7 @@ module Shift =
         |> upd H2O (get H2O - xi)
         |> upd CO2 (get CO2 + xi)
         |> upd H2 (get H2 + xi)
+    /// <summary>Applies the configured water-gas shift model to a composition.</summary>
     let equilibrate (mode: Mode) (c0: Composition) (tK: float) : Composition =
         match mode with
         | Frozen -> c0
@@ -67,6 +71,7 @@ module Shift =
                 let c = normalize c0
                 let xiEq = extent (molFrac c CO) (molFrac c H2O) (molFrac c CO2) (molFrac c H2) (kp tK)
                 normalize (applyExtent c (frac * xiEq))
+    /// <summary>Solves temperature and shifted composition from pressure, composition, and enthalpy.</summary>
     let stateFromEnthalpyAt (mode: Mode) (real: bool) (pPa: float) (cIn: Composition) (h: float) =
         // Enthalpy grows monotonically with temperature (cp > 0), so the inversion is
         // driven by a bracketed Newton iteration on the residual, using the mixture cp
@@ -93,6 +98,7 @@ module Shift =
         match mode with
         | Frozen -> cIn
         | _ -> snd (stateFromEnthalpyAt mode real pPa cIn h)
+    /// <summary>Solves temperature and shifted composition using the ideal-gas property model.</summary>
     let stateFromEnthalpy (mode: Mode) (cIn: Composition) (h: float) =
         stateFromEnthalpyAt mode false 0.0 cIn h
 

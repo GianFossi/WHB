@@ -11,6 +11,7 @@ type EquipmentPackage =
       Downcomers: PipelineEquipment list
       SteamDrum: SteamDrumEquipment
       Notes: string }
+    /// <summary>Returns aggregate geometry and material metrics for the package.</summary>
     member x.Metrics =
         Metrics.combine
             [ yield! x.Whbs |> Seq.map (fun whb -> whb.Metrics)
@@ -21,6 +22,7 @@ type EquipmentPackage =
 [<RequireQualifiedAccess>]
 module EquipmentPackage =
 
+  /// <summary>Creates an equipment package from a core snapshot contract.</summary>
     let ofWhbCore (source: Interop.IWhbCoreEquipmentSnapshot) =
         { Name = source.PackageName
           Whbs = source.Whbs

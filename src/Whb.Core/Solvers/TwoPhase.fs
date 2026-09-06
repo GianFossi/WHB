@@ -10,17 +10,20 @@ open Constants
 /// Uses theoretical mixture relations and empirical two-phase flow multipliers for circulation, void fraction, density, and pressure-drop calculations. Correlation validity depends on pressure, vapor quality, geometry, and flow regime; confirm limits before extrapolation.
 /// </remarks>
 module TwoPhase =
+    /// <summary>Available void-fraction models.</summary>
     type VoidModel =
         | Homogeneous
         | ChisholmSlip
         | ZuberFindlay
         | Smith
+    /// <summary>Returns the display name of a void-fraction model.</summary>
     let voidModelName =
         function
         | Homogeneous -> "Omogeneo (S = 1)"
         | ChisholmSlip -> "Chisholm (slip ratio)"
         | ZuberFindlay -> "Zuber-Findlay (drift-flux)"
         | Smith -> "Smith (1969)"
+    /// <summary>Computes vapor void fraction from quality, saturation properties, and mass flux.</summary>
     let voidFraction (model: VoidModel) (x: float) (s: Steam.SatProps) (g_: float) =
         let x = min 0.9999 (max 0.0 x)
         if x <= 0.0 then 0.0
@@ -45,26 +48,32 @@ module TwoPhase =
                 let vgj = 1.53 * Math.Pow(s.Sigma * g * (s.RhoL - s.RhoV) / (s.RhoL * s.RhoL), 0.25)
                 let a = jv / (c0 * j + vgj)
                 min 0.999 (max 0.0 a)
+    /// <summary>Computes homogeneous mixture density from void fraction.</summary>
     let mixtureDensity (alpha: float) (s: Steam.SatProps) =
         alpha * s.RhoV + (1.0 - alpha) * s.RhoL
+    /// <summary>Computes the homogeneous two-phase density from vapor quality.</summary>
     let homogeneousDensity (x: float) (s: Steam.SatProps) =
         1.0 / (x / s.RhoV + (1.0 - x) / s.RhoL)
+    /// <summary>Available two-phase friction multiplier models.</summary>
     type FrictionModel =
         | HomogeneousFriction
         | LockhartMartinelli
         | Friedel
         | ChisholmB
+    /// <summary>Returns the display name of a friction model.</summary>
     let frictionModelName =
         function
         | HomogeneousFriction -> "Omogeneo (McAdams)"
         | LockhartMartinelli -> "Lockhart-Martinelli / Chisholm"
         | Friedel -> "Friedel (1979)"
         | ChisholmB -> "Chisholm B (1973)"
+    /// <summary>Computes the Martinelli parameter $X_{tt}$.</summary>
     let martinelliXtt (x: float) (s: Steam.SatProps) =
         let x = min 0.999 (max 1e-6 x)
         Math.Pow((1.0 - x) / x, 0.9)
         * Math.Pow(s.RhoV / s.RhoL, 0.5)
         * Math.Pow(s.MuL / s.MuV, 0.1)
+    /// <summary>Computes the two-phase friction multiplier relative to liquid-only flow.</summary>
     let phi2LO (model: FrictionModel) (x: float) (g_: float) (d: float) (s: Steam.SatProps) =
         let x = min 0.999 (max 0.0 x)
         if x <= 0.0 then 1.0
@@ -103,12 +112,14 @@ module TwoPhase =
                 let fr = vel * vel / (g * d)
                 let we = g_ * g_ * d / (rhoH * s.Sigma)
                 e + 3.24 * f * h / (Math.Pow(fr, 0.045) * Math.Pow(we, 0.035))
+    /// <summary>Computes two-phase frictional pressure drop along a tube.</summary>
     let dpFrictionTwoPhase
         (model: FrictionModel) (x: float) (g_: float) (d: float) (l: float) (s: Steam.SatProps) =
         let reLO = max 1.0 (g_ * d / s.MuL)
         let fLO = GasSide.darcyFriction reLO 0.0
         let dpLO = fLO * l / d * g_ * g_ / (2.0 * s.RhoL)
         dpLO * phi2LO model x g_ d s
+    /// <summary>Computes acceleration pressure drop between inlet and outlet quality.</summary>
     let dpAcceleration (model: VoidModel) (xIn: float) (xOut: float) (g_: float) (s: Steam.SatProps) =
         let term x =
             let a = voidFraction model x s g_
@@ -116,9 +127,11 @@ module TwoPhase =
             elif a >= 1.0 then 1.0 / s.RhoV
             else x * x / (s.RhoV * a) + (1.0 - x) ** 2.0 / (s.RhoL * (1.0 - a))
         g_ * g_ * (term xOut - term xIn)
+    /// <summary>Computes the static pressure contribution over an elevation change.</summary>
     let dpStatic (model: VoidModel) (x: float) (g_: float) (h: float) (s: Steam.SatProps) =
         let a = voidFraction model x s g_
         mixtureDensity a s * g * h
+    /// <summary>Computes the tube-bundle crossflow friction factor.</summary>
     let bundleFrictionFactor (re: float) (a: float) (b: float) (staggered: bool) =
         let re = max 10.0 re
         if staggered then
@@ -126,13 +139,16 @@ module TwoPhase =
         else
             (0.044 + 0.08 * b / Math.Pow(max 0.05 (a - 1.0), 0.43 + 1.13 / b))
             * Math.Pow(re, -0.15)
+    /// <summary>Computes single-phase bundle crossflow pressure drop.</summary>
     let dpCrossflow (re: float) (nRows: float) (gMax: float) (rho: float) (a: float) (b: float) (staggered: bool) =
         let f = bundleFrictionFactor re a b staggered
         f * nRows * gMax * gMax / (2.0 * rho)
+    /// <summary>Computes the crossflow two-phase multiplier relative to liquid flow.</summary>
     let phi2CrossflowLiquid (x: float) (s: Steam.SatProps) =
         let xtt = martinelliXtt x s
         let c = 8.0
         1.0 + c / xtt + 1.0 / (xtt * xtt)
+    /// <summary>Computes two-phase pressure drop across a tube bundle.</summary>
     let dpCrossflowTwoPhase
         (x: float) (nRows: float) (gMax: float) (s: Steam.SatProps)
         (d: float) (a: float) (b: float) (staggered: bool) =

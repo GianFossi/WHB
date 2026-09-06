@@ -21,6 +21,7 @@ type WhbEquipment =
       Name: string
       Bom: Bom.BomItem
       Components: Component list }
+    /// <summary>Returns aggregate metrics for all WHB components.</summary>
     member x.Metrics = x.Components |> Component.totalMetrics
 
 /// <summary>
@@ -33,16 +34,20 @@ type SteamDrumEquipment =
       Bom: Bom.BomItem
       Components: Component list
       Levels: LevelDefinition }
+    /// <summary>Returns aggregate metrics for all steam-drum components.</summary>
     member x.Metrics = x.Components |> Component.totalMetrics
 
 [<RequireQualifiedAccess>]
 module EquipmentAssemblies =
 
+    /// <summary>Creates a tube-bundle assembly from its tube bank and accessory components.</summary>
     let tubeBundle id name bom tubeBank otherComponents =
         Component.createAssembly id name bom (tubeBank :: otherComponents)
 
+    /// <summary>Creates a central-bypass assembly.</summary>
     let centralBypass id name bom components =
         Component.createAssembly id name bom components
 
+    /// <summary>Creates a steam-drum component assembly.</summary>
     let steamDrumSection id name bom components =
         Component.createAssembly id name bom components

@@ -10,12 +10,14 @@ open Constants
 /// Uses empirical boiling, convection, pressure-drop, and wall-temperature correlations for water-side thermal calculations. Treat results as engineering estimates and verify pressure, quality, mass flux, and SI-unit assumptions against the applicable design code or vendor method.
 /// </remarks>
 module WaterSide =
+    /// <summary>Available pool-boiling heat-transfer correlations.</summary>
     type PoolBoilingCorrelation =
         | Mostinski
         | Cooper
         | Rohsenow
         | Gorenflo
         | CornwellHouston
+    /// <summary>Returns the display name of a pool-boiling correlation.</summary>
     let poolBoilingName =
         function
         | Mostinski -> "Mostinski (1963) - stati corrispondenti"
@@ -23,11 +25,17 @@ module WaterSide =
         | Rohsenow -> "Rohsenow (1952) - Csf acqua/acciaio"
         | Gorenflo -> "Gorenflo (VDI Heat Atlas)"
         | CornwellHouston -> "Cornwell-Houston (1994) - tubo singolo/fascio"
+    /// <summary>Computes the Mostinski pool-boiling heat-transfer coefficient.</summary>
+    /// <param name="q">Heat flux in W/m².</param><param name="p">Pressure in Pa.</param><param name="pc">Critical pressure in Pa.</param>
+    /// <returns>Heat-transfer coefficient in W/(m²·K).</returns>
     let hMostinski (q: float) (p: float) (pc: float) =
         let pr = p / pc
         let pcKPa = pc / 1000.0
         let fp = 1.8 * Math.Pow(pr, 0.17) + 4.0 * Math.Pow(pr, 1.2) + 10.0 * Math.Pow(pr, 10.0)
         0.00417 * Math.Pow(pcKPa, 0.69) * Math.Pow(max q 1.0, 0.7) * fp
+    /// <summary>Computes the Cooper pool-boiling heat-transfer coefficient.</summary>
+    /// <param name="q">Heat flux in W/m².</param><param name="p">Pressure in Pa.</param><param name="pc">Critical pressure in Pa.</param><param name="rp">Relative roughness.</param><param name="mMol">Molar mass in g/mol.</param>
+    /// <returns>Heat-transfer coefficient in W/(m²·K).</returns>
     let hCooper (q: float) (p: float) (pc: float) (rp: float) (mMol: float) =
         let pr = max 1e-4 (p / pc)
         55.0
@@ -35,6 +43,7 @@ module WaterSide =
         * Math.Pow(-log10 pr, -0.55)
         * Math.Pow(mMol, -0.5)
         * Math.Pow(max q 1.0, 0.67)
+    /// <summary>Computes the Rohsenow pool-boiling coefficient from wall superheat.</summary>
     let hRohsenow (dTe: float) (s: Steam.SatProps) (csf: float) (sExp: float) =
         if dTe <= 0.0 then 0.0
         else
@@ -42,6 +51,7 @@ module WaterSide =
             let b = s.CpL * dTe / (csf * s.Hfg * Math.Pow(s.PrL, sExp))
             let q = a * Math.Pow(b, 3.0)
             q / dTe
+    /// <summary>Computes the Gorenflo pool-boiling heat-transfer coefficient.</summary>
     let hGorenflo (q: float) (p: float) (pc: float) (rp: float) =
         let pr = max 1e-4 (min 0.95 (p / pc))
         let h0 = 5600.0
@@ -50,6 +60,7 @@ module WaterSide =
         let fp = 1.73 * Math.Pow(pr, 0.27) + (6.1 + 0.68 / (1.0 - pr)) * pr * pr
         let n = 0.9 - 0.3 * Math.Pow(pr, 0.15)
         h0 * fp * Math.Pow(max q 1.0 / q0, n) * Math.Pow(rp / rp0, 0.133)
+    /// <summary>Computes the Cornwell-Houston pool-boiling coefficient for a tube or bundle.</summary>
     let hCornwellHouston (q: float) (d: float) (p: float) (pc: float) (s: Steam.SatProps) =
         let pr = p / pc
         let pcBar = pc / 1.0e5
@@ -57,6 +68,7 @@ module WaterSide =
         let reb = max 1.0 (q * d / (s.MuL * s.Hfg))
         let nu = 9.7 * Math.Pow(pcBar, 0.5) * fp * Math.Pow(reb, 0.67) * Math.Pow(s.PrL, 0.4)
         nu * s.KL / d
+    /// <summary>Selects and evaluates the requested pool-boiling correlation.</summary>
     let hPool
         (corr: PoolBoilingCorrelation)
         (q: float)
@@ -77,6 +89,7 @@ module WaterSide =
                 a * Math.Pow(b, 3.0) - q
             let dTe = bisect f 0.01 200.0 1e-6 200
             if dTe <= 0.0 then 0.0 else q / dTe
+    /// <summary>Computes the natural-convection coefficient for saturated liquid around a tube.</summary>
     let hNaturalConvection (d: float) (dT: float) (s: Steam.SatProps) =
         if dT <= 0.0 then 0.0
         else
@@ -88,7 +101,9 @@ module WaterSide =
                             / Math.Pow(1.0 + Math.Pow(0.559 / s.PrL, 9.0 / 16.0), 8.0 / 27.0)
             let nu = num * num
             nu * s.KL / d
+    /// <summary>Clamps a bundle enhancement factor to at least unity.</summary>
     let bundleFactor (fb: float) = max 1.0 fb
+    /// <summary>Computes the Chen two-phase enhancement factor.</summary>
     let chenF (x: float) (s: Steam.SatProps) =
         let x = min 0.99 (max 1e-4 x)
         let xtt =
@@ -97,9 +112,11 @@ module WaterSide =
             * Math.Pow(s.MuL / s.MuV, 0.1)
         let inv = 1.0 / xtt
         if inv <= 0.1 then 1.0 else 2.35 * Math.Pow(inv + 0.213, 0.736)
+    /// <summary>Computes the Chen suppression factor.</summary>
     let chenS (reL: float) (f: float) =
         let retp = reL * Math.Pow(f, 1.25)
         1.0 / (1.0 + 2.53e-6 * Math.Pow(retp, 1.17))
+    /// <summary>Computes the Forster-Zuber nucleate-boiling coefficient.</summary>
     let hForsterZuber (dTsat: float) (dPsat: float) (s: Steam.SatProps) =
         if dTsat <= 0.0 then 0.0
         else
@@ -109,24 +126,32 @@ module WaterSide =
                * Math.Pow(s.RhoV, 0.24))
             * Math.Pow(dTsat, 0.24)
             * Math.Pow(max dPsat 0.0, 0.75)
+    /// <summary>Computes the boiling number from heat flux, mass flux, and latent heat.</summary>
     let boilingNumber (q: float) (gMass: float) (hfg: float) =
         max 0.0 q / (max 1.0 gMass * max 1.0 hfg)
+    /// <summary>Computes the Lockhart-Martinelli-style convection number.</summary>
     let convectionNumber (x: float) (s: Steam.SatProps) =
         let xc = min 0.95 (max 1e-4 x)
         Math.Pow((1.0 - xc) / xc, 0.8) * Math.Pow(s.RhoV / s.RhoL, 0.5)
+    /// <summary>Computes the liquid-only Froude number.</summary>
     let froudeLO (gMass: float) (d: float) (s: Steam.SatProps) =
         gMass * gMass / (s.RhoL * s.RhoL * g * max 1e-6 d)
+    /// <summary>Computes the Kandlikar orientation correction factor.</summary>
     let kandlikarF2 (frLO: float) (horizontal: bool) =
         if horizontal && frLO < 0.04 then Math.Pow(25.0 * frLO, 0.3) else 1.0
+    /// <summary>Dominant flow-boiling regime selected by the correlation.</summary>
     type FlowBoilingRegime =
         | NucleateBoilingDominant
         | ConvectiveBoilingDominant
+    /// <summary>Returns the display name of a flow-boiling regime.</summary>
     let flowBoilingRegimeName =
         function
         | NucleateBoilingDominant -> "NBD - ebollizione nucleata dominante"
         | ConvectiveBoilingDominant -> "CBD - ebollizione convettiva dominante"
+    /// <summary>Selects the flow-boiling regime from the convection number.</summary>
     let regimeByCo (co: float) =
         if co > 0.65 then NucleateBoilingDominant else ConvectiveBoilingDominant
+    /// <summary>Stores the intermediate and selected Kandlikar flow-boiling results.</summary>
     type KandlikarResult =
         { HNbd: float
           HCbd: float
@@ -136,6 +161,7 @@ module WaterSide =
           FrLO: float
           F2: float
           Regime: FlowBoilingRegime }
+    /// <summary>Computes nucleate and convective Kandlikar boiling coefficients.</summary>
     let hKandlikar
         (hLO: float) (q: float) (gMass: float) (x: float) (d: float)
         (horizontal: bool) (fFl: float) (s: Steam.SatProps) : KandlikarResult =
@@ -156,17 +182,22 @@ module WaterSide =
           FrLO = fr
           F2 = f2
           Regime = if hNbd >= hCbd then NucleateBoilingDominant else ConvectiveBoilingDominant }
+    /// <summary>Available flow-boiling combination models.</summary>
     type FlowBoilingModel =
         | ChenSuperposition
         | KandlikarMax
+    /// <summary>Returns the display name of a flow-boiling model.</summary>
     let flowBoilingModelName =
         function
         | ChenSuperposition -> "Chen (superposizione con soppressione)"
         | KandlikarMax -> "Kandlikar (1990) - max(h_NBD, h_CBD)"
+    /// <summary>Converts the required minimum DNBR into an allowable heat-flux fraction.</summary>
     let dnbAllowableFraction (requiredMinDNBR: float) =
         1.0 / max 1e-9 requiredMinDNBR
+    /// <summary>Returns the required DNBR threshold for a cell.</summary>
     let dnbrRequired (requiredMinDNBR: float) (_firstRow: bool) (_inFerrule: bool) =
         max 1e-9 requiredMinDNBR
+    /// <summary>Computes the Zukauskas crossflow heat-transfer coefficient for a tube bank.</summary>
     let hZukauskas (reMax: float) (pr: float) (prW: float) (k: float) (d: float) (staggered: bool) (stOverSl: float) =
         let c, m =
             if staggered then
@@ -176,6 +207,7 @@ module WaterSide =
                 (if reMax < 2.0e5 then (0.27, 0.63) else (0.021, 0.84))
         let nu = c * Math.Pow(reMax, m) * Math.Pow(pr, 0.36) * Math.Pow(pr / prW, 0.25)
         nu * k / d
+    /// <summary>Combines shell-side pool-boiling and convection contributions.</summary>
     let shellSideHtc
         (corr: PoolBoilingCorrelation)
         (q: float)
@@ -188,9 +220,11 @@ module WaterSide =
         =
         let hnb = hPool corr q dOut s rp csf
         hnb * bundleFactor fb + hConv
+    /// <summary>Computes the Zuber critical heat flux.</summary>
     let chfZuber (s: Steam.SatProps) =
         0.131 * s.Hfg * Math.Pow(s.RhoV, 0.5)
         * Math.Pow(s.Sigma * g * (s.RhoL - s.RhoV), 0.25)
+    /// <summary>Computes critical heat flux for a horizontal tube.</summary>
     let chfHorizontalTube (d: float) (s: Steam.SatProps) =
         let lc = sqrt (s.Sigma / (g * (s.RhoL - s.RhoV)))
         let rp = d / 2.0 / lc
@@ -199,17 +233,21 @@ module WaterSide =
             elif rp > 0.15 then 1.05 * Math.Pow(rp, -0.25)
             else 1.4 * Math.Pow(rp, -0.25)
         chfZuber s * corr
+    /// <summary>Computes the Mostinski critical heat flux estimate.</summary>
     let chfMostinski (p: float) (pc: float) =
         let pr = p / pc
         let pcKPa = pc / 1000.0
         0.368 * pcKPa * Math.Pow(pr, 0.35) * Math.Pow(1.0 - pr, 0.9) * 1000.0
+    /// <summary>Computes the Palen bundle correction factor.</summary>
     let palenPhiB (dBundle: float) (lTube: float) (areaOut: float) =
         if areaOut <= 0.0 then 1.0
         else
             let psi = dBundle * lTube / areaOut
             max 0.1 (min 1.0 (3.1 * psi))
+    /// <summary>Computes bundle critical heat flux from the tube value and Palen factor.</summary>
     let chfBundle (dBundle: float) (lTube: float) (areaOut: float) (qCritTube: float) =
         palenPhiB dBundle lTube areaOut * qCritTube
+    /// <summary>Computes the Lienhard-Eichhorn crossflow critical heat flux.</summary>
     let chfLienhardEichhorn (d: float) (u: float) (s: Steam.SatProps) =
         let uu = max 0.01 u
         let we = s.RhoV * uu * uu * d / s.Sigma
@@ -217,19 +255,23 @@ module WaterSide =
         let low = baseq / Math.PI * (1.0 + Math.Pow(4.0 / max 1e-9 we, 1.0 / 3.0))
         let high = baseq * (1.0 / (169.0 * Math.PI) + Math.Pow(we, -1.0 / 3.0) / 19.2)
         max low high
+    /// <summary>Computes critical heat-flux derating as a function of vapor quality.</summary>
     let chfQualityDerating (x: float) (xCrit: float) =
         max 0.1 (1.0 - (max 0.0 x) / (max 1e-3 xCrit))
+    /// <summary>Available critical-heat-flux models.</summary>
     type ChfModel =
         | PalenBundle
         | LienhardEichhornCrossflow
         | ZuberQuality
         | PracticalLimit of float
+    /// <summary>Returns the display name of a critical-heat-flux model.</summary>
     let chfModelName =
         function
         | PalenBundle -> "Palen (fattore di fascio, base kettle)"
         | LienhardEichhornCrossflow -> "Lienhard-Eichhorn (cilindro in crossflow) + derating sul titolo"
         | ZuberQuality -> "Zuber + derating sul titolo"
         | PracticalLimit q -> sprintf "limite pratico di progetto %.0f kW/m2" (q / 1000.0)
+    /// <summary>Evaluates the selected local critical-heat-flux model.</summary>
     let chfLocal (model: ChfModel) (d: float) (u: float) (x: float) (xCrit: float)
                  (phiB: float) (qCritTube: float) (s: Steam.SatProps) =
         match model with
@@ -238,8 +280,10 @@ module WaterSide =
             chfLienhardEichhorn d u s * chfQualityDerating x xCrit
         | ZuberQuality -> chfZuber s * chfQualityDerating x xCrit
         | PracticalLimit q -> q
+    /// <summary>Computes the nucleate-boiling wall superheat estimate.</summary>
     let dTonb (q: float) (rc: float) (s: Steam.SatProps) =
         2.0 * s.Sigma * s.Tsat / (s.RhoV * s.Hfg * rc) + q * rc / s.KL
+    /// <summary>Computes the wall superheat associated with a critical heat flux.</summary>
     let dTcrit (corr: PoolBoilingCorrelation) (qCrit: float) (d: float) (s: Steam.SatProps) (rp: float) (csf: float) =
         let h = hPool corr qCrit d s rp csf
         if h <= 0.0 then nan else qCrit / h

@@ -39,42 +39,50 @@ module Geometry =
     [<RequireQualifiedAccess>]
     module CylinderOps =
 
+        /// <summary>Returns the outer diameter of a cylindrical wall.</summary>
         let outerDiameter (x: CylinderGeometry) =
             max 0.0 x.InnerDiameter + 2.0 * max 0.0 x.WallThickness
 
     [<RequireQualifiedAccess>]
     module PipeOps =
 
+        /// <summary>Returns the inner diameter of a pipe.</summary>
         let innerDiameter (x: PipeGeometry) =
             max 0.0 (max 0.0 x.OuterDiameter - 2.0 * max 0.0 x.WallThickness)
 
     [<RequireQualifiedAccess>]
     module CylindricalLinerOps =
 
+        /// <summary>Returns the outer diameter of a cylindrical liner.</summary>
         let outerDiameter (x: CylindricalLinerGeometry) =
             max 0.0 x.InnerDiameter + 2.0 * max 0.0 x.WallThickness
 
     [<RequireQualifiedAccess>]
     module NozzleOps =
 
+        /// <summary>Returns the outer diameter of a nozzle.</summary>
         let outerDiameter (x: NozzleGeometry) =
             max 0.0 x.InnerDiameter + 2.0 * max 0.0 x.WallThickness
 
     [<RequireQualifiedAccess>]
     module PipeElbowOps =
 
+        /// <summary>Returns the inner diameter of a pipe elbow.</summary>
         let innerDiameter (x: PipeElbowGeometry) =
             max 0.0 (max 0.0 x.OuterDiameter - 2.0 * max 0.0 x.WallThickness)
 
     [<RequireQualifiedAccess>]
     module ConicalReducerOps =
 
+        /// <summary>Returns the inlet inner diameter of a conical reducer.</summary>
         let innerDiameterIn (x: ConicalReducerGeometry) =
             max 0.0 (max 0.0 x.OuterDiameterIn - 2.0 * max 0.0 x.WallThicknessIn)
 
+        /// <summary>Returns the outlet inner diameter of a conical reducer.</summary>
         let innerDiameterOut (x: ConicalReducerGeometry) =
             max 0.0 (max 0.0 x.OuterDiameterOut - 2.0 * max 0.0 x.WallThicknessOut)
 
+    /// <summary>Returns zero-valued shape metrics for fold initialization.</summary>
     let empty : ShapeMetrics =
         { ComponentVolume = 0.0
           InternalFluidVolume = 0.0
@@ -336,6 +344,7 @@ module Geometry =
           InternalArea = 0.0
           ExternalArea = area }
 
+    /// <summary>Evaluates raw volume and area metrics for a primitive or composite shape.</summary>
     let rec evaluate shape =
         match shape with
         | Cylinder x -> cylinderMetrics x
@@ -367,6 +376,7 @@ module Geometry =
             let factor = float (max 0 count)
             evaluate item |> scale factor
 
+    /// <summary>Returns the characteristic developed length of a shape.</summary>
     let rec referenceLength shape =
         match shape with
         | Cylinder x -> max 0.0 x.Length

@@ -9,10 +9,13 @@ open System
 /// Uses empirical forced-convection and friction correlations for gas-side thermal calculations. Check Reynolds and Prandtl ranges, roughness assumptions, radiation settings, and SI units before applying results outside the reference WHB design envelope.
 /// </remarks>
 module GasSide =
+    /// <summary>Computes the Blasius Darcy friction factor.</summary>
     let fBlasius (re: float) = 0.3164 * Math.Pow(re, -0.25)
+    /// <summary>Computes the Filonenko turbulent Darcy friction factor.</summary>
     let fFilonenko (re: float) =
         let x = 1.82 * log10 re - 1.64
         1.0 / (x * x)
+    /// <summary>Solves the Colebrook equation for the Darcy friction factor.</summary>
     let fColebrook (re: float) (relRough: float) =
         let mutable f = fFilonenko re
         let mutable i = 0
@@ -26,11 +29,14 @@ module GasSide =
             f <- fNext
             i <- i + 1
         f
+    /// <summary>Computes the laminar Darcy friction factor.</summary>
     let fLaminar (re: float) = 64.0 / re
+    /// <summary>Selects a Darcy friction factor from Reynolds number and relative roughness.</summary>
     let darcyFriction (re: float) (relRough: float) =
         if re < 2300.0 then fLaminar (max 1.0 re)
         elif relRough > 1e-6 then fColebrook re relRough
         else fFilonenko re
+    /// <summary>Available internal forced-convection Nusselt correlations.</summary>
     type Correlation =
         | DittusBoelter
         | SiederTate
@@ -38,6 +44,7 @@ module GasSide =
         | Gnielinski
         | PetukhovKirillov
         | Hausen
+    /// <summary>Returns the display name of a forced-convection correlation.</summary>
     let correlationName =
         function
         | DittusBoelter -> "Dittus-Boelter (1930)"
@@ -46,6 +53,7 @@ module GasSide =
         | Gnielinski -> "Gnielinski (1976)"
         | PetukhovKirillov -> "Petukhov-Kirillov (1958)"
         | Hausen -> "Hausen (1959)"
+    /// <summary>Computes the fully developed Nusselt number for the selected correlation.</summary>
     let nusseltFD (corr: Correlation) (re: float) (pr: float) (muRatio: float) =
         let ret = max re 1.0
         match corr with
@@ -70,14 +78,18 @@ module GasSide =
                 0.116 * (Math.Pow(ret, 2.0 / 3.0) - 125.0) * Math.Pow(pr, 1.0 / 3.0)
                 * Math.Pow(muRatio, 0.14)
             else 0.023 * Math.Pow(ret, 0.8) * Math.Pow(pr, 0.4)
+    /// <summary>Computes the wall-to-bulk gas-property correction factor.</summary>
     let gasPropertyCorrection (tWallK: float) (tBulkK: float) =
         let r = max 0.2 (min 5.0 (tWallK / tBulkK))
         Math.Pow(r, -0.5)
+    /// <summary>Computes the local entrance-length correction.</summary>
     let entranceCorrection (x: float) (d: float) (c: float) =
         let xe = max x (2.0 * d)
         1.0 + c * Math.Pow(d / xe, 0.7)
+    /// <summary>Computes the mean entrance-length correction over a tube.</summary>
     let entranceCorrectionMean (l: float) (d: float) (c: float) =
         1.0 + c * Math.Pow(d / l, 0.7)
+    /// <summary>Stores local gas-side convection, radiation, and flow results.</summary>
     type GasHtcResult =
         { Re: float
           Pr: float
@@ -89,6 +101,7 @@ module GasSide =
           EpsGas: float
           Velocity: float   // m/s
           MassFlux: float } // kg/(m²·s)
+    /// <summary>Computes the local gas-side heat-transfer coefficient and flow state.</summary>
     let localHtc
         (corr: Correlation)
         (props: GasProps.MixProps)
@@ -124,8 +137,10 @@ module GasSide =
         { Re = re; Pr = pr; NuFD = nuFD; Nu = nu
           HConv = hConv; HRad = hRad; HTot = hConv + hRad
           EpsGas = eps; Velocity = vel; MassFlux = gFlux }
+    /// <summary>Computes frictional pressure gradient in a circular passage.</summary>
     let dpFrictionPerM (f: float) (di: float) (rho: float) (vel: float) =
         f / di * rho * vel * vel / 2.0
+    /// <summary>Computes a local-loss pressure drop from a loss coefficient.</summary>
     let dpLocal (k: float) (rho: float) (vel: float) = k * rho * vel * vel / 2.0
 
 

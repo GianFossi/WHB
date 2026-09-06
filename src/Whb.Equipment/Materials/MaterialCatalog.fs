@@ -30,8 +30,11 @@ module Materials =
     /// without embedding a storage choice or database path into the calculation assembly.
     /// </summary>
     type IMaterialPropertySource =
+      /// <summary>Returns all materials available from the source.</summary>
         abstract member AllMaterials: unit -> MaterialProperties list
+      /// <summary>Attempts to find a material by identifier or name.</summary>
         abstract member TryGetMaterial: string -> MaterialProperties option
+      /// <summary>Returns a material by identifier or name, using the source default when absent.</summary>
         abstract member GetMaterial: string -> MaterialProperties
 
     let builtInMaterials =
@@ -68,12 +71,15 @@ module Materials =
         material.Id.Equals(key, StringComparison.OrdinalIgnoreCase)
         || material.Name.Contains(key, StringComparison.OrdinalIgnoreCase)
 
+    /// <summary>Attempts to find a built-in material by identifier or name.</summary>
     let tryGetMaterialByName (key: string) =
         builtInMaterials |> List.tryFind (matchesKey key)
 
+    /// <summary>Returns a built-in material by identifier or name.</summary>
     let getMaterialByName (key: string) =
         tryGetMaterialByName key |> Option.defaultValue builtInMaterials.Head
 
+    /// <summary>Provides material lookup against the built-in material catalogue.</summary>
     type BuiltInMaterialPropertySource() =
         interface IMaterialPropertySource with
             member _.AllMaterials() = builtInMaterials

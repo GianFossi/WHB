@@ -27,6 +27,7 @@ module Valve =
           65.0, 256.0
           70.0, 751.0 ]
     let private arr = table |> List.toArray
+    /// <summary>Computes the valve loss coefficient from closure angle in degrees.</summary>
     let zetaClosure (alphaDeg: float) =
         let a = max 0.0 alphaDeg
         if a <= 0.0 then snd arr.[0]
@@ -41,7 +42,9 @@ module Valve =
             let (a1, z1) = arr.[i]
             let (a2, z2) = arr.[i + 1]
             exp (log z1 + (log z2 - log z1) * (a - a1) / (a2 - a1))
+    /// <summary>Computes the valve loss coefficient from opening angle in degrees.</summary>
     let zetaOpening (openDeg: float) = zetaClosure (90.0 - openDeg)
+    /// <summary>Inverts the empirical loss curve to obtain closure angle.</summary>
     let closureForZeta (z: float) =
         let zz = max (snd arr.[0]) z
         let n = arr.Length
@@ -56,7 +59,9 @@ module Valve =
             let (a1, z1) = arr.[i]
             let (a2, z2) = arr.[i + 1]
             a1 + (a2 - a1) * (log zz - log z1) / (log z2 - log z1)
+    /// <summary>Inverts the empirical loss curve to obtain opening angle.</summary>
     let openingForZeta (z: float) = 90.0 - closureForZeta z
+    /// <summary>Computes the loss coefficient of a flat-disc valve.</summary>
     let zetaFlatDisc (thicknessRatio: float) (closureDeg: float) =
         let a = max 0.0 (min 89.9 closureDeg) * Math.PI / 180.0
         let sigma =
@@ -64,22 +69,30 @@ module Valve =
         let cc = 0.62 + 0.38 * sigma * sigma * sigma
         let r = 1.0 / (cc * sigma) - 1.0
         r * r + 0.20
+    /// <summary>Computes the calibrated flat-disc valve loss coefficient.</summary>
     let zetaFlatDiscCalibrated (thicknessRatio: float) (closureDeg: float) =
         0.82 * (zetaFlatDisc thicknessRatio closureDeg - 0.20) + 0.20
+    /// <summary>Converts a loss coefficient and diameter to a US Cv flow coefficient.</summary>
     let cvFromZeta (idM: float) (zeta: float) =
         let dIn = idM / 0.0254
         29.9 * dIn * dIn / sqrt (max 1e-9 zeta)
+    /// <summary>Converts a loss coefficient and diameter to a metric Kv flow coefficient.</summary>
     let kvFromZeta (idM: float) (zeta: float) = cvFromZeta idM zeta / 1.156
+    /// <summary>Computes the Kv required for a mass flow, density, and pressure drop.</summary>
     let kvRequired (wKgS: float) (rho: float) (dpPa: float) =
         let w = wKgS * 3600.0
         w / sqrt (1000.0 * max 1e-6 rho * max 1e-9 (dpPa / 1.0e5))
+    /// <summary>Computes pressure-drop ratio relative to upstream pressure.</summary>
     let pressureDropRatio (dpPa: float) (p1Pa: float) = dpPa / p1Pa
+    /// <summary>Computes the logarithmic valve gain around an opening angle.</summary>
     let gain (openDeg: float) =
         let d = 0.5
         let z1 = zetaOpening (openDeg - d)
         let z2 = zetaOpening (openDeg + d)
         (log z1 - log z2) / (2.0 * d)
+    /// <summary>Computes ideal throat velocity from pressure drop and density.</summary>
     let throatVelocity (dp: float) (rho: float) = sqrt (2.0 * max 0.0 dp / max 1e-6 rho)
+    /// <summary>Computes the ideal-gas sonic velocity.</summary>
     let sonic (gamma: float) (mw: float) (tK: float) = sqrt (gamma * R * tK / mw)
 
 
