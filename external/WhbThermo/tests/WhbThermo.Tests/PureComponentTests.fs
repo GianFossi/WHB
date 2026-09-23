@@ -36,7 +36,8 @@ let ``carbon dioxide Cp at 500 K`` () =
 /// Evaluating outside the fit range must succeed WITH a warning, never silently.
 [<Fact>]
 let ``out of range evaluation warns`` () =
-    match PureComponent.viscosity (species "N2") 2500.0<K> with
+    // NASA CEA transport for N2 starts at 200 K; 100 K is below every interval.
+    match PureComponent.viscosity (species "N2") 100.0<K> with
     | Success (_, warnings) ->
         Assert.Contains(warnings, function OutsideFitRange _ -> true | _ -> false)
     | Failure _ -> failwith "expected success with warning"
@@ -50,7 +51,7 @@ let ``enthalpy is available for every species`` () =
         match PureComponent.enthalpy sp 800.0<K> with
         | Success _ -> ()
         | Failure msgs ->
-            failwith $"{sp.Key}: " + (msgs |> List.map string |> String.concat "; ")
+            failwith ($"{sp.Key}: " + (msgs |> List.map string |> String.concat "; "))
 
 /// NASA CEA transport must be preferred wherever it exists: the Sutherland
 /// fallback is only reliable below about 1000 degC.

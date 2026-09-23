@@ -118,6 +118,23 @@ module Mixing =
             yI * valueI / denom)
         |> Array.sum
 
+    /// Wassiljewa conductivity combination on its own inputs, with the interaction
+    /// parameter built from the VISCOSITIES exactly as `evaluate` does. Passing
+    /// conductivities to `combine` instead would build phi from the conductivity
+    /// ratio, which is not the Wassiljewa rule.
+    ///
+    /// `components` are (mole fraction, molar mass, viscosity, conductivity).
+    let combineConductivity (components: (float * float * float * float)[]) =
+        let n = components.Length
+        Array.init n (fun i ->
+            let (yI, mI, muI, kI) = components.[i]
+            let mutable denom = 0.0
+            for j in 0 .. n - 1 do
+                let (yJ, mJ, muJ, _) = components.[j]
+                denom <- denom + yJ * phi muI muJ mI mJ
+            yI * kI / denom)
+        |> Array.sum
+
     /// Rigorous bounds any physically admissible mixture conductivity must obey:
     ///   1 / SUM(x_i / k_i)  <=  k_mix  <=  SUM(x_i k_i)
     let bounds (fractions: float[]) (values: float[]) =

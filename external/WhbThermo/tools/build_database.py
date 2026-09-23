@@ -117,22 +117,23 @@ for key, name, M, mu0, smu, k0, sk, cp500 in TRANSPORT:
 # the third time in this project a rebuild would have destroyed manual work.
 existing_path = Path(__file__).resolve().parent.parent / "data" / "species-database.json"
 preserved = 0
+existing_doc = db_guard.load(existing_path) if existing_path.exists() else {}
 if existing_path.exists():
-    old = {s["key"]: s for s in db_guard.load(existing_path)["species"]}
-    for sp in species:
+    old = {s["key"]: s for s in existing_doc["species"]}
+    rank = db_guard.CP_RANK
+    for i, sp in enumerate(species):
         prev = old.get(sp["key"])
         if not prev:
             continue
-        # Any Cp model better than what the base tables produce wins, and the
-        # transport block travels with it.
-        if prev["cpModel"]["kind"] in ("nasa9", "nasa7"):
-            sp["cpModel"] = prev["cpModel"]
-            sp["molarMass_kg_kmol"] = prev.get("molarMass_kg_kmol", sp["molarMass_kg_kmol"])
-            preserved += 1
-        if "transport" in prev:
-            sp["transport"] = prev["transport"]
-        if prev.get("critical") is not None:
-            sp["critical"] = prev["critical"]
+        # The existing record wins field by field: it holds everything the
+        # other importers added (formula, CAS, vapour pressure, diffusion
+        # volume, schema 3.0 identity and quality). The base tables only fill
+        # fields it lacks, and replace its Cp only if theirs is better.
+        merged = {**sp, **prev}
+        if rank.get(sp["cpModel"]["kind"], 99) < rank.get(prev["cpModel"]["kind"], 99):
+            merged["cpModel"] = sp["cpModel"]
+        species[i] = merged
+        preserved += 1
 
     # Species that exist only in the current file - added by add_species.py from
     # CEA - are carried over whole. The base tables know nothing about them, so
@@ -144,10 +145,13 @@ if existing_path.exists():
     preserved += len(carried)
 
 doc = {
-    "schemaVersion": "1.1",
-    "description": "WHB/PGC process gas species database. Sutherland transport + Shomate Cp.",
+    "schemaVersion": existing_doc.get("schemaVersion", "1.1"),
+    "description": existing_doc.get(
+        "description", "WHB/PGC process gas species database. Sutherland transport + Shomate Cp."),
     "species": species,
 }
+if "referenceState" in existing_doc:
+    doc["referenceState"] = existing_doc["referenceState"]
 
 out = Path(__file__).resolve().parent.parent / "data" / "species-database.json"
 db_guard.save(doc, tool="build_database.py",

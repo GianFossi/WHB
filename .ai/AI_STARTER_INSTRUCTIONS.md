@@ -55,7 +55,7 @@ business rule goes into it - those stay in `Whb.Core`.
 | Equipment / Component model | `src/Whb.Equipment` (components, piping, equipment assemblies, material lookup) |
 | Domain / Calculations | `Whb.Core/Components/`, `Process/`, `Loads/`, `Solvers/` |
 | Materials | `Materials/` (gas properties, IF97 steam) |
-| External thermo source | `external/WhbThermo/` vendored runtime/property libraries, with `src/Whb.Core/Materials/Sulfur/Sulfur.fs` as the thin adapter into `XSulfur` |
+| External thermo source | `external/WhbThermo/` vendored runtime/property libraries, with `src/Whb.Core/Materials/Sulfur/Sulfur.fs` as the thin adapter into `XSulfur` and `src/Whb.Core/Materials/Gas/GasThermoAdapter.fs` as the thin adapter into the WhbThermo species database |
 | Sizing / Optimization | `Whb.Core/Designers/`, `Whb.Core/Optimizer/` |
 | Configuration | `Options/` (`whb.options.json` merged onto defaults) |
 | Reporting | `Whb.Core/Reports/` |

@@ -415,9 +415,26 @@ module Condensation =
                         fail (CorrelationExtrapolated
                                 ("Colburn-Hougen", "the residual is undefined inside the bracket"))
 
-        match evaluate tWall, evaluate tGas with
+        // Above the bulk dew point the interface drives no condensation and the
+        // residual is undefined, so the physical bracket ends at the dew point:
+        // the hottest interface temperature at which condensation is still driven.
+        let upper =
+            match evaluate tGas, evaluate tWall with
+            | Some _, _ -> tGas
+            | None, None -> tGas
+            | None, Some _ ->
+                let mutable lo = tWall
+                let mutable hi = tGas
+                for _ in 1 .. 100 do
+                    let mid = (lo + hi) / 2.0
+                    match evaluate mid with
+                    | Some _ -> lo <- mid
+                    | None -> hi <- mid
+                lo
+
+        match evaluate tWall, evaluate upper with
         | Some low, Some high when (low > 0.0) <> (high > 0.0) ->
-            bisect tWall tGas 100
+            bisect tWall upper 100
         | Some low, Some high ->
             fail (CorrelationExtrapolated
                     ("Colburn-Hougen",

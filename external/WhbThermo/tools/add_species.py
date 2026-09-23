@@ -37,34 +37,35 @@ import nasa9  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "species-database.json"
 
-# our key -> (CEA thermo name, display name, CEA transport name or None)
+# our key -> (CEA thermo name, display name, CEA transport name or None, family)
+# The family is required: schema 3.0 refuses a record without one (schema_v3.py).
 NEW_SPECIES = {
     # permanent gases
-    "O2":     ("O2", "Oxygen", "O2"),
+    "O2":     ("O2", "Oxygen", "O2", "PermanentGas"),
     # oxygenates
-    "CH3OH":  ("CH3OH", "Methanol", "CH3OH"),
-    "HCHO":   ("HCHO,formaldehy", "Formaldehyde", None),
-    "DME":    ("CH3OCH3", "DimethylEther", None),
+    "CH3OH":  ("CH3OH", "Methanol", "CH3OH", "Oxygenate"),
+    "HCHO":   ("HCHO,formaldehy", "Formaldehyde", None, "Oxygenate"),
+    "DME":    ("CH3OCH3", "DimethylEther", None, "Oxygenate"),
     # remaining sulfur allotropes, for Sx coverage
-    "S3":     ("S3", "Trisulfur", None),
-    "S4":     ("S4", "Tetrasulfur", None),
-    "S5":     ("S5", "Pentasulfur", None),
-    "S7":     ("S7", "Heptasulfur", None),
+    "S3":     ("S3", "Trisulfur", None, "SulfurCompound"),
+    "S4":     ("S4", "Tetrasulfur", None, "SulfurCompound"),
+    "S5":     ("S5", "Pentasulfur", None, "SulfurCompound"),
+    "S7":     ("S7", "Heptasulfur", None, "SulfurCompound"),
     # Atoms and radicals. Below about 1000 degC their equilibrium concentrations
     # are negligible and they can be ignored; above it they are what dissociation
     # produces, and without them no dissociation equilibrium can be closed.
-    "H":      ("H", "AtomicHydrogen", "H"),
-    "O":      ("O", "AtomicOxygen", "O"),
-    "N":      ("N", "AtomicNitrogen", "N"),
-    "S1":     ("S", "AtomicSulfur", None),
-    "OH":     ("OH", "Hydroxyl", "OH"),
-    "SH":     ("SH", "Mercapto", None),
-    "SO":     ("SO", "SulfurMonoxide", None),
-    "CH3":    ("CH3", "Methyl", None),
-    "HO2":    ("HO2", "Hydroperoxyl", None),
-    "CS":     ("CS", "CarbonMonosulfide", None),
-    "NH2":    ("NH2", "Amidogen", None),
-    "CN":     ("CN", "Cyano", None),
+    "H":      ("H", "AtomicHydrogen", "H", "Radical"),
+    "O":      ("O", "AtomicOxygen", "O", "Radical"),
+    "N":      ("N", "AtomicNitrogen", "N", "Radical"),
+    "S1":     ("S", "AtomicSulfur", None, "Radical"),
+    "OH":     ("OH", "Hydroxyl", "OH", "Radical"),
+    "SH":     ("SH", "Mercapto", None, "Radical"),
+    "SO":     ("SO", "SulfurMonoxide", None, "Radical"),
+    "CH3":    ("CH3", "Methyl", None, "Radical"),
+    "HO2":    ("HO2", "Hydroperoxyl", None, "Radical"),
+    "CS":     ("CS", "CarbonMonosulfide", None, "Radical"),
+    "NH2":    ("NH2", "Amidogen", None, "Radical"),
+    "CN":     ("CN", "Cyano", None, "Radical"),
 }
 
 
@@ -85,7 +86,7 @@ def main() -> int:
 
     added, skipped, without_transport = [], [], []
 
-    for key, (thermo_name, display, transport_name) in NEW_SPECIES.items():
+    for key, (thermo_name, display, transport_name, family) in NEW_SPECIES.items():
         if key in existing:
             skipped.append(f"{key} (already present)")
             continue
@@ -97,7 +98,9 @@ def main() -> int:
 
         entry = {
             "key": key,
+            "id": key,
             "name": display,
+            "family": family,
             "molarMass_kg_kmol": round(record.molar_mass, 4),
             "cpModel": {
                 "kind": "nasa9",

@@ -4,7 +4,8 @@
     <Compile Include="Buoyancy.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Ganfoss.ROP" Version="1.0.2" />
+    <PackageReference Include="Ganfoss.ROP" Version="1.2.0" />
+    <PackageReference Update="FSharp.Core" Version="10.1.401" />
     <ProjectReference Include="../WhbThermo.Domain/WhbThermo.Domain.fsproj" />
   </ItemGroup>
 </Project>

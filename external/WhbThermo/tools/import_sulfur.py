@@ -4,10 +4,15 @@ sulfur allotropes, from the NASA CEA thermo.inp (Apache 2.0).
 
     python tools/import_sulfur.py /path/to/cea/data
 
-The main species database carries only S2, S6 and S8, which is what the WHB gas
-mixture needs. A sulfur condenser needs all of S1 to S8, because the allotrope
-distribution shifts continuously along the condensation path and it is that
-shift - not just sensible cooling - that carries much of the heat release.
+A sulfur condenser needs all of S1 to S8, because the allotrope distribution
+shifts continuously along the condensation path and it is that shift - not just
+sensible cooling - that carries much of the heat release.
+
+The gas-phase allotropes are NOT copied here: species-database.json already
+carries S1-S8, and a second copy of the same coefficients could only drift.
+Each allotrope is written as a reference (key, id in the species database,
+atoms); only the liquid reference phase, which the gas database does not hold,
+keeps its NASA-9 coefficients in this file.
 """
 from __future__ import annotations
 
@@ -21,9 +26,9 @@ import nasa9  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "sulfur-species.json"
 
-# allotrope -> (CEA name, atoms per molecule)
+# allotrope key -> (id in species-database.json, atoms per molecule)
 ALLOTROPES = {
-    "S": ("S", 1), "S2": ("S2", 2), "S3": ("S3", 3), "S4": ("S4", 4),
+    "S": ("S1", 1), "S2": ("S2", 2), "S3": ("S3", 3), "S4": ("S4", 4),
     "S5": ("S5", 5), "S6": ("S6", 6), "S7": ("S7", 7), "S8": ("S8", 8),
 }
 
@@ -44,18 +49,14 @@ def main() -> int:
     records = nasa9.parse_file(str(Path(sys.argv[1]) / "thermo.inp"))
     source = "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
 
+    species_db = json.loads((ROOT / "data" / "species-database.json").read_text(encoding="utf-8"))
+    known = {s["key"] for s in species_db["species"]}
     species, missing = [], []
-    for key, (name, atoms) in ALLOTROPES.items():
-        record = nasa9.find(records, name)
-        if record is None:
-            missing.append(key)
+    for key, (species_id, atoms) in ALLOTROPES.items():
+        if species_id not in known:
+            missing.append(f"{key} (id {species_id} not in species-database.json)")
             continue
-        species.append({
-            "key": key,
-            "atoms": atoms,
-            "molarMass_g_mol": round(record.molar_mass, 4),
-            "nasa9Segments": record.to_segments(source),
-        })
+        species.append({"key": key, "id": species_id, "atoms": atoms})
 
     liquid = nasa9.find(records, LIQUID[0])
     if liquid is None:
@@ -70,8 +71,10 @@ def main() -> int:
         }
 
     document = {
-        "schemaVersion": "1.1",
-        "description": "Gas-phase sulfur allotropes S1-S8 for reactive condensation modelling",
+        "schemaVersion": "2.0",
+        "description": ("Sulfur allotropes S1-S8 for reactive condensation modelling. Gas-phase "
+                        "thermochemistry is referenced by id from species-database.json; only the "
+                        "liquid reference phase is carried here."),
         "atomicMass_g_mol": ATOMIC_MASS,
         "source": source,
         "reference": (
@@ -96,8 +99,7 @@ def main() -> int:
     print(f"{OUT.name}: {len(species)} allotropes"
           + (" + liquid reference" if liquid_entry else " (NO liquid reference)"))
     for s in species:
-        print(f"  {s['key']:3s} M = {s['molarMass_g_mol']:8.3f}  "
-              f"{len(s['nasa9Segments'])} segments")
+        print(f"  {s['key']:3s} -> {s['id']}  ({s['atoms']} atoms)")
     if missing:
         print(f"missing: {', '.join(missing)}")
     return 0

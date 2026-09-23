@@ -34,8 +34,8 @@ FLUIDS = {
     "iC4H10": "IsoButane", "nC4H10": "n-Butane", "nC5H12": "n-Pentane",
     "nC6H14": "n-Hexane", "nC7H16": "n-Heptane", "nC8H18": "n-Octane",
     "nC10H22": "n-Decane", "cC6H12": "CycloHexane", "C6H6": "Benzene",
-    "C7H8": "Toluene", "oC8H10": "o-Xylene", "CH4O": "Methanol",
-    "C2H6O": "Ethanol", "CH4": "Methane",
+    "C7H8": "Toluene", "oC8H10": "o-Xylene", "CH3OH": "Methanol",
+    "C2H5OH": "Ethanol", "CH4": "Methane",
 }
 
 # property -> (correlation name, CoolProp key, conversion from raw, tolerance)

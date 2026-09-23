@@ -236,6 +236,14 @@ module FilmKinetics =
     let assess (film: FilmState) (drainageState: DrainageState) (tFilm: float<K>)
                : Thermo<DrainageVerdict> =
         let tC = float tFilm - 273.15
+        // A frozen film is decided before any liquid property is needed: the
+        // liquid viscosity has no meaning below the melting point.
+        if tC < Chemistry.MeltingPointRhombicC then
+            ok (DoesNotDrain
+                    (sprintf
+                        "film at %.1f degC is below the melting point: the sulfur is solid and \
+                         will encrust the wall" tC))
+        else
         LiquidProperties.viscosityPenalty tFilm
         >>= fun penalty ->
             if tC > Chemistry.LambdaTransitionC then
@@ -244,11 +252,6 @@ module FilmKinetics =
                             "film at %.1f degC is past the lambda transition: viscosity is %.0f times \
                              its value at 155 degC, the condensate will not drain at any slope"
                             tC penalty))
-            elif tC < Chemistry.MeltingPointRhombicC then
-                ok (DoesNotDrain
-                        (sprintf
-                            "film at %.1f degC is below the melting point: the sulfur is solid and \
-                             will encrust the wall" tC))
             elif tC > Chemistry.LambdaTransitionC - 4.0 then
                 ok (DrainsMarginally
                         (sprintf

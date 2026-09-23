@@ -21,15 +21,16 @@ That check is what catches a wrong Burcat name or a high/low block swap.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import db_guard  # noqa: E402
 from nasa7 import parse_file  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "src" / "WhbThermo.Data" / "species-database.json"
+# The live database. An older version of this script pointed at a stale copy
+# under src/WhbThermo.Data and wrote it without the guard.
+DB_PATH = db_guard.DB_PATH
 
 # our key -> candidate names in the thermo file (first match wins, case-insensitive)
 ALIASES = {
@@ -70,7 +71,7 @@ def main() -> int:
     records = parse_file(args.thermo_file)
     print(f"parsed {len(records)} records from {args.thermo_file}")
 
-    db = json.loads(DB_PATH.read_text(encoding="utf-8"))
+    db = db_guard.load()
     source = f"Burcat/CHEMKIN NASA-7, {Path(args.thermo_file).name}"
 
     merged, skipped, rejected = [], [], []
@@ -117,7 +118,8 @@ def main() -> int:
         print("\ndry run, database not written")
         return 0
 
-    DB_PATH.write_text(json.dumps(db, indent=2), encoding="utf-8")
+    db_guard.save(db, tool="merge_burcat.py", note=f"NASA-7 from {Path(args.thermo_file).name}",
+                  force=args.force)
     remaining = sum(1 for s in db["species"] if s["cpModel"]["kind"] == "anchor")
     print(f"\n{DB_PATH} written. {remaining} species still anchor-only.")
     print("Now lower `allowed` in DatabaseTests.'pending-completion count does not regress'"

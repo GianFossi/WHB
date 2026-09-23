@@ -860,6 +860,45 @@ let ``extended gas database returns physical properties for all supported specie
         Assert.True(GasProps.kPure sp t > 0.0, sprintf "k %A" sp)
 
 [<Fact>]
+let ``gas species data is read from the WhbThermo database`` () =
+    // NASA-9 (CEA): N2 cp at 1000 K = 32.70 J/(mol K); CO2 formation enthalpy = -393510 J/mol.
+    approx 32.70 0.02 (GasProps.cpMolar GasProps.N2 1000.0)
+    approx -393510.0 5.0 (GasProps.hForm GasProps.CO2)
+    approx 0.0 1e-6 (GasProps.hMolar GasProps.CO2 298.15)
+    approx 0.0280134 1e-9 (GasProps.molarMass GasProps.N2)
+    for sp in GasProps.allSpecies do
+        let r = GasThermoAdapter.record (GasProps.speciesName sp)
+        approx (GasThermoAdapter.cpMolar r 800.0) 1e-12 (GasProps.cpMolar sp 800.0)
+        approx (GasThermoAdapter.viscosity r 800.0) 1e-15 (GasProps.muPure sp 800.0)
+
+[<Fact>]
+let ``water-gas shift constant comes from the NASA-9 Gibbs energies`` () =
+    // exp(-dG/RT) for CO + H2O = CO2 + H2 on the WhbThermo data; the empirical
+    // ln Kp = 4577.8/T - 4.33 it replaced gives 1.281 at 1000 K.
+    approx 1.434 0.001 (Shift.kp 1000.0)
+    approx 9.403 0.005 (Shift.kp 700.0)
+    Assert.True(Shift.kp 600.0 > Shift.kp 900.0, "exothermic: K falls with temperature")
+
+[<Fact>]
+let ``only water takes its second virial coefficient from IF97`` () =
+    Assert.True((GasThermoAdapter.record "H2O").If97SecondVirial)
+    for sp in GasProps.allSpecies |> List.except [ GasProps.H2O ] do
+        Assert.False((GasThermoAdapter.record (GasProps.speciesName sp)).If97SecondVirial, sprintf "%A" sp)
+    // The shipped k_ij table is empty: every pair keeps the k_ij = 0 combining rule.
+    approx 0.0 0.0 (GasThermoAdapter.virialKij "CO2" "N2")
+
+[<Fact>]
+let ``virial critical constants include the migrated critical volume`` () =
+    match GasProps.Virial.criticalOpt GasProps.CO2 with
+    | Some (tc, pc, _, vc) ->
+        Assert.InRange(tc, 303.0, 305.0)
+        Assert.InRange(pc, 73.0e5, 74.5e5)
+        approx 94.07e-6 1e-12 vc
+    | None -> failwith "CO2 critical constants missing"
+    for sp in GasProps.allSpecies |> List.except [ GasProps.S2; GasProps.S6; GasProps.S8 ] do
+        Assert.True((GasProps.Virial.criticalOpt sp).IsSome, sprintf "critical %A" sp)
+
+[<Fact>]
 let ``species parser accepts formulas and service aliases`` () =
     Assert.Equal(Some GasProps.H2S, GasProps.tryParseSpecies "H2S")
     Assert.Equal(Some GasProps.S8, GasProps.tryParseSpecies "s8")
@@ -957,7 +996,7 @@ let ``sulphur speciation shifts towards heavier allotropes on cooling`` () =
 let ``polymerisation duty is positive because frozen speciation underpredicts it`` () =
     let extra = Sulphur.polymerisationDuty (cToK 300.0) (cToK 170.0) (barToPa 1.7) 8.0 100.0
     Assert.True(extra > 0.0)
-    approx 9815.0 1.0 extra
+    approx 9802.4 1.0 extra   // S2/S6/S8 enthalpies from WhbThermo NASA-9 (was 9815 with the legacy polynomials)
 
 [<Fact>]
 let ``sulphur vapour pressure and dew point are monotone and round trip`` () =

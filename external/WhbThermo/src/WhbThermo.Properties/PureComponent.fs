@@ -69,8 +69,8 @@ module PureComponent =
                 |> rangeCheck sp.Key "conductivity" fit.TMin fit.TMax t
             | Option.None ->
                 fail (DatabaseParseError
-                        $"{sp.Key} conductivity: NASA transport has no conductivity block and "
-                        + "there is no Sutherland fallback")
+                        ($"{sp.Key} conductivity: NASA transport has no conductivity block and "
+                         + "there is no Sutherland fallback"))
         | SutherlandPair (_, fit) ->
             sutherland fit t * 1.0<W/(m*K)>
             |> rangeCheck sp.Key "conductivity" fit.TMin fit.TMax t
@@ -103,7 +103,8 @@ module PureComponent =
     let private nasa7CpOverR (seg: Nasa7Segment) (t: float<K>) =
         let x = float t
         let a = seg.A
-        Numerics.horner a x
+        // Cp/R uses a1..a5 only; a6 and a7 are the enthalpy and entropy integration constants.
+        a.[0] + x * (a.[1] + x * (a.[2] + x * (a.[3] + x * a.[4])))
 
     /// H/(R*T) from a NASA-7 segment [dimensionless].
     let private nasa7HOverRT (seg: Nasa7Segment) (t: float<K>) =

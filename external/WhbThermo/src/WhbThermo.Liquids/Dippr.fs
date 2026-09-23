@@ -57,25 +57,30 @@ module Dippr =
 
     // ---------- loading ----------
 
-    [<CLIMutable>]
+    [<CLIMutable; NoComparison; NoEquality>]
     type private CorrelationDto =
-        { equation: int; c: float[]; tcK: Nullable<float>
-          tMinK: Nullable<float>; tMaxK: Nullable<float>
+        { equation: int; c: float[]; tcK: float option
+          tMinK: float option; tMaxK: float option
           unit: string; source: string }
 
-    [<CLIMutable>]
+    [<CLIMutable; NoComparison; NoEquality>]
     type private SpeciesDto =
         { key: string; cas: string; name: string; molarMass_g_mol: float
-          tcK: Nullable<float>
+          tcK: float option
           correlations: System.Collections.Generic.Dictionary<string, CorrelationDto> }
 
-    [<CLIMutable>]
+    [<CLIMutable; NoComparison; NoEquality>]
     type private RootDto =
         { schemaVersion: string; licence: string; species: SpeciesDto[] }
 
     let private options =
         let o = JsonSerializerOptions(PropertyNameCaseInsensitive = true)
-        o.Converters.Add(JsonFsharpConverter())
+        // Optional fields are absent or null in parts of the data file; both read as None.
+        o.Converters.Add(
+            JsonFSharpConverter(
+                JsonFSharpOptions.Default()
+                    .WithSkippableOptionFields(SkippableOptionFields.Always,
+                                               deserializeNullAsNone = true)))
         o
 
     /// Number of coefficients each form requires. A set of the wrong length is a
@@ -102,9 +107,9 @@ module Dippr =
         | Some _ ->
             ok { Equation = d.equation
                  C = Array.copy d.c
-                 Tc = if d.tcK.HasValue then Some (d.tcK.Value * 1.0<K>) else Option.None
-                 TMin = if d.tMinK.HasValue then Some (d.tMinK.Value * 1.0<K>) else Option.None
-                 TMax = if d.tMaxK.HasValue then Some (d.tMaxK.Value * 1.0<K>) else Option.None
+                 Tc = d.tcK |> Option.map (fun v -> v * 1.0<K>)
+                 TMin = d.tMinK |> Option.map (fun v -> v * 1.0<K>)
+                 TMax = d.tMaxK |> Option.map (fun v -> v * 1.0<K>)
                  Unit = d.unit
                  Source = d.source }
 
@@ -122,7 +127,7 @@ module Dippr =
                 >>= fun correlations ->
                     ok { Key = s.key; Cas = s.cas; Name = s.name
                          MolarMass = s.molarMass_g_mol
-                         Tc = if s.tcK.HasValue then Some (s.tcK.Value * 1.0<K>) else Option.None
+                         Tc = s.tcK |> Option.map (fun v -> v * 1.0<K>)
                          Correlations = Map.ofList correlations })
             >>= fun species ->
                 ok { Species = species |> List.map (fun s -> s.Key, s) |> Map.ofList

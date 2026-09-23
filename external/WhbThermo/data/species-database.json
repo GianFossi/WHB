@@ -1,10 +1,18 @@
 {
-  "schemaVersion": "2.1",
+  "schemaVersion": "3.0",
   "description": "WHB/PGC process gas species database. Sutherland transport + Shomate Cp.",
   "species": [
     {
       "key": "Ar",
+      "id": "Ar",
       "name": "Argon",
+      "synonyms": [
+        "Argon"
+      ],
+      "family": "Inert",
+      "elements": {
+        "Ar": 1
+      },
       "molarMass_kg_kmol": 39.948,
       "viscosity": {
         "coeff0": 2.2100000000000002e-05,
@@ -88,7 +96,9 @@
         "tcK": 150.69,
         "pcBar": 48.63,
         "acentric": -0.002,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 74.57,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -171,11 +181,58 @@
         "value_cm3_mol": 16.2,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "verified",
+        "validationNote": "CoolProp pure-fluid reference, 400-1600 K at 1 bar (PureComponentGoldenTests)"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "C2H2",
+      "id": "C2H2",
       "name": "Acetylene",
+      "synonyms": [
+        "Acetylene",
+        "Ethyne"
+      ],
+      "family": "Hydrocarbon",
+      "elements": {
+        "C": 2,
+        "H": 2
+      },
       "molarMass_kg_kmol": 26.0373,
       "viscosity": {
         "coeff0": 1.0199999999999999e-05,
@@ -242,7 +299,9 @@
         "pcBar": 59.882,
         "acentric": 0.178,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 112.2,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -307,11 +366,57 @@
         "value_cm3_mol": 36.42,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "C2H2 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": true,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "C2H4",
+      "id": "C2H4",
       "name": "Ethylene",
+      "synonyms": [
+        "Ethylene",
+        "Ethene"
+      ],
+      "family": "Hydrocarbon",
+      "elements": {
+        "C": 2,
+        "H": 4
+      },
       "molarMass_kg_kmol": 28.0532,
       "viscosity": {
         "coeff0": 1.008e-05,
@@ -377,7 +482,9 @@
         "tcK": 282.34,
         "pcBar": 50.41,
         "acentric": 0.087,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 131.1,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -442,11 +549,56 @@
         "value_cm3_mol": 41.04,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "C2H4 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": true,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "C2H6",
+      "id": "C2H6",
       "name": "Ethane",
+      "synonyms": [
+        "Ethane"
+      ],
+      "family": "Hydrocarbon",
+      "elements": {
+        "C": 2,
+        "H": 6
+      },
       "molarMass_kg_kmol": 30.069,
       "viscosity": {
         "coeff0": 9.1e-06,
@@ -513,7 +665,9 @@
         "pcBar": 48.722,
         "acentric": 0.0995,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 145.5,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -578,11 +732,58 @@
         "value_cm3_mol": 45.66,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "verified",
+        "validationNote": "CoolProp pure-fluid reference, 400-1600 K at 1 bar (PureComponentGoldenTests)"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "C2H6 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": true,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "C3H6",
+      "id": "C3H6",
       "name": "Propylene",
+      "synonyms": [
+        "Propylene",
+        "Propene"
+      ],
+      "family": "Hydrocarbon",
+      "elements": {
+        "C": 3,
+        "H": 6
+      },
       "molarMass_kg_kmol": 42.0797,
       "viscosity": {
         "coeff0": 8.35e-06,
@@ -649,7 +850,9 @@
         "pcBar": 45.55,
         "acentric": 0.146,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 184.6,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "sutherland"
@@ -674,11 +877,57 @@
         "value_cm3_mol": 61.56,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "C",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "knownDeviation",
+        "validationNote": "Sutherland transport vs CoolProp, 400-1600 K: mu +4 to +5 %, k -22 to -70 %"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "C3H6 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": true,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "C3H8",
+      "id": "C3H8",
       "name": "Propane",
+      "synonyms": [
+        "Propane"
+      ],
+      "family": "Hydrocarbon",
+      "elements": {
+        "C": 3,
+        "H": 8
+      },
       "molarMass_kg_kmol": 44.0956,
       "viscosity": {
         "coeff0": 8e-06,
@@ -745,7 +994,9 @@
         "pcBar": 42.512,
         "acentric": 0.1521,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 200.0,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "sutherland"
@@ -770,11 +1021,57 @@
         "value_cm3_mol": 66.18,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "C",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "knownDeviation",
+        "validationNote": "Sutherland transport vs CoolProp, 400-1600 K: mu +7 to +18 %, k -28 to -82 %"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "C3H8 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": true,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "C6H6",
+      "id": "C6H6",
       "name": "Benzene",
+      "synonyms": [
+        "Benzene"
+      ],
+      "family": "Hydrocarbon",
+      "elements": {
+        "C": 6,
+        "H": 6
+      },
       "molarMass_kg_kmol": 78.1118,
       "viscosity": {
         "coeff0": 7.499999999999999e-06,
@@ -841,7 +1138,9 @@
         "pcBar": 49.0728,
         "acentric": 0.211,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 256.0,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "sutherland"
@@ -866,11 +1165,57 @@
         "value_cm3_mol": 90.96,
         "source": "Fuller et al., summed from atomic increments with the aromatic-ring correction",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "C",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "knownDeviation",
+        "validationNote": "Sutherland transport vs CoolProp, 500-1600 K: mu -14 to +10 %, k -41 to -66 %"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "C6H6 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": true,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": true,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "C7H8",
+      "id": "C7H8",
       "name": "Toluene",
+      "synonyms": [
+        "Toluene"
+      ],
+      "family": "Hydrocarbon",
+      "elements": {
+        "C": 7,
+        "H": 8
+      },
       "molarMass_kg_kmol": 92.1384,
       "viscosity": {
         "coeff0": 6.9e-06,
@@ -937,7 +1282,9 @@
         "pcBar": 41.263,
         "acentric": 0.2657,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 316.0,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "sutherland"
@@ -962,11 +1309,55 @@
         "value_cm3_mol": 111.48,
         "source": "Fuller et al., summed from atomic increments with the aromatic-ring correction",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "C",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "knownDeviation",
+        "validationNote": "Sutherland transport vs CoolProp, 500-1600 K: mu +5 to +12 %, k -43 to -71 %"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "C7H8 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": true,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": true,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "CH3",
+      "id": "CH3",
       "name": "Methyl",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "C": 1,
+        "H": 3
+      },
       "molarMass_kg_kmol": 15.0345,
       "cpModel": {
         "kind": "nasa9",
@@ -1028,11 +1419,54 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "CH3 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "CH3OH",
+      "id": "CH3OH",
       "name": "Methanol",
+      "synonyms": [
+        "Methanol"
+      ],
+      "family": "Oxygenate",
+      "elements": {
+        "C": 1,
+        "H": 4,
+        "O": 1
+      },
       "molarMass_kg_kmol": 32.0419,
       "cpModel": {
         "kind": "nasa9",
@@ -1150,11 +1584,56 @@
         "value_cm3_mol": 31.25,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "CH3OH absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "decomposes towards CO + H2 at high temperature: screen as syngas"
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": true,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "CH4",
+      "id": "CH4",
       "name": "Methane",
+      "synonyms": [
+        "Methane"
+      ],
+      "family": "Hydrocarbon",
+      "elements": {
+        "C": 1,
+        "H": 4
+      },
       "molarMass_kg_kmol": 16.0425,
       "viscosity": {
         "coeff0": 1.087e-05,
@@ -1220,7 +1699,9 @@
         "tcK": 190.56,
         "pcBar": 45.99,
         "acentric": 0.011,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 98.6,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -1285,11 +1766,55 @@
         "value_cm3_mol": 25.14,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "verified",
+        "validationNote": "CoolProp pure-fluid reference, 400-1600 K at 1 bar (PureComponentGoldenTests)"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "CH4 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": true,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "CN",
+      "id": "CN",
       "name": "Cyano",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "C": 1,
+        "N": 1
+      },
       "molarMass_kg_kmol": 26.0174,
       "cpModel": {
         "kind": "nasa9",
@@ -1369,11 +1894,53 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "CN absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "CO",
+      "id": "CO",
       "name": "CarbonMonoxide",
+      "synonyms": [
+        "Carbon monoxide"
+      ],
+      "family": "PermanentGas",
+      "elements": {
+        "C": 1,
+        "O": 1
+      },
       "molarMass_kg_kmol": 28.0101,
       "viscosity": {
         "coeff0": 1.7199999999999998e-05,
@@ -1457,7 +2024,9 @@
         "tcK": 132.85,
         "pcBar": 34.94,
         "acentric": 0.045,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 93.1,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -1540,11 +2109,56 @@
         "value_cm3_mol": 18.0,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "CO absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": true,
+        "metalDusting": true,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "metal dusting in the 400-800 degC band"
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": true,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "CO2",
+      "id": "CO2",
       "name": "CarbonDioxide",
+      "synonyms": [
+        "Carbon dioxide"
+      ],
+      "family": "AcidGas",
+      "elements": {
+        "C": 1,
+        "O": 2
+      },
       "molarMass_kg_kmol": 44.0095,
       "viscosity": {
         "coeff0": 1.4699999999999998e-05,
@@ -1628,7 +2242,9 @@
         "tcK": 304.13,
         "pcBar": 73.77,
         "acentric": 0.224,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 94.07,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -1711,11 +2327,62 @@
         "value_cm3_mol": 26.9,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "verified",
+        "validationNote": "CoolProp pure-fluid reference, 400-1600 K at 1 bar (PureComponentGoldenTests)"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [
+          "Smith, Shen & Friedman (1982) WSGG",
+          "Leckner (1972) form, fitted to the Smith WSGG model (not independent of it)"
+        ],
+        "note": "emissivity depends on the partial pressure path p*L and the mixture"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": true,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "COS",
+      "id": "COS",
       "name": "CarbonylSulfide",
+      "synonyms": [
+        "Carbonyl sulfide",
+        "OCS"
+      ],
+      "family": "SulfurCompound",
+      "elements": {
+        "C": 1,
+        "O": 1,
+        "S": 1
+      },
       "molarMass_kg_kmol": 60.0751,
       "viscosity": {
         "coeff0": 1.2e-05,
@@ -1782,7 +2449,9 @@
         "pcBar": 63.7,
         "acentric": 0.0978,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 137.0,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -1834,11 +2503,53 @@
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
       },
-      "vapourPressureUnavailableReason": "Not in Perry Table 2-8."
+      "vapourPressureUnavailableReason": "Not in Perry Table 2-8.",
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "COS absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": true,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
+      }
     },
     {
       "key": "CS",
+      "id": "CS",
       "name": "CarbonMonosulfide",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "C": 1,
+        "S": 1
+      },
       "molarMass_kg_kmol": 44.0757,
       "cpModel": {
         "kind": "nasa9",
@@ -1900,11 +2611,53 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "CS absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "CS2",
+      "id": "CS2",
       "name": "CarbonDisulfide",
+      "synonyms": [
+        "Carbon disulfide"
+      ],
+      "family": "SulfurCompound",
+      "elements": {
+        "C": 1,
+        "S": 2
+      },
       "molarMass_kg_kmol": 76.1407,
       "viscosity": {
         "coeff0": 9.9e-06,
@@ -1971,7 +2724,9 @@
         "pcBar": 79.0335,
         "acentric": 0.115,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 173.0,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -2036,11 +2791,57 @@
         "value_cm3_mol": 61.7,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "CS2 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": true,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "DME",
+      "id": "DME",
       "name": "DimethylEther",
+      "synonyms": [
+        "Dimethyl ether"
+      ],
+      "family": "Oxygenate",
+      "elements": {
+        "C": 2,
+        "H": 6,
+        "O": 1
+      },
       "molarMass_kg_kmol": 46.0684,
       "cpModel": {
         "kind": "nasa9",
@@ -2121,11 +2922,52 @@
         "value_cm3_mol": 51.77,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "DME absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "decomposes towards CO + H2 at high temperature: screen as syngas"
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "H",
+      "id": "H",
       "name": "AtomicHydrogen",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "H": 1
+      },
       "molarMass_kg_kmol": 1.0079,
       "cpModel": {
         "kind": "nasa9",
@@ -2242,11 +3084,53 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "H2",
+      "id": "H2",
       "name": "Hydrogen",
+      "synonyms": [
+        "Hydrogen"
+      ],
+      "family": "PermanentGas",
+      "elements": {
+        "H": 2
+      },
       "molarMass_kg_kmol": 2.0159,
       "viscosity": {
         "coeff0": 8.759999999999999e-06,
@@ -2330,7 +3214,9 @@
         "tcK": 33.15,
         "pcBar": 12.96,
         "acentric": -0.219,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 64.1,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -2413,11 +3299,59 @@
         "value_cm3_mol": 6.12,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "verified",
+        "validationNote": "CoolProp pure-fluid reference, 400-1600 K at 1 bar (PureComponentGoldenTests)"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": true,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "high-temperature hydrogen attack and embrittlement (API RP 571 / 941)"
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "H2O",
+      "id": "H2O",
       "name": "WaterVapour",
+      "synonyms": [
+        "Water",
+        "Steam",
+        "Water vapour"
+      ],
+      "family": "Water",
+      "elements": {
+        "H": 2,
+        "O": 1
+      },
       "molarMass_kg_kmol": 18.0153,
       "viscosity": {
         "coeff0": 1.2e-05,
@@ -2483,7 +3417,9 @@
         "tcK": 647.1,
         "pcBar": 220.64,
         "acentric": 0.345,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 55.95,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -2566,11 +3502,67 @@
         "value_cm3_mol": 13.1,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "verified",
+        "validationNote": "CoolProp pure-fluid reference, 400-1600 K at 1 bar (PureComponentGoldenTests)"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [
+          "Smith, Shen & Friedman (1982) WSGG",
+          "Leckner (1972) form, fitted to the Smith WSGG model (not independent of it)"
+        ],
+        "note": "emissivity depends on the partial pressure path p*L and the mixture"
+      },
+      "eosParameters": [
+        {
+          "eos": "Virial",
+          "secondVirial": "IAPWS-IF97 region 2, dilute-gas limit",
+          "source": "IAPWS-IF97 (Wagner et al. 2000); replaces the Pitzer correlation for water"
+        }
+      ],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": true,
+        "notes": "steam oxidation"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "H2S",
+      "id": "H2S",
       "name": "HydrogenSulfide",
+      "synonyms": [
+        "Hydrogen sulfide",
+        "Hydrogen sulphide"
+      ],
+      "family": "AcidGas",
+      "elements": {
+        "H": 2,
+        "S": 1
+      },
       "molarMass_kg_kmol": 34.0809,
       "viscosity": {
         "coeff0": 1.24e-05,
@@ -2636,7 +3628,9 @@
         "tcK": 373.4,
         "pcBar": 89.63,
         "acentric": 0.09,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 98.5,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -2701,11 +3695,57 @@
         "value_cm3_mol": 27.52,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "H2S absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": true,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": false,
+        "notes": "sulfidation at high temperature; wet H2S cracking (HIC / SSC) below the water dew point"
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": true,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "HCHO",
+      "id": "HCHO",
       "name": "Formaldehyde",
+      "synonyms": [
+        "Formaldehyde"
+      ],
+      "family": "Oxygenate",
+      "elements": {
+        "C": 1,
+        "H": 2,
+        "O": 1
+      },
       "molarMass_kg_kmol": 30.026,
       "cpModel": {
         "kind": "nasa9",
@@ -2786,11 +3826,56 @@
         "value_cm3_mol": 26.63,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "HCHO absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "decomposes towards CO + H2 at high temperature: screen as syngas"
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": true,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "HCN",
+      "id": "HCN",
       "name": "HydrogenCyanide",
+      "synonyms": [
+        "Hydrogen cyanide"
+      ],
+      "family": "NitrogenCompound",
+      "elements": {
+        "H": 1,
+        "C": 1,
+        "N": 1
+      },
       "molarMass_kg_kmol": 27.0253,
       "viscosity": {
         "coeff0": 1.12e-05,
@@ -2857,7 +3942,9 @@
         "pcBar": 54.0,
         "acentric": 0.407,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 139.0,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -2922,11 +4009,54 @@
         "value_cm3_mol": 22.75,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "HCN absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": true,
+        "carburizing": true,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "nitrocarburizing potential"
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": true,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "HO2",
+      "id": "HO2",
       "name": "Hydroperoxyl",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "H": 1,
+        "O": 2
+      },
       "molarMass_kg_kmol": 33.0067,
       "cpModel": {
         "kind": "nasa9",
@@ -2988,11 +4118,52 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "HO2 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "He",
+      "id": "He",
       "name": "Helium",
+      "synonyms": [
+        "Helium"
+      ],
+      "family": "Inert",
+      "elements": {
+        "He": 1
+      },
       "molarMass_kg_kmol": 4.0026,
       "viscosity": {
         "coeff0": 1.9600000000000002e-05,
@@ -3076,7 +4247,9 @@
         "tcK": 5.195,
         "pcBar": 2.276,
         "acentric": -0.39,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 57.3,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -3159,11 +4332,54 @@
         "value_cm3_mol": 2.67,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "verified",
+        "validationNote": "CoolProp pure-fluid reference, 400-1600 K at 1 bar (PureComponentGoldenTests)"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "N",
+      "id": "N",
       "name": "AtomicNitrogen",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "N": 1
+      },
       "molarMass_kg_kmol": 14.0067,
       "cpModel": {
         "kind": "nasa9",
@@ -3280,11 +4496,53 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "N2",
+      "id": "N2",
       "name": "Nitrogen",
+      "synonyms": [
+        "Nitrogen"
+      ],
+      "family": "PermanentGas",
+      "elements": {
+        "N": 2
+      },
       "molarMass_kg_kmol": 28.0134,
       "viscosity": {
         "coeff0": 1.7539999999999998e-05,
@@ -3368,7 +4626,9 @@
         "tcK": 126.2,
         "pcBar": 33.98,
         "acentric": 0.037,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 89.2,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -3451,11 +4711,57 @@
         "value_cm3_mol": 18.5,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "verified",
+        "validationNote": "CoolProp pure-fluid reference, 400-1600 K at 1 bar (PureComponentGoldenTests)"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "can nitride some high-alloy materials well above 1000 degC"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "N2O",
+      "id": "N2O",
       "name": "NitrousOxide",
+      "synonyms": [
+        "Nitrous oxide"
+      ],
+      "family": "NitrogenCompound",
+      "elements": {
+        "N": 2,
+        "O": 1
+      },
       "molarMass_kg_kmol": 44.0128,
       "viscosity": {
         "coeff0": 1.4599999999999999e-05,
@@ -3521,7 +4827,9 @@
         "tcK": 309.6,
         "pcBar": 72.45,
         "acentric": 0.162,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 97.4,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -3586,11 +4894,54 @@
         "value_cm3_mol": 35.9,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "N2O absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": true,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "NH2",
+      "id": "NH2",
       "name": "Amidogen",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "H": 2,
+        "N": 1
+      },
       "molarMass_kg_kmol": 16.0226,
       "cpModel": {
         "kind": "nasa9",
@@ -3652,11 +5003,53 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "NH2 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "NH3",
+      "id": "NH3",
       "name": "Ammonia",
+      "synonyms": [
+        "Ammonia"
+      ],
+      "family": "NitrogenCompound",
+      "elements": {
+        "N": 1,
+        "H": 3
+      },
       "molarMass_kg_kmol": 17.0305,
       "viscosity": {
         "coeff0": 9.82e-06,
@@ -3722,7 +5115,9 @@
         "tcK": 405.4,
         "pcBar": 113.3,
         "acentric": 0.256,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 72.47,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -3787,11 +5182,57 @@
         "value_cm3_mol": 20.7,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "verified",
+        "validationNote": "CoolProp pure-fluid reference, 400-1600 K at 1 bar (PureComponentGoldenTests)"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "NH3 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": true,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "nitriding of steels above about 350 degC"
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": true,
+        "corrosive": true,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "NO",
+      "id": "NO",
       "name": "NitricOxide",
+      "synonyms": [
+        "Nitric oxide"
+      ],
+      "family": "NitrogenCompound",
+      "elements": {
+        "N": 1,
+        "O": 1
+      },
       "molarMass_kg_kmol": 30.0061,
       "viscosity": {
         "coeff0": 1.88e-05,
@@ -3875,7 +5316,9 @@
         "tcK": 180.0,
         "pcBar": 64.8,
         "acentric": 0.583,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 58.0,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -3958,11 +5401,56 @@
         "value_cm3_mol": 10.65,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "NO absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": true,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": true,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "NO2",
+      "id": "NO2",
       "name": "NitrogenDioxide",
+      "synonyms": [
+        "Nitrogen dioxide"
+      ],
+      "family": "NitrogenCompound",
+      "elements": {
+        "N": 1,
+        "O": 2
+      },
       "molarMass_kg_kmol": 46.0055,
       "viscosity": {
         "coeff0": 1.4099999999999999e-05,
@@ -4028,7 +5516,9 @@
         "tcK": 431.0,
         "pcBar": 101.0,
         "acentric": 0.851,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 167.8,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -4080,11 +5570,52 @@
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
       },
-      "vapourPressureUnavailableReason": "Not in Perry Table 2-8."
+      "vapourPressureUnavailableReason": "Not in Perry Table 2-8.",
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "NO2 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": true,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": true,
+        "corrosive": true,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
+      }
     },
     {
       "key": "O",
+      "id": "O",
       "name": "AtomicOxygen",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "O": 1
+      },
       "molarMass_kg_kmol": 15.9994,
       "cpModel": {
         "kind": "nasa9",
@@ -4201,11 +5732,53 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "O2",
+      "id": "O2",
       "name": "Oxygen",
+      "synonyms": [
+        "Oxygen"
+      ],
+      "family": "PermanentGas",
+      "elements": {
+        "O": 2
+      },
       "molarMass_kg_kmol": 31.9988,
       "cpModel": {
         "kind": "nasa9",
@@ -4274,7 +5847,9 @@
         "pcBar": 50.43,
         "acentric": 0.0222,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 73.4,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -4359,11 +5934,54 @@
         "value_cm3_mol": 16.3,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": true,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "OH",
+      "id": "OH",
       "name": "Hydroxyl",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "H": 1,
+        "O": 1
+      },
       "molarMass_kg_kmol": 17.0073,
       "cpModel": {
         "kind": "nasa9",
@@ -4480,11 +6098,53 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "OH absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "S1",
+      "id": "S1",
       "name": "AtomicSulfur",
+      "synonyms": [
+        "Atomic sulfur"
+      ],
+      "family": "Radical",
+      "elements": {
+        "S": 1
+      },
       "molarMass_kg_kmol": 32.065,
       "cpModel": {
         "kind": "nasa9",
@@ -4564,11 +6224,50 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "S2",
+      "id": "S2",
       "name": "DiatomicSulfur",
+      "synonyms": [],
+      "family": "SulfurCompound",
+      "elements": {
+        "S": 2
+      },
       "molarMass_kg_kmol": 64.13,
       "viscosity": {
         "coeff0": 1.15e-05,
@@ -4641,11 +6340,51 @@
         "computed": true
       },
       "criticalUnavailableReason": "Sulfur allotrope: the allotropes are in continuous reactive equilibrium and do not have individual critical points. Liquid sulfur is handled as a phase by XSulfur, not as a component here.",
-      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless."
+      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless.",
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "C",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
+      }
     },
     {
       "key": "S3",
+      "id": "S3",
       "name": "Trisulfur",
+      "synonyms": [],
+      "family": "SulfurCompound",
+      "elements": {
+        "S": 3
+      },
       "molarMass_kg_kmol": 96.195,
       "cpModel": {
         "kind": "nasa9",
@@ -4707,11 +6446,50 @@
         "computed": true
       },
       "criticalUnavailableReason": "Sulfur allotrope: the allotropes are in continuous reactive equilibrium and do not have individual critical points. Liquid sulfur is handled as a phase by XSulfur, not as a component here.",
-      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless."
+      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
+      }
     },
     {
       "key": "S4",
+      "id": "S4",
       "name": "Tetrasulfur",
+      "synonyms": [],
+      "family": "SulfurCompound",
+      "elements": {
+        "S": 4
+      },
       "molarMass_kg_kmol": 128.26,
       "cpModel": {
         "kind": "nasa9",
@@ -4773,11 +6551,50 @@
         "computed": true
       },
       "criticalUnavailableReason": "Sulfur allotrope: the allotropes are in continuous reactive equilibrium and do not have individual critical points. Liquid sulfur is handled as a phase by XSulfur, not as a component here.",
-      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless."
+      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
+      }
     },
     {
       "key": "S5",
+      "id": "S5",
       "name": "Pentasulfur",
+      "synonyms": [],
+      "family": "SulfurCompound",
+      "elements": {
+        "S": 5
+      },
       "molarMass_kg_kmol": 160.325,
       "cpModel": {
         "kind": "nasa9",
@@ -4839,11 +6656,50 @@
         "computed": true
       },
       "criticalUnavailableReason": "Sulfur allotrope: the allotropes are in continuous reactive equilibrium and do not have individual critical points. Liquid sulfur is handled as a phase by XSulfur, not as a component here.",
-      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless."
+      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
+      }
     },
     {
       "key": "S6",
+      "id": "S6",
       "name": "Hexasulfur",
+      "synonyms": [],
+      "family": "SulfurCompound",
+      "elements": {
+        "S": 6
+      },
       "molarMass_kg_kmol": 192.39,
       "viscosity": {
         "coeff0": 1.0199999999999999e-05,
@@ -4916,11 +6772,51 @@
         "computed": true
       },
       "criticalUnavailableReason": "Sulfur allotrope: the allotropes are in continuous reactive equilibrium and do not have individual critical points. Liquid sulfur is handled as a phase by XSulfur, not as a component here.",
-      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless."
+      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless.",
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "C",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
+      }
     },
     {
       "key": "S7",
+      "id": "S7",
       "name": "Heptasulfur",
+      "synonyms": [],
+      "family": "SulfurCompound",
+      "elements": {
+        "S": 7
+      },
       "molarMass_kg_kmol": 224.455,
       "cpModel": {
         "kind": "nasa9",
@@ -4982,11 +6878,50 @@
         "computed": true
       },
       "criticalUnavailableReason": "Sulfur allotrope: the allotropes are in continuous reactive equilibrium and do not have individual critical points. Liquid sulfur is handled as a phase by XSulfur, not as a component here.",
-      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless."
+      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
+      }
     },
     {
       "key": "S8",
+      "id": "S8",
       "name": "Octasulfur",
+      "synonyms": [],
+      "family": "SulfurCompound",
+      "elements": {
+        "S": 8
+      },
       "molarMass_kg_kmol": 256.52,
       "viscosity": {
         "coeff0": 9.499999999999999e-06,
@@ -5059,11 +6994,52 @@
         "computed": true
       },
       "criticalUnavailableReason": "Sulfur allotrope: the allotropes are in continuous reactive equilibrium and do not have individual critical points. Liquid sulfur is handled as a phase by XSulfur, not as a component here.",
-      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless."
+      "vapourPressureUnavailableReason": "Sulfur vapour pressure is a mixture property of the reacting allotropes; XSulfur.Chemistry derives it from the Gibbs energies over liquid sulfur. Per-allotrope values would be meaningless.",
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "C",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": false,
+        "supportedModels": [],
+        "note": "transparent in the infrared (homonuclear diatomic or monatomic)"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": false,
+        "notes": ""
+      },
+      "safety": {
+        "flammable": true,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
+      }
     },
     {
       "key": "SH",
+      "id": "SH",
       "name": "Mercapto",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "H": 1,
+        "S": 1
+      },
       "molarMass_kg_kmol": 33.0729,
       "cpModel": {
         "kind": "nasa9",
@@ -5125,11 +7101,51 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "SH absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "SO",
+      "id": "SO",
       "name": "SulfurMonoxide",
+      "synonyms": [],
+      "family": "Radical",
+      "elements": {
+        "O": 1,
+        "S": 1
+      },
       "molarMass_kg_kmol": 48.0644,
       "cpModel": {
         "kind": "nasa9",
@@ -5191,11 +7207,54 @@
         "computed": true
       },
       "criticalUnavailableReason": "Radical or atomic species: it has no condensed phase and therefore no critical point. Not a data gap.",
-      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap."
+      "vapourPressureUnavailableReason": "Radical or atomic species: no condensed phase, so no vapour pressure. Not a data gap.",
+      "dataQuality": {
+        "thermo": "A",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "SO absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": false,
+        "notes": "transient radical or atom: screen the stable species it forms instead"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": false,
+        "corrosive": false,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "transient radical or atom: screen the stable species it forms instead"
+      }
     },
     {
       "key": "SO2",
+      "id": "SO2",
       "name": "SulfurDioxide",
+      "synonyms": [
+        "Sulfur dioxide",
+        "Sulphur dioxide"
+      ],
+      "family": "SulfurCompound",
+      "elements": {
+        "S": 1,
+        "O": 2
+      },
       "molarMass_kg_kmol": 64.0638,
       "viscosity": {
         "coeff0": 1.255e-05,
@@ -5261,7 +7320,9 @@
         "tcK": 430.8,
         "pcBar": 78.84,
         "acentric": 0.245,
-        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A"
+        "source": "Poling et al., Properties of Gases and Liquids, 5th ed., App. A",
+        "vcCm3Mol": 122.0,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "nasaCea",
@@ -5326,11 +7387,57 @@
         "value_cm3_mol": 41.8,
         "source": "Fuller et al., tabulated molecular volume",
         "computed": false
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "B",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "SO2 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": true,
+        "oxidation": true,
+        "notes": "mixed oxidation-sulfidation at high temperature"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": true,
+        "corrosive": true,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     },
     {
       "key": "SO3",
+      "id": "SO3",
       "name": "SulfurTrioxide",
+      "synonyms": [
+        "Sulfur trioxide",
+        "Sulphur trioxide"
+      ],
+      "family": "SulfurCompound",
+      "elements": {
+        "S": 1,
+        "O": 3
+      },
       "molarMass_kg_kmol": 80.0632,
       "viscosity": {
         "coeff0": 1.35e-05,
@@ -5397,7 +7504,9 @@
         "pcBar": 82.0733,
         "acentric": 0.4121,
         "source": "chemicals (MIT) handbook collection: CRC / IUPAC / Poling",
-        "verified": false
+        "verified": false,
+        "vcCm3Mol": 127.3,
+        "vcSource": "Whb.Core GasProps virial table (critical-constant compilation, Poling et al. / Reid et al.), migrated 2026-09-23"
       },
       "transport": {
         "kind": "sutherland"
@@ -5422,13 +7531,49 @@
         "value_cm3_mol": 41.23,
         "source": "Fuller et al., summed from atomic increments",
         "computed": true
+      },
+      "dataQuality": {
+        "thermo": "A",
+        "transport": "C",
+        "critical": "A",
+        "vapourPressure": "B",
+        "validation": "unverified"
+      },
+      "radiation": {
+        "participating": true,
+        "supportedModels": [],
+        "note": "SO3 absorbs in the infrared but no open WSGG or Leckner parameter set exists for it; its emission is missing from any emissivity computed here, which is therefore LOW"
+      },
+      "eosParameters": [],
+      "lennardJones": null,
+      "lennardJonesUnavailableReason": "no checked source transcribed yet (candidates: Cantera transport data, BSD licence; Poling et al., Appendix B)",
+      "phase": {
+        "unavailableReason": "normal boiling, melting and triple points not transcribed yet from a checked source"
+      },
+      "materialInteraction": {
+        "hydrogenService": false,
+        "nitriding": false,
+        "carburizing": false,
+        "metalDusting": false,
+        "sulfidation": false,
+        "oxidation": true,
+        "notes": "sulfuric acid dew-point corrosion on cold surfaces"
+      },
+      "safety": {
+        "flammable": false,
+        "toxic": true,
+        "corrosive": true,
+        "lflVolPct": null,
+        "uflVolPct": null,
+        "autoIgnitionK": null,
+        "source": "screening classification by chemistry, not transcribed from an SDS; confirm against the supplier SDS / GHS classification before use"
       }
     }
   ],
   "integrity": {
-    "sha256": "1fdf20436adb18e31c74fb015648a9ced2e9a7cdd1d503c255087762cc6e309e",
-    "written": "2026-09-19T07:37:52",
-    "writtenBy": "complete_species.py",
+    "sha256": "67240a605be4e41819126b505bc24465715c872b64a8d6233cb08da4ad395f3d",
+    "written": "2026-09-23T21:59:41",
+    "writtenBy": "schema_v3 normalise",
     "speciesCount": 48,
     "history": [
       {
@@ -5437,8 +7582,56 @@
         "species": 48,
         "note": "formula, critical, vapour pressure, diffusion volume",
         "forced": false
+      },
+      {
+        "tool": "add_vc (Whb.Core gas migration)",
+        "written": "2026-09-23T20:47:20",
+        "species": 48,
+        "note": "critical molar volume Vc added for 26 species",
+        "forced": false
+      },
+      {
+        "tool": "migrate_schema_v3.py",
+        "written": "2026-09-23T21:41:04",
+        "species": 48,
+        "note": "schema 3.0: id, family, synonyms, elements, dataQuality, referenceState",
+        "forced": false
+      },
+      {
+        "tool": "schema_v3 normalise",
+        "written": "2026-09-23T21:48:16",
+        "species": 48,
+        "note": "radiation role per species (participating, supportedModels, note)",
+        "forced": false
+      },
+      {
+        "tool": "schema_v3 normalise",
+        "written": "2026-09-23T21:49:44",
+        "species": 48,
+        "note": "radiation note wording (30 species)",
+        "forced": false
+      },
+      {
+        "tool": "schema_v3 normalise",
+        "written": "2026-09-23T21:51:56",
+        "species": 48,
+        "note": "eosParameters (water second virial from IF97)",
+        "forced": false
+      },
+      {
+        "tool": "schema_v3 normalise",
+        "written": "2026-09-23T21:59:41",
+        "species": 48,
+        "note": "screening: material interaction and safety flags; Lennard-Jones and phase points marked as not yet sourced",
+        "forced": false
       }
     ],
     "note": "Written through tools/db_guard.py. The hash covers everything except this block. A mismatch on load means the file was edited outside the guard, which is allowed but flagged."
+  },
+  "referenceState": {
+    "temperatureK": 298.15,
+    "pressureBar": 1.0,
+    "enthalpyConvention": "NASA-9 absolute: H(298.15 K) equals the standard formation enthalpy, elements in their reference state at zero",
+    "entropyConvention": "NASA-9 absolute (third-law) entropy at the 1 bar standard state"
   }
 }

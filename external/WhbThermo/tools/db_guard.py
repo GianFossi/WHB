@@ -21,7 +21,10 @@ WHAT IS REFUSED
   * fewer species than before
   * a species losing a property it had
   * a Cp model downgraded (nasa9 -> nasa7 -> shomate -> anchor)
-  * a manual annotation dropped (suspect, verified, any *Reason field)
+  * a manual annotation dropped (suspect, verified, validationNote)
+  * a species id changed, the referenceState lost, the schema version lowered
+  * a schema 3.0 record that schema_v3.normalise() cannot complete (for
+    example a new species with no family)
   * writing over a file that changed since it was read
 
 The last is the one that catches concurrent edits and hand editing: the file
@@ -43,6 +46,9 @@ import shutil
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import schema_v3  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "species-database.json"
 BACKUP_DIR = ROOT / "data" / ".backups"
@@ -51,11 +57,14 @@ BACKUP_DIR = ROOT / "data" / ".backups"
 PROTECTED_FIELDS = [
     "formula", "cas", "molarMass_kg_kmol", "cpModel", "transport",
     "critical", "vapourPressure", "diffusionVolume",
+    # schema 3.0
+    "id", "family", "synonyms", "elements", "dataQuality", "radiation", "eosParameters",
+    "lennardJones", "phase", "materialInteraction", "safety",
 ]
 
 # Annotations a human put there. Losing one silently returns an investigated
 # defect to service.
-MANUAL_ANNOTATIONS = ["suspect", "suspectReason", "verified"]
+MANUAL_ANNOTATIONS = ["suspect", "suspectReason", "verified", "validationNote"]
 
 # Cp model quality, best first. A rebuild must never move a species down this
 # list.
@@ -101,8 +110,18 @@ def _differences(before: dict, after: dict) -> list[str]:
     if removed:
         losses.append(f"{len(removed)} species removed: {', '.join(removed)}")
 
+    if schema_v3.version(after) < schema_v3.version(before):
+        losses.append(f"schema version downgraded {before.get('schemaVersion')} -> "
+                      f"{after.get('schemaVersion')}")
+    if before.get("referenceState") and not after.get("referenceState"):
+        losses.append("lost the database referenceState")
+
     for key in sorted(set(old) & set(new)):
         o, n = old[key], new[key]
+
+        # The id is what reports and other files refer to; it never changes.
+        if o.get("id") is not None and n.get("id") is not None and o["id"] != n["id"]:
+            losses.append(f"{key}: id changed {o['id']} -> {n['id']}")
 
         for field in PROTECTED_FIELDS:
             if field in o and o[field] is not None and n.get(field) is None:
@@ -157,6 +176,17 @@ def save(document: dict, tool: str, note: str = "",
     previous = None
     if path.exists():
         previous = json.loads(path.read_text(encoding="utf-8"))
+
+    # Every writer produces complete schema 3.0 records, whether or not it knows
+    # about them: missing ids, families, elements and quality grades are filled
+    # here, and a record that still cannot be completed is refused outright.
+    problems = schema_v3.normalise_document(document, previous)
+    if problems:
+        raise GuardError(f"\nREFUSED: {tool} writes records that are not valid schema "
+                         f"{schema_v3.SCHEMA_VERSION}:\n"
+                         + "\n".join(f"  - {p}" for p in problems))
+
+    if previous is not None:
         losses = _differences(previous, document)
         if losses:
             message = (f"\nREFUSED: {tool} would lose information:\n"

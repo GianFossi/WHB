@@ -84,8 +84,8 @@ SPECIES = {
     "oC8H10": ("95-47-6", "o-Xylene", 106.165),
     "C8H8": ("100-42-5", "Styrene", 104.149),
     "C10H8": ("91-20-3", "Naphthalene", 128.171),
-    "CH4O": ("67-56-1", "Methanol", 32.042),
-    "C2H6O": ("64-17-5", "Ethanol", 46.068),
+    "CH3OH": ("67-56-1", "Methanol", 32.042),
+    "C2H5OH": ("64-17-5", "Ethanol", 46.068),
 }
 
 # label -> (path, equation, coefficient count, output unit, source, leadingTc)

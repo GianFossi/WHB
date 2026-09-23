@@ -144,10 +144,10 @@ let ``a curve ordered cold to hot is rejected`` () =
 [<Fact>]
 let ``a curve with non-increasing duty is rejected`` () =
     let points =
-        [ { CondensationCurve.Temperature = 500.0<K>; HeatRemoved = 0.0
-            VapourFraction = 1.0; CondensedSulfur = 0.0; VapourHeatCapacity = Some 1100.0 }
-          { CondensationCurve.Temperature = 480.0<K>; HeatRemoved = 0.0
-            VapourFraction = 0.8; CondensedSulfur = 0.2; VapourHeatCapacity = Some 1100.0 } ]
+        [ { CondensationCurve.Temperature = 500.0<K>; CondensationCurve.HeatRemoved = 0.0
+            CondensationCurve.VapourFraction = 1.0; CondensationCurve.CondensedSulfur = 0.0; CondensationCurve.VapourHeatCapacity = Some 1100.0 }
+          { CondensationCurve.Temperature = 480.0<K>; CondensationCurve.HeatRemoved = 0.0
+            CondensationCurve.VapourFraction = 0.8; CondensationCurve.CondensedSulfur = 0.2; CondensationCurve.VapourHeatCapacity = Some 1100.0 } ]
     match CondensationCurve.validate points "flat duty" "test" with
     | Failure _ -> ()
     | Success _ -> failwith "a curve with no duty change must be rejected"
@@ -155,8 +155,8 @@ let ``a curve with non-increasing duty is rejected`` () =
 [<Fact>]
 let ``a single point curve is rejected`` () =
     let point =
-        { CondensationCurve.Temperature = 500.0<K>; HeatRemoved = 0.0
-          VapourFraction = 1.0; CondensedSulfur = 0.0; VapourHeatCapacity = None }
+        { CondensationCurve.Temperature = 500.0<K>; CondensationCurve.HeatRemoved = 0.0
+          CondensationCurve.VapourFraction = 1.0; CondensationCurve.CondensedSulfur = 0.0; CondensationCurve.VapourHeatCapacity = None }
     match CondensationCurve.validate [ point ] "single" "test" with
     | Failure _ -> ()
     | Success _ -> failwith "one point is not a curve"
@@ -227,10 +227,10 @@ let ``the Z factor uses the exported vapour heat capacity`` () =
 [<Fact>]
 let ``the Z factor is refused when no vapour heat capacity is available`` () =
     let points =
-        [ { CondensationCurve.Temperature = 500.0<K>; HeatRemoved = 0.0
-            VapourFraction = 1.0; CondensedSulfur = 0.0; VapourHeatCapacity = None }
-          { CondensationCurve.Temperature = 480.0<K>; HeatRemoved = 50000.0
-            VapourFraction = 0.8; CondensedSulfur = 0.2; VapourHeatCapacity = None } ]
+        [ { CondensationCurve.Temperature = 500.0<K>; CondensationCurve.HeatRemoved = 0.0
+            CondensationCurve.VapourFraction = 1.0; CondensationCurve.CondensedSulfur = 0.0; CondensationCurve.VapourHeatCapacity = None }
+          { CondensationCurve.Temperature = 480.0<K>; CondensationCurve.HeatRemoved = 50000.0
+            CondensationCurve.VapourFraction = 0.8; CondensationCurve.CondensedSulfur = 0.2; CondensationCurve.VapourHeatCapacity = None } ]
     let curve = CondensationCurve.validate points "no cp" "test" |> value
     match CondensationCurve.zFactorAt curve 490.0<K> None with
     | Failure _ -> ()

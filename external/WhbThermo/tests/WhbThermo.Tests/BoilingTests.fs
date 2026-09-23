@@ -71,7 +71,7 @@ let ``Cooper superheat form inverts the heat flux form exactly`` () =
     let pr = 10.0 / 22.064
     for superheat in [ 1.0; 2.0; 5.0; 8.0 ] do
         let h = Nucleate.cooperFromSuperheat pr 18.015<kg/kmol> superheat 1.0 |> value
-        let flux = h * (superheat * 1.0<K>) / 1.0<K>
+        let flux = h * (superheat * 1.0<K>)
         let back = Nucleate.cooperFromHeatFlux pr 18.015<kg/kmol> flux 1.0 |> value
         Assert.Equal(float h, float back, 6)
 
@@ -91,7 +91,7 @@ let ``Zuber critical heat flux peaks in the expected pressure range`` () =
     let flux pBar =
         let s = If97.saturatedAt steam (pBar * 1.0<bar>) |> value
         let sigma = Nucleate.surfaceTension s.SaturationTemperature |> value
-        float (Nucleate.zuberCriticalHeatFlux s.LatentHeat 1000.0 (float s.Liquid.Density)
+        float (Nucleate.zuberCriticalHeatFlux (s.LatentHeat * 1000.0) (float s.Liquid.Density)
                                              (float s.Vapour.Density) sigma |> value)
 
     let pressures = [ 10.0; 20.0; 40.0; 60.0; 80.0; 100.0; 140.0 ]
@@ -146,7 +146,7 @@ let ``Cooper superheat form crosses burnout at a modest superheat`` () =
     let pr = pBar / 10.0 / 22.064
     let fluxAt superheat =
         let h = Nucleate.cooperFromSuperheat pr 18.015<kg/kmol> superheat 1.0 |> value
-        h * (superheat * 1.0<K>) / 1.0<K>
+        h * (superheat * 1.0<K>)
 
     // Comfortable at a few degrees, past burnout by ten.
     match Nucleate.checkAgainstCritical (fluxAt 3.0) critical with
@@ -198,8 +198,10 @@ let ``gas film dominates the resistance network`` () =
                             0.0004 0.0002 Overall.LowAlloySA213_T11 350.0<degC>
         |> value
     let share name = r.Shares |> List.find (fun (n, _) -> n = name) |> snd
-    Assert.True(share "gas film" > 0.6, $"gas film share {share \"gas film\"}")
-    Assert.True(share "boiling" < 0.05, $"boiling share {share \"boiling\"}")
+    let gasFilm = share "gas film"
+    let boiling = share "boiling"
+    Assert.True(gasFilm > 0.6, $"gas film share {gasFilm}")
+    Assert.True(boiling < 0.05, $"boiling share {boiling}")
     Assert.True(float r.OverallCoefficient > 50.0 && float r.OverallCoefficient < 200.0)
 
 /// A clean-case rating must announce itself: it is valid for metal temperature
@@ -218,5 +220,6 @@ let ``tube conductivity falls with temperature for the alloy steels`` () =
     let cold = Overall.LowAlloySA213_T11.Conductivity 100.0<degC>
     let hot = Overall.LowAlloySA213_T11.Conductivity 550.0<degC>
     Assert.True(cold > 0.0 && hot > 0.0)
-    Assert.True(Overall.Austenitic316L.Conductivity 300.0<degC>
-                < Overall.CarbonSteelSA516_70.Conductivity 300.0<degC>)
+    let austenitic = Overall.Austenitic316L.Conductivity 300.0<degC>
+    let carbon = Overall.CarbonSteelSA516_70.Conductivity 300.0<degC>
+    Assert.True(austenitic < carbon)

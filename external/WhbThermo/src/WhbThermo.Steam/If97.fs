@@ -32,7 +32,7 @@ module If97 =
     // ---------- data model ----------
 
     [<CLIMutable>]
-    type private RangeDto = { tMinK: float; tMaxK: float; pMaxMPa: float }
+    type private RangeDto = { tMinK: float; tMaxK: float; pMaxMPa: float option }
 
     [<CLIMutable>]
     type private ConstantsDto =
@@ -95,7 +95,12 @@ module If97 =
 
     let private options =
         let o = JsonSerializerOptions(PropertyNameCaseInsensitive = true)
-        o.Converters.Add(JsonFsharpConverter())
+        // Optional fields are absent or null in parts of the data file; both read as None.
+        o.Converters.Add(
+            JsonFSharpConverter(
+                JsonFSharpOptions.Default()
+                    .WithSkippableOptionFields(SkippableOptionFields.Always,
+                                               deserializeNullAsNone = true)))
         o
 
     let parse (json: string) : Thermo<Model> =
@@ -104,8 +109,8 @@ module If97 =
             let check name (a: int[]) (b: int[]) (n: float[]) =
                 if a.Length <> n.Length || b.Length <> n.Length then
                     Some (DatabaseParseError
-                            $"IF97 {name}: coefficient arrays of unequal length "
-                            + $"(I={a.Length}, J={b.Length}, n={n.Length})")
+                            ($"IF97 {name}: coefficient arrays of unequal length "
+                             + $"(I={a.Length}, J={b.Length}, n={n.Length})"))
                 else None
 
             match check "region1" r.region1.i r.region1.j r.region1.n,
@@ -122,17 +127,19 @@ module If97 =
                     fail (DatabaseParseError $"IF97 region 2 ideal has {r.region2.ideal.n.Length} terms, standard has 9")
                 elif r.region4.n.Length <> 10 then
                     fail (DatabaseParseError $"IF97 region 4 has {r.region4.n.Length} coefficients, standard has 10")
+                elif r.region1.range.pMaxMPa.IsNone || r.region2.range.pMaxMPa.IsNone then
+                    fail (DatabaseParseError "IF97 regions 1 and 2 need range.pMaxMPa")
                 else
                     ok { R = r.constants.r_kJ_kgK
                          Tc = r.constants.tc_K * 1.0<K>
                          Pc = r.constants.pc_MPa * 10.0<bar>
                          R1 = {| PiStar = r.region1.piStar_MPa; TauStar = r.region1.tauStar_K
                                  TMin = r.region1.range.tMinK; TMax = r.region1.range.tMaxK
-                                 PMax = r.region1.range.pMaxMPa
+                                 PMax = r.region1.range.pMaxMPa.Value
                                  I = r.region1.i; J = r.region1.j; N = r.region1.n |}
                          R2 = {| PiStar = r.region2.piStar_MPa; TauStar = r.region2.tauStar_K
                                  TMin = r.region2.range.tMinK; TMax = r.region2.range.tMaxK
-                                 PMax = r.region2.range.pMaxMPa
+                                 PMax = r.region2.range.pMaxMPa.Value
                                  IdealJ = r.region2.ideal.j; IdealN = r.region2.ideal.n
                                  I = r.region2.residual.i; J = r.region2.residual.j
                                  N = r.region2.residual.n |}

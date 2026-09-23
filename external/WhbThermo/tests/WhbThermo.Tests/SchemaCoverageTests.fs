@@ -60,8 +60,8 @@ let ``the heat capacity ratio is physical`` () =
 
 [<Fact>]
 let ``formation enthalpy and Gibbs energy are exposed directly`` () =
-    Assert.InRange(SpeciesApi.formationEnthalpy (species "CO2") |> value / 1000.0, -395.0, -392.0)
-    Assert.InRange(SpeciesApi.formationEnthalpy (species "H2O") |> value / 1000.0, -243.0, -240.0)
+    Assert.InRange((SpeciesApi.formationEnthalpy (species "CO2") |> value) / 1000.0, -395.0, -392.0)
+    Assert.InRange((SpeciesApi.formationEnthalpy (species "H2O") |> value) / 1000.0, -243.0, -240.0)
     // Gibbs is on the NASA-9 convention, absolute rather than of-formation.
     let g = SpeciesApi.formationGibbs (species "CO2") |> value
     let h = SpeciesApi.formationEnthalpy (species "CO2") |> value
@@ -185,7 +185,7 @@ let ``homonuclear and monatomic species are transparent`` () =
 let ``water and carbon dioxide are participating and covered`` () =
     for key in [ "H2O"; "CO2" ] do
         match (species key).Radiation with
-        | ParticipatingCovered model -> Assert.Contains("WSGG", model)
+        | ParticipatingCovered models -> Assert.Contains(models, fun m -> m.Contains "WSGG")
         | other -> failwith $"{key}: expected covered, got {other}"
 
 /// The species that matter in Claus service absorb but have no parameter set.

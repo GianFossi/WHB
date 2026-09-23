@@ -62,8 +62,10 @@ module LiquidProperties =
         let last = List.last viscosityAnchors
 
         if tC < fst first || tC > fst last then
+            // OutsideFitRange is stated in kelvin.
             fail (OutsideFitRange
-                    ("liquid sulfur viscosity", "temperature", tC, fst first, fst last))
+                    ("liquid sulfur viscosity", "temperature", float t,
+                     fst first + 273.15, fst last + 273.15))
         else
             let bracket =
                 viscosityAnchors
@@ -89,7 +91,7 @@ module LiquidProperties =
     let density (t: float<K>) : Thermo<float> =
         let tC = float t - 273.15
         if tC < 115.0 || tC > 400.0 then
-            fail (OutsideFitRange ("liquid sulfur density", "temperature", tC, 115.0, 400.0))
+            fail (OutsideFitRange ("liquid sulfur density", "temperature", float t, 115.0 + 273.15, 400.0 + 273.15))
         else
             ok (1819.0 - 0.784 * (tC - 120.0))
 
@@ -97,7 +99,7 @@ module LiquidProperties =
     let surfaceTension (t: float<K>) : Thermo<float> =
         let tC = float t - 273.15
         if tC < 115.0 || tC > 400.0 then
-            fail (OutsideFitRange ("liquid sulfur surface tension", "temperature", tC, 115.0, 400.0))
+            fail (OutsideFitRange ("liquid sulfur surface tension", "temperature", float t, 115.0 + 273.15, 400.0 + 273.15))
         else
             ok (0.0608 - 7.0e-5 * (tC - 120.0))
 
@@ -107,7 +109,7 @@ module LiquidProperties =
     let conductivity (t: float<K>) : Thermo<float> =
         let tC = float t - 273.15
         if tC < 115.0 || tC > 400.0 then
-            fail (OutsideFitRange ("liquid sulfur conductivity", "temperature", tC, 115.0, 400.0))
+            fail (OutsideFitRange ("liquid sulfur conductivity", "temperature", float t, 115.0 + 273.15, 400.0 + 273.15))
         else
             ok (0.1352 + 1.15e-4 * (tC - 120.0))
 
@@ -118,7 +120,7 @@ module LiquidProperties =
     let heatCapacity (t: float<K>) : Thermo<float> =
         let tC = float t - 273.15
         if tC < 115.0 || tC > 400.0 then
-            fail (OutsideFitRange ("liquid sulfur heat capacity", "temperature", tC, 115.0, 400.0))
+            fail (OutsideFitRange ("liquid sulfur heat capacity", "temperature", float t, 115.0 + 273.15, 400.0 + 273.15))
         else
             let baseline = 1000.0 + 0.55 * (tC - 120.0)
             // Lambda anomaly, modelled as a peak centred on the transition.

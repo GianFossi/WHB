@@ -19,204 +19,17 @@ module GasProps =
         | C2H4 | C2H6 | C3H6 | C3H8 | C2H2 | C6H6 | C7H8
         | NO | NO2 | N2O | SO3 | HCN | He
     /// <summary>
-    /// Returns the molecular weight of a species in kg/mol.
+    /// Returns the compact index used to address per-species tables and caches.
     /// </summary>
-    /// <param name="sp">The species whose molar mass is requested.</param>
-    /// <returns>The molar mass of the species in kg/mol.</returns>
-    let molarMass =
+    /// <param name="sp">The species.</param>
+    /// <returns>A stable integer ID for the species.</returns>
+    let private speciesIndex =
         function
-        | H2 -> 0.00201588 | N2 -> 0.0280134 | O2 -> 0.0319988
-        | CO -> 0.0280101  | CO2 -> 0.0440095 | CH4 -> 0.01604246
-        | H2O -> 0.01801528 | Ar -> 0.039948 | NH3 -> 0.01703052
-        | H2S -> 0.0340809  | SO2 -> 0.0640638 | COS -> 0.0600751
-        | CS2 -> 0.0761407  | S2 -> 0.0641300  | S6 -> 0.1923900
-        | S8 -> 0.2565200
-        | C2H4 -> 0.0280532 | C2H6 -> 0.0300690 | C3H6 -> 0.0420797
-        | C3H8 -> 0.0440956 | C2H2 -> 0.0260373 | C6H6 -> 0.0781118
-        | C7H8 -> 0.0921384
-        | NO -> 0.0300061   | NO2 -> 0.0460055  | N2O -> 0.0440128
-        | SO3 -> 0.0800632  | HCN -> 0.0270253  | He -> 0.0040026
-    /// <summary>
-    /// Provides the polynomial heat-capacity coefficients used to evaluate the ideal-gas molar heat capacity.
-    /// </summary>
-    /// <param name="sp">A gas species.</param>
-    /// <returns>The coefficients for the polynomial $C_p = a + bT + cT^2 + d/T^2$ expressed in J/mol·K.</returns>
-    let private cpCoef =
-        function
-        | H2  -> (3.249, 0.422e-3, 0.0,       0.083e5)
-        | N2  -> (3.280, 0.593e-3, 0.0,       0.040e5)
-        | O2  -> (3.639, 0.506e-3, 0.0,      -0.227e5)
-        | CO  -> (3.376, 0.557e-3, 0.0,      -0.031e5)
-        | CO2 -> (5.457, 1.045e-3, 0.0,      -1.157e5)
-        | H2O -> (3.470, 1.450e-3, 0.0,       0.121e5)
-        | CH4 -> (1.702, 9.081e-3, -2.164e-6, 0.0)
-        | Ar  -> (2.500, 0.0,      0.0,       0.0)
-        | NH3 -> (3.578, 3.020e-3, 0.0,      -0.186e5)
-        | H2S -> (2.8292,  3.4632e-3, -7.9790e-7,  0.3097e5)
-        | SO2 -> (4.9720,  2.3231e-3, -6.9826e-7, -0.8281e5)
-        | COS -> (5.2290,  2.3095e-3, -6.4143e-7, -0.8217e5)
-        | CS2 -> (5.8945,  1.7962e-3, -5.3079e-7, -0.8790e5)
-        | S2  -> (4.2230,  0.2990e-3,  1.3711e-8, -0.3757e5)
-        | S6  -> (15.6648, 0.0976e-3,  3.0526e-7, -1.8938e5)
-        | S8  -> (17.0260, 9.8204e-3, -3.5717e-6, -0.5874e5)
-        | C2H4 -> (2.1491, 13.208e-3, -3.9794e-6, -0.5990e5)
-        | C2H6 -> (1.3824, 19.067e-3, -5.6588e-6, -0.3041e5)
-        | C3H6 -> (2.9907, 20.848e-3, -6.3411e-6, -0.9125e5)
-        | C3H8 -> (2.9504, 26.119e-3, -7.9093e-6, -1.2056e5)
-        | C2H2 -> (5.2215,  3.8191e-3, -7.8326e-7, -0.9041e5)
-        | C6H6 -> (5.3626, 30.687e-3, -1.0222e-5, -3.6521e5)
-        | C7H8 -> (5.7614, 38.863e-3, -1.2779e-5, -3.7211e5)
-        | NO  -> (2.9165,  1.5763e-3, -4.3377e-7,  0.2067e5)
-        | NO2 -> (4.2347,  3.0756e-3, -8.9391e-7, -0.6420e5)
-        | N2O -> (4.5227,  2.9955e-3, -8.2205e-7, -0.6832e5)
-        | SO3 -> (6.7777,  3.6138e-3, -1.1137e-6, -1.6553e5)
-        | HCN -> (3.9467,  2.7421e-3, -6.1536e-7, -0.3608e5)
-        | He  -> (2.500,   0.0,        0.0,        0.0)
-    /// <summary>
-    /// Returns the Sutherland viscosity parameters for a species.
-    /// </summary>
-    /// <param name="sp">The gas species.</param>
-    /// <returns>The viscosity reference values used by the Sutherland correlation.</returns>
-    let private sutherland =
-        function
-        | H2  -> (8.411e-6, 273.15, 97.0)
-        | N2  -> (1.663e-5, 273.15, 107.0)
-        | O2  -> (1.919e-5, 273.15, 139.0)
-        | CO  -> (1.657e-5, 273.15, 136.0)
-        | CO2 -> (1.370e-5, 273.15, 222.0)
-        | CH4 -> (1.024e-5, 273.15, 164.0)
-        | Ar  -> (2.125e-5, 273.15, 144.0)
-        | NH3 -> (0.918e-5, 273.15, 370.0)
-        | H2O -> (1.120e-5, 350.0,  1064.0)
-        | H2S -> (12.40e-6, 293.15, 331.0)
-        | SO2 -> (12.55e-6, 293.15, 416.0)
-        | COS -> (12.00e-6, 293.15, 380.0)
-        | CS2 -> ( 9.90e-6, 293.15, 450.0)
-        | S2  -> (11.50e-6, 293.15, 500.0)
-        | S6  -> (10.20e-6, 293.15, 600.0)
-        | S8  -> ( 9.50e-6, 293.15, 650.0)
-        | C2H4 -> (10.08e-6, 293.15, 226.0)
-        | C2H6 -> ( 9.10e-6, 293.15, 252.0)
-        | C3H6 -> ( 8.35e-6, 293.15, 290.0)
-        | C3H8 -> ( 8.00e-6, 293.15, 310.0)
-        | C2H2 -> (10.20e-6, 293.15, 210.0)
-        | C6H6 -> ( 7.50e-6, 293.15, 380.0)
-        | C7H8 -> ( 6.90e-6, 293.15, 410.0)
-        | NO  -> (18.80e-6, 293.15, 128.0)
-        | NO2 -> (14.10e-6, 293.15, 270.0)
-        | N2O -> (14.60e-6, 293.15, 260.0)
-        | SO3 -> (13.50e-6, 293.15, 450.0)
-        | HCN -> (11.20e-6, 293.15, 280.0)
-        | He  -> (19.60e-6, 293.15,  79.0)
-    /// <summary>
-    /// Computes the ideal-gas molar heat capacity at constant pressure for a single species.
-    /// </summary>
-    /// <param name="sp">The species to evaluate.</param>
-    /// <param name="tK">Temperature in kelvin.</param>
-    /// <returns>The molar heat capacity in J/mol·K.</returns>
-    let cpMolar (sp: Species) (tK: float) =
-        let (a, b, c, d) = cpCoef sp
-        R * (a + b * tK + c * tK * tK + d / (tK * tK))
-    /// <summary>
-    /// Returns the standard formation enthalpy of a species in J/mol.
-    /// </summary>
-    /// <param name="sp">The species whose formation enthalpy is requested.</param>
-    /// <returns>The reference formation enthalpy in J/mol.</returns>
-    let hForm =
-        function
-        | H2 -> 0.0 | N2 -> 0.0 | O2 -> 0.0 | Ar -> 0.0 | He -> 0.0
-        | CO -> -110530.0 | CO2 -> -393510.0 | H2O -> -241826.0
-        | CH4 -> -74850.0 | NH3 -> -45900.0
-        | H2S -> -20600.0   | SO2 -> -296810.0 | COS -> -141700.0
-        | CS2 -> 116700.0   | S2 -> 128600.0   | S6 -> 101315.0
-        | S8 -> 101277.0
-        | C2H4 -> 52500.0   | C2H6 -> -83852.0 | C3H6 -> 20000.0
-        | C3H8 -> -104680.0 | C2H2 -> 228200.0 | C6H6 -> 82880.0
-        | C7H8 -> 50170.0
-        | NO -> 91271.0     | NO2 -> 34193.0   | N2O -> 81600.0
-        | SO3 -> -395900.0  | HCN -> 133082.0
-    /// <summary>
-    /// Calculates the sensible molar enthalpy increment of a species relative to 298.15 K.
-    /// </summary>
-    /// <param name="sp">The gas species.</param>
-    /// <param name="tK">Temperature in kelvin.</param>
-    /// <returns>The sensible molar enthalpy in J/mol.</returns>
-    let hMolar (sp: Species) (tK: float) =
-        let (a, b, c, d) = cpCoef sp
-        let t0 = 298.15
-        R * (a * (tK - t0)
-             + b / 2.0 * (tK * tK - t0 * t0)
-             + c / 3.0 * (tK ** 3.0 - t0 ** 3.0)
-             - d * (1.0 / tK - 1.0 / t0))
-    /// <summary>
-    /// Returns the absolute molar enthalpy of a species including the formation term.
-    /// </summary>
-    /// <param name="sp">The species to evaluate.</param>
-    /// <param name="tK">Temperature in kelvin.</param>
-    /// <returns>The absolute molar enthalpy in J/mol.</returns>
-    let hMolarAbs (sp: Species) (tK: float) = hForm sp + hMolar sp tK
-    /// <summary>
-    /// Evaluates the pure-species dynamic viscosity using the Sutherland model.
-    /// </summary>
-    /// <param name="sp">The gas species.</param>
-    /// <param name="tK">Temperature in kelvin.</param>
-    /// <returns>The dynamic viscosity in Pa·s.</returns>
-    let muPure (sp: Species) (tK: float) =
-        match sp with
-        | H2O -> Steam.viscosity tK 0.0      // limite di gas diluito IAPWS
-        | _ ->
-            let (mu0, t0, s) = sutherland sp
-            mu0 * Math.Pow(tK / t0, 1.5) * (t0 + s) / (tK + s)
-    /// <summary>
-    /// Gets the conductivity fitting parameters for species that need a dedicated polynomial alternative to the Sutherland correlation.
-    /// </summary>
-    /// <param name="sp">The gas species.</param>
-    /// <returns>The thermal conductivity coefficients, when available.</returns>
-    let private sutherlandKOpt =
-        function
-        | H2S -> Some (13.0e-3, 450.0)
-        | SO2 -> Some (8.6e-3, 480.0)
-        | COS -> Some (10.5e-3, 420.0)
-        | CS2 -> Some (7.5e-3, 510.0)
-        | S2 -> Some (9.0e-3, 550.0)
-        | S6 -> Some (6.8e-3, 650.0)
-        | S8 -> Some (5.5e-3, 700.0)
-        | C2H4 -> Some (17.5e-3, 350.0)
-        | C2H6 -> Some (18.0e-3, 380.0)
-        | C3H6 -> Some (15.2e-3, 400.0)
-        | C3H8 -> Some (15.0e-3, 420.0)
-        | C2H2 -> Some (19.5e-3, 320.0)
-        | C6H6 -> Some (9.5e-3, 450.0)
-        | C7H8 -> Some (9.0e-3, 470.0)
-        | NO -> Some (23.8e-3, 160.0)
-        | NO2 -> Some (13.0e-3, 350.0)
-        | N2O -> Some (15.1e-3, 340.0)
-        | SO3 -> Some (10.0e-3, 500.0)
-        | HCN -> Some (16.5e-3, 360.0)
-        | He -> Some (150.0e-3, 100.0)
-        | _ -> None
-    /// <summary>
-    /// Evaluates the pure-species thermal conductivity in W/(m·K).
-    /// </summary>
-    /// <param name="sp">The species to assess.</param>
-    /// <param name="tK">Temperature in kelvin.</param>
-    /// <returns>The species thermal conductivity.</returns>
-    let kPure (sp: Species) (tK: float) =
-        match sp with
-        | H2O -> Steam.conductivity tK 0.0
-        | _ ->
-            match sutherlandKOpt sp with
-            | Some (k0, sk) ->
-                k0 * Math.Pow(tK / 273.15, 1.5) * (273.15 + sk) / (tK + sk)
-            | None ->
-                let mu = muPure sp tK
-                let m = molarMass sp
-                let cv = cpMolar sp tK - R
-                mu / m * (1.32 * cv + 1.77 * R)
-    /// <summary>
-    /// Represents a gas composition as a list of species/mol fractions.
-    /// </summary>
-    type Composition = (Species * float) list
+        | H2 -> 0 | N2 -> 1 | O2 -> 2 | CO -> 3 | CO2 -> 4
+        | CH4 -> 5 | H2O -> 6 | Ar -> 7 | NH3 -> 8
+        | H2S -> 9 | SO2 -> 10 | COS -> 11 | CS2 -> 12 | S2 -> 13 | S6 -> 14 | S8 -> 15
+        | C2H4 -> 16 | C2H6 -> 17 | C3H6 -> 18 | C3H8 -> 19 | C2H2 -> 20 | C6H6 -> 21 | C7H8 -> 22
+        | NO -> 23 | NO2 -> 24 | N2O -> 25 | SO3 -> 26 | HCN -> 27 | He -> 28
     /// <summary>
     /// Lists all gas species supported by the internal property library.
     /// </summary>
@@ -229,9 +42,76 @@ module GasProps =
     /// <summary>
     /// Formats the species identifier as the canonical symbolic name.
     /// </summary>
+    /// <remarks>
+    /// The name is also the species key in the WhbThermo database.
+    /// </remarks>
     /// <param name="sp">The species to format.</param>
     /// <returns>A string representation of the species.</returns>
     let speciesName (sp: Species) = sprintf "%A" sp
+    /// <summary>
+    /// Species data resolved from the WhbThermo database on first use, indexed by <c>speciesIndex</c>.
+    /// </summary>
+    let private records =
+        lazy (
+            let table = Array.zeroCreate (List.length allSpecies)
+            for sp in allSpecies do
+                table.[speciesIndex sp] <- GasThermoAdapter.record (speciesName sp)
+            table)
+    let private recordOf (sp: Species) : GasThermoAdapter.SpeciesRecord =
+        records.Force().[speciesIndex sp]
+    /// <summary>
+    /// Returns the molecular weight of a species in kg/mol.
+    /// </summary>
+    /// <param name="sp">The species whose molar mass is requested.</param>
+    /// <returns>The molar mass of the species in kg/mol, from the WhbThermo database.</returns>
+    let molarMass (sp: Species) = (recordOf sp).MolarMass
+    /// <summary>
+    /// Computes the ideal-gas molar heat capacity at constant pressure for a single species.
+    /// </summary>
+    /// <param name="sp">The species to evaluate.</param>
+    /// <param name="tK">Temperature in kelvin.</param>
+    /// <returns>The molar heat capacity in J/mol·K, from the WhbThermo NASA-9 fit.</returns>
+    let cpMolar (sp: Species) (tK: float) = GasThermoAdapter.cpMolar (recordOf sp) tK
+    /// <summary>
+    /// Returns the standard formation enthalpy of a species in J/mol.
+    /// </summary>
+    /// <param name="sp">The species whose formation enthalpy is requested.</param>
+    /// <returns>The reference formation enthalpy in J/mol at 298.15 K, from the WhbThermo NASA-9 fit.</returns>
+    let hForm (sp: Species) = (recordOf sp).FormationEnthalpy
+    /// <summary>
+    /// Returns the absolute molar enthalpy of a species including the formation term.
+    /// </summary>
+    /// <param name="sp">The species to evaluate.</param>
+    /// <param name="tK">Temperature in kelvin.</param>
+    /// <returns>The absolute molar enthalpy in J/mol.</returns>
+    let hMolarAbs (sp: Species) (tK: float) = GasThermoAdapter.hMolarAbs (recordOf sp) tK
+    /// <summary>
+    /// Calculates the sensible molar enthalpy increment of a species relative to 298.15 K.
+    /// </summary>
+    /// <param name="sp">The gas species.</param>
+    /// <param name="tK">Temperature in kelvin.</param>
+    /// <returns>The sensible molar enthalpy in J/mol.</returns>
+    let hMolar (sp: Species) (tK: float) =
+        let r = recordOf sp
+        GasThermoAdapter.hMolarAbs r tK - r.FormationEnthalpy
+    /// <summary>
+    /// Evaluates the pure-species low-pressure dynamic viscosity.
+    /// </summary>
+    /// <param name="sp">The gas species.</param>
+    /// <param name="tK">Temperature in kelvin.</param>
+    /// <returns>The dynamic viscosity in Pa·s, from the WhbThermo NASA CEA or Sutherland fit.</returns>
+    let muPure (sp: Species) (tK: float) = GasThermoAdapter.viscosity (recordOf sp) tK
+    /// <summary>
+    /// Evaluates the pure-species low-pressure thermal conductivity in W/(m·K).
+    /// </summary>
+    /// <param name="sp">The species to assess.</param>
+    /// <param name="tK">Temperature in kelvin.</param>
+    /// <returns>The species thermal conductivity, from the WhbThermo NASA CEA or Sutherland fit.</returns>
+    let kPure (sp: Species) (tK: float) = GasThermoAdapter.conductivity (recordOf sp) tK
+    /// <summary>
+    /// Represents a gas composition as a list of species/mol fractions.
+    /// </summary>
+    type Composition = (Species * float) list
     /// <summary>
     /// Normalizes case-insensitive species names to the internal enum values.
     /// </summary>
@@ -279,36 +159,11 @@ module GasProps =
         /// Returns the critical parameters for a species needed by the virial mixture model.
         /// </summary>
         /// <param name="sp">The species to inspect.</param>
-        /// <returns>The critical temperature, pressure, acentric factor, and critical volume when available.</returns>
-        let criticalOpt =
-            function
-            | H2  -> Some (33.19, 13.13e5, -0.216, 64.1e-6)
-            | N2  -> Some (126.20, 33.98e5, 0.037, 89.2e-6)
-            | O2  -> Some (154.58, 50.43e5, 0.022, 73.4e-6)
-            | CO  -> Some (132.85, 34.94e5, 0.045, 93.1e-6)
-            | CO2 -> Some (304.12, 73.74e5, 0.225, 94.07e-6)
-            | CH4 -> Some (190.56, 45.99e5, 0.011, 98.6e-6)
-            | H2O -> Some (647.10, 220.64e5, 0.345, 55.95e-6)
-            | Ar  -> Some (150.86, 48.98e5, 0.000, 74.57e-6)
-            | NH3 -> Some (405.50, 113.59e5, 0.253, 72.47e-6)
-            | H2S -> Some (373.40, 89.63e5, 0.090, 98.5e-6)
-            | SO2 -> Some (430.80, 78.84e5, 0.245, 122.0e-6)
-            | COS -> Some (378.80, 63.49e5, 0.111, 137.0e-6)
-            | CS2 -> Some (552.00, 79.00e5, 0.111, 173.0e-6)
-            | C2H4 -> Some (282.34, 50.41e5, 0.087, 131.1e-6)
-            | C2H6 -> Some (305.32, 48.72e5, 0.099, 145.5e-6)
-            | C3H6 -> Some (364.90, 46.00e5, 0.142, 184.6e-6)
-            | C3H8 -> Some (369.83, 42.48e5, 0.152, 200.0e-6)
-            | C2H2 -> Some (308.30, 61.14e5, 0.187, 112.2e-6)
-            | C6H6 -> Some (562.05, 48.95e5, 0.210, 256.0e-6)
-            | C7H8 -> Some (591.75, 41.08e5, 0.264, 316.0e-6)
-            | NO  -> Some (180.15, 64.80e5, 0.582, 58.0e-6)
-            | NO2 -> Some (431.35, 101.32e5, 0.849, 167.8e-6)
-            | N2O -> Some (309.57, 72.45e5, 0.141, 97.4e-6)
-            | SO3 -> Some (490.85, 82.10e5, 0.424, 127.3e-6)
-            | HCN -> Some (456.65, 53.90e5, 0.410, 139.0e-6)
-            | He  -> Some (5.19, 2.27e5, -0.390, 57.3e-6)
-            | S2 | S6 | S8 -> None
+        /// <returns>
+        /// The critical temperature [K], pressure [Pa], acentric factor, and critical volume [m³/mol] from the
+        /// WhbThermo database, or None when the database lacks any of them (the sulfur allotropes).
+        /// </returns>
+        let criticalOpt (sp: Species) = (recordOf sp).Critical
         /// <summary>
         /// Gets the critical parameters for a species or throws if they are unavailable.
         /// </summary>
@@ -361,18 +216,6 @@ module GasProps =
               Om: float
               IsWater: bool }
         /// <summary>
-        /// Returns the compact index used to cache species-pair terms.
-        /// </summary>
-        /// <param name="sp">The species.</param>
-        /// <returns>A stable integer ID for the species.</returns>
-        let private speciesIndex =
-            function
-            | H2 -> 0 | N2 -> 1 | O2 -> 2 | CO -> 3 | CO2 -> 4
-            | CH4 -> 5 | H2O -> 6 | Ar -> 7 | NH3 -> 8
-            | H2S -> 9 | SO2 -> 10 | COS -> 11 | CS2 -> 12 | S2 -> 13 | S6 -> 14 | S8 -> 15
-            | C2H4 -> 16 | C2H6 -> 17 | C3H6 -> 18 | C3H8 -> 19 | C2H2 -> 20 | C6H6 -> 21 | C7H8 -> 22
-            | NO -> 23 | NO2 -> 24 | N2O -> 25 | SO3 -> 26 | HCN -> 27 | He -> 28
-        /// <summary>
         /// Builds the virial interaction coefficients for a species set.
         /// </summary>
         /// <param name="species">The species that define the mixture.</param>
@@ -386,7 +229,7 @@ module GasProps =
                     let b = species.[j]
                     let mult = if i = j then 1.0 else 2.0
                     if a = b then
-                        if a = H2O then
+                        if (recordOf a).If97SecondVirial then
                             acc.Add { I = i; J = j; Mult = mult
                                       Tc = 0.0; Pc = 0.0; Om = 0.0; IsWater = true }
                         else
@@ -398,7 +241,9 @@ module GasProps =
                     else
                         match criticalOpt a, criticalOpt b with
                         | Some (tca, pca, oma, vca), Some (tcb, pcb, omb, vcb) ->
-                            let tcij = sqrt (tca * tcb)
+                            // k_ij from the WhbThermo binary table; 0 when the pair has none.
+                            let kij = GasThermoAdapter.virialKij (speciesName a) (speciesName b)
+                            let tcij = sqrt (tca * tcb) * (1.0 - kij)
                             let omij = 0.5 * (oma + omb)
                             let zca = pca * vca / (R * tca)
                             let zcb = pcb * vcb / (R * tcb)

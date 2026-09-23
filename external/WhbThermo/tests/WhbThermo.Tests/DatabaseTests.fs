@@ -39,10 +39,18 @@ let ``pending-completion count does not regress`` () =
 /// Anchor-only species MUST warn. Silence here would be the dangerous failure mode.
 [<Fact>]
 let ``anchor-only species emit a warning`` () =
-    match SpeciesDatabase.load () with
+    // The shipped database has no anchor-only species left (see the test above),
+    // so the warning path is exercised on a synthetic record.
+    let json = """
+    { "schemaVersion": "2.1", "description": "test", "species": [
+      { "key": "ANC", "name": "Anchor", "molarMass_kg_kmol": 40.0,
+        "cpModel": { "kind": "anchor", "anchorCp500C": 1.0, "source": "t" },
+        "transport": { "kind": "none", "reason": "synthetic" } } ] }
+    """
+    match SpeciesDatabase.parse json with
     | Success (_, warnings) ->
         Assert.Contains(warnings, function CpIsAnchorOnly _ -> true | _ -> false)
-    | Failure _ -> failwith "database did not load"
+    | Failure msgs -> failwith (msgs |> List.map string |> String.concat "; ")
 
 [<Fact>]
 let ``unknown species key fails cleanly`` () =

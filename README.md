@@ -529,6 +529,8 @@ src/Whb.Core/
   Options/Constants.fs       constants, unit conversions, bisection, fixed point
   Materials/SteamIF97.fs     IAPWS-IF97 helper properties
   Materials/GasProps.fs      gas species and mixture properties
+  Materials/Gas/GasThermoAdapter.fs
+                             thin adapter: species data from the WhbThermo database
   Materials/Materials.fs     material catalogue and limits
   Solvers/GasSide.fs         gas-side HTC correlations
   Solvers/WaterSide.fs       boiling and CHF correlations

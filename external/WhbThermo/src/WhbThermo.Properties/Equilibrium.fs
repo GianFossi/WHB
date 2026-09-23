@@ -149,8 +149,9 @@ module Equilibrium =
                              + "effectively complete in one direction; use the logarithm, "
                              + "not the constant itself"))
 
-    /// Degree of dissociation for a reaction of the form A -> n B at a given
-    /// pressure, solved from K_p.
+    /// Degree of dissociation of a reaction with one reactant and any products
+    /// (A -> n B, 2 H2S -> 2 H2 + S2, ...) at a given pressure, starting from
+    /// pure reactant, solved from K_p.
     ///
     /// Provided because "is dissociation negligible here?" is the question that
     /// actually gets asked, and answering it from a raw K_p requires care with
@@ -169,22 +170,27 @@ module Equilibrium =
                              $"'{reaction.Name}' has no mole change, so the extent is not "
                              + "set by pressure; solve the full equilibrium instead"))
                 else
-                    // A -> n B: Kp = (n x)^n / (1-x) * (P/P0)^(n-1) / (1+(n-1)x)^(n-1)
-                    // Solved by bisection on x, which is bounded in [0,1] and
-                    // monotonic in Kp - no convergence question.
-                    let n = dn + 1.0
-                    let residual x =
-                        if x <= 0.0 then -k.K
-                        elif x >= 1.0 then Double.PositiveInfinity
-                        else
-                            let total = 1.0 + (n - 1.0) * x
-                            let pA = (1.0 - x) / total * float pressure / StandardPressureBar
-                            let pB = n * x / total * float pressure / StandardPressureBar
-                            (pB ** n) / pA - k.K
-
-                    if Double.IsPositiveInfinity k.K then ok 1.0
-                    elif k.K <= 0.0 then ok 0.0
-                    else
+                    match reaction.Terms |> List.filter (fun (_, nu) -> nu < 0.0) with
+                    | [ (reactant, nuR) ] ->
+                        // One reactant R, any products, starting from pure R.
+                        // x is the fraction of R dissociated; with |nuR| moles of
+                        // R initially, product j holds nu_j x moles. Then
+                        //   ln Q(x) = SUM nu_i ln(y_i P / P0)  =  ln K
+                        // is solved in logarithms (K overflows a double for the
+                        // strongly favoured reactions) by bisection: ln Q rises
+                        // monotonically from -inf at x = 0 to +inf at x = 1.
+                        let rMoles = -nuR
+                        let pRatio = float pressure / StandardPressureBar
+                        let residual x =
+                            let productMoles =
+                                reaction.Terms |> List.sumBy (fun (_, nu) -> if nu > 0.0 then nu * x else 0.0)
+                            let total = rMoles * (1.0 - x) + productMoles
+                            let lnQ =
+                                reaction.Terms
+                                |> List.sumBy (fun (key, nu) ->
+                                    let moles = if key = reactant then rMoles * (1.0 - x) else nu * x
+                                    nu * log (moles / total * pRatio))
+                            lnQ - k.LogK
                         let rec bisect lo hi iterations =
                             if iterations = 0 || hi - lo < 1e-12 then (lo + hi) / 2.0
                             else
@@ -192,40 +198,8 @@ module Equilibrium =
                                 if residual mid < 0.0 then bisect mid hi (iterations - 1)
                                 else bisect lo mid (iterations - 1)
                         ok (bisect 1e-12 (1.0 - 1e-12) 200)
-
-    /// Reactions that matter in WHB and PGC service above about 1000 degC.
-    /// Named so a rating can ask "is this one significant here?" rather than
-    /// assuming.
-    module Reactions =
-
-        let h2sCracking =
-            { Name = "2 H2S -> 2 H2 + S2"
-              Terms = [ "H2S", -2.0; "H2", 2.0; "S2", 1.0 ] }
-
-        let sulfurDepolymerisation =
-            { Name = "S8 -> 4 S2"
-              Terms = [ "S8", -1.0; "S2", 4.0 ] }
-
-        let ammoniaCracking =
-            { Name = "2 NH3 -> N2 + 3 H2"
-              Terms = [ "NH3", -2.0; "N2", 1.0; "H2", 3.0 ] }
-
-        let waterGasShift =
-            { Name = "CO + H2O -> CO2 + H2"
-              Terms = [ "CO", -1.0; "H2O", -1.0; "CO2", 1.0; "H2", 1.0 ] }
-
-        let clausReaction =
-            { Name = "2 H2S + SO2 -> 3/2 S2 + 2 H2O"
-              Terms = [ "H2S", -2.0; "SO2", -1.0; "S2", 1.5; "H2O", 2.0 ] }
-
-        let cosHydrolysis =
-            { Name = "COS + H2O -> CO2 + H2S"
-              Terms = [ "COS", -1.0; "H2O", -1.0; "CO2", 1.0; "H2S", 1.0 ] }
-
-        let sulfurDioxideDissociation =
-            { Name = "2 SO2 -> S2 + 2 O2"
-              Terms = [ "SO2", -2.0; "S2", 1.0; "O2", 2.0 ] }
-
-        let all =
-            [ h2sCracking; sulfurDepolymerisation; ammoniaCracking; waterGasShift
-              clausReaction; cosHydrolysis; sulfurDioxideDissociation ]
+                    | _ ->
+                        fail (CorrelationExtrapolated
+                                ("dissociation fraction",
+                                 $"'{reaction.Name}' does not have exactly one reactant; "
+                                 + "solve the full equilibrium instead"))

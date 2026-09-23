@@ -16,12 +16,34 @@ let private synthetic (molarMass: float) (low: float[]) (high: float[]) =
           TMin = 250.0<K>; TMax = 1800.0<K>; Source = "synthetic" }
     { Key = "SYN"
       Name = "Synthetic"
+      Formula = "SYN"
+      Cas = None
       MolarMass = molarMass * 1.0<kg/kmol>
-      Viscosity = fit
-      Conductivity = fit
+      Viscosity = Some fit
+      Conductivity = Some fit
+      Transport = SutherlandPair (fit, fit)
       Cp = Nasa7 [ { TMin = 200.0<K>; TMax = 1000.0<K>; A = low; Source = "synthetic" }
                    { TMin = 1000.0<K>; TMax = 6000.0<K>; A = high; Source = "synthetic" } ]
-      Critical = None }
+      Critical = None
+      CriticalUnavailable = Some "synthetic species"
+      VapourPressure = None
+      VapourPressureUnavailable = Some "synthetic species"
+      DiffusionVolume = None
+      Radiation = Transparent
+      Synonyms = []
+      Family = SpeciesFamily.Other
+      Elements = [ "X", 1 ]
+      Quality =
+        { Thermo = QualityLevel.A; Transport = Some QualityLevel.C; Critical = None; VapourPressure = None
+          Validation = Unverified }
+      EosParameters = []
+      LennardJones = None
+      LennardJonesUnavailable = Some "synthetic species"
+      Phase =
+        { NormalBoilingPoint = None; MeltingPoint = None; TriplePoint = None
+          Source = None; Unavailable = Some "synthetic species" }
+      MaterialInteraction = None
+      Safety = None }
 
 let private value r =
     match r with

@@ -3,8 +3,10 @@
     <Compile Include="PureComponent.fs" />
     <Compile Include="ChungEstimate.fs" />
     <Compile Include="Equilibrium.fs" />
+    <Compile Include="ReactionDatabase.fs" />
     <Compile Include="SpeciesApi.fs" />
     <Compile Include="Mixing.fs" />
+    <Compile Include="GasState.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Ganfoss.ROP" Version="1.2.0" />

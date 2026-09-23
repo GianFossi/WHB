@@ -28,7 +28,7 @@ module RadiationModel =
 
     let private options =
         let o = JsonSerializerOptions(PropertyNameCaseInsensitive = true)
-        o.Converters.Add(JsonFsharpConverter())
+        o.Converters.Add(JsonFSharpConverter())
         o
 
     let private toLeckner (d: LecknerDto) : Emissivity.LecknerCoefficients =

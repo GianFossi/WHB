@@ -230,8 +230,8 @@ match result with
 ## Build
 
 ```bash
-dotnet build WhbThermo.sln
-dotnet test  WhbThermo.sln
+dotnet build GasProperties.sln
+dotnet test  GasProperties.sln
 ```
 
 Not compiled in the environment where it was generated (no NuGet access), so
@@ -436,7 +436,7 @@ the wrong count is rejected whatever its header claims.
 ```bash
 pip install CoolProp cantera iapws
 python tools/generate_golden.py     # regenerates tests/WhbThermo.Tests/reference/
-dotnet test WhbThermo.sln
+dotnet test GasProperties.sln
 ```
 
 Three oracles, each used only for what it is actually authoritative on. The
@@ -1025,3 +1025,35 @@ coperta (H₂O, CO₂), partecipante e **scoperta** — trenta specie, fra cui S
 H₂S. Per queste il messaggio dice esplicitamente che l'emissività calcolata è
 **bassa**, e `uncoveredRadiators` permette a una relazione di elencare cosa
 manca invece di lasciarlo implicito.
+
+## Schema 3.0 del database specie (2026-09-23)
+
+`species-database.json` è ora allo schema 3.0. Ogni record ha, oltre ai dati di prima:
+
+| Gruppo | Contenuto |
+|---|---|
+| Identità | `id` immutabile (uguale a `key`), `synonyms`, `family` (PermanentGas, Hydrocarbon, Oxygenate, SulfurCompound, NitrogenCompound, Water, Inert, AcidGas, Radical, Other) |
+| Molecolare | `elements` (conteggio atomi dalla formula); un test verifica che riproducano la massa molare |
+| Qualità | `dataQuality`: livello A–D per termodinamica, trasporto, critiche, tensione di vapore, più lo stato di validazione (`verified`, `unverified`, `knownDeviation` con nota) |
+| Radiazione | `radiation`: `participating`, `supportedModels[]`, `note` — non più una lista fissa nel loader |
+| EOS | `eosParameters[]`: solo ciò che un'equazione di stato richiede oltre alle costanti critiche (oggi: B dell'acqua da IAPWS-IF97) |
+| Trasporto, fase | `lennardJones`, `phase` — vuoti con il motivo finché non c'è una fonte verificata |
+| Materiali, sicurezza | `materialInteraction`, `safety`: flag di screening, non verdetti; i limiti numerici sono vuoti |
+
+A livello di file, `referenceState` dichiara lo stato di riferimento dei dati NASA-9:
+298.15 K e **1 bar**, non 1 atm.
+
+Tre file affiancano il database specie invece di copiarne i dati:
+
+- `reactions.json` — reazioni per id, stechiometria per id di specie, K calcolata dalle
+  Gibbs NASA-9, campo di validità come intersezione dei campi delle specie;
+  `tools/build_reactions.py` lo genera e controlla il bilancio atomico;
+- `binary-interaction.json` — k_ij per coppia ed equazione di stato; oggi vuoto;
+- `sulfur-species.json` — gli allotropi S1–S8 si riferiscono per `id` al database
+  specie; il file conserva solo la fase liquida.
+
+Tutte le scritture passano da `tools/db_guard.py`, che applica `tools/schema_v3.py`:
+completa i campi mancanti, ricalcola il livello di qualità di un gruppo solo quando cambia
+il tipo di dato, e rifiuta un record incompleto (ad esempio una specie nuova senza
+famiglia), un cambio di `id` o la perdita dello stato di riferimento. Un file allo schema
+2.x si carica ancora: il loader ricava i valori mancanti e lo segnala dove serve.

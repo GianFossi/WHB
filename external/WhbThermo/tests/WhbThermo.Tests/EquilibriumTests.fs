@@ -17,6 +17,9 @@ let private db =
     | Success (d, _) -> d
     | Failure msgs -> failwith (msgs |> List.map string |> String.concat "; ")
 
+let private reactions = ReactionDatabase.load () |> value
+let private reaction id = (ReactionDatabase.find reactions id |> value).Reaction
+
 let private species key =
     match SpeciesDatabase.find db key with
     | Success (s, _) -> s
@@ -33,7 +36,7 @@ let private kelvin c = (c + 273.15) * 1.0<K>
 [<Fact>]
 let ``formation enthalpies match published values`` () =
     let check key expected tolerance =
-        let h = Equilibrium.molarEnthalpy (species key) 298.15<K> |> value / 1000.0
+        let h = (Equilibrium.molarEnthalpy (species key) 298.15<K> |> value) / 1000.0
         Assert.True(abs (h - expected) < tolerance,
                     $"{key}: {h:F1} kJ/mol against {expected}")
 
@@ -65,7 +68,7 @@ let ``standard entropies match published values`` () =
 /// formation enthalpy, and confusing them makes every equilibrium wrong.
 [<Fact>]
 let ``absolute and relative enthalpies differ by the formation enthalpy`` () =
-    let absolute = Equilibrium.molarEnthalpy (species "CO2") 800.0<K> |> value / 1000.0
+    let absolute = (Equilibrium.molarEnthalpy (species "CO2") 800.0<K> |> value) / 1000.0
     let relative = PureComponent.enthalpy (species "CO2") 800.0<K> |> value
     Assert.True(abs (absolute - relative) > 300.0,
                 "the absolute enthalpy must carry the formation term")
@@ -78,7 +81,7 @@ let ``absolute and relative enthalpies differ by the formation enthalpy`` () =
 [<Fact>]
 let ``water gas shift crosses unity near 820 degC`` () =
     let logK tC =
-        (Equilibrium.equilibriumConstant db Equilibrium.Reactions.waterGasShift (kelvin tC)
+        (Equilibrium.equilibriumConstant db (reaction "waterGasShift") (kelvin tC)
          |> value).LogK
     Assert.True(logK 700.0 > 0.0, "shift favours products below the crossing")
     Assert.True(logK 900.0 < 0.0, "and reactants above it")
@@ -89,7 +92,7 @@ let ``water gas shift crosses unity near 820 degC`` () =
 [<Fact>]
 let ``H2S cracking extent matches published Claus behaviour`` () =
     let extent tC =
-        Equilibrium.dissociationFraction db Equilibrium.Reactions.h2sCracking
+        Equilibrium.dissociationFraction db (reaction "h2sCracking")
                                          (kelvin tC) 1.0<bar>
         |> value
     Assert.InRange(extent 1000.0, 0.15, 0.25)
@@ -99,9 +102,9 @@ let ``H2S cracking extent matches published Claus behaviour`` () =
 /// Endothermic dissociations must all become more favourable with temperature.
 [<Fact>]
 let ``endothermic dissociations become more favourable with temperature`` () =
-    for reaction in [ Equilibrium.Reactions.h2sCracking
-                      Equilibrium.Reactions.sulfurDepolymerisation
-                      Equilibrium.Reactions.ammoniaCracking ] do
+    for reaction in [ (reaction "h2sCracking")
+                      (reaction "sulfurDepolymerisation")
+                      (reaction "ammoniaCracking") ] do
         let logK tC =
             (Equilibrium.equilibriumConstant db reaction (kelvin tC) |> value).LogK
         let values = [ 600.0; 900.0; 1200.0; 1500.0 ] |> List.map logK
@@ -112,7 +115,7 @@ let ``endothermic dissociations become more favourable with temperature`` () =
 /// why the thermal stage makes S2 and the catalytic stage makes S8.
 [<Fact>]
 let ``sulfur depolymerisation is strongly favoured at flame temperature`` () =
-    let k = Equilibrium.equilibriumConstant db Equilibrium.Reactions.sulfurDepolymerisation
+    let k = Equilibrium.equilibriumConstant db (reaction "sulfurDepolymerisation")
                                             (kelvin 1200.0) |> value
     Assert.True(k.LogK > 15.0, $"ln K = {k.LogK}")
     Assert.True(k.DeltaH > 0.0, "depolymerisation is endothermic")
@@ -122,14 +125,14 @@ let ``sulfur depolymerisation is strongly favoured at flame temperature`` () =
 [<Fact>]
 let ``the Claus reaction is favoured across the furnace range`` () =
     for tC in [ 900.0; 1100.0; 1300.0 ] do
-        let k = Equilibrium.equilibriumConstant db Equilibrium.Reactions.clausReaction
+        let k = Equilibrium.equilibriumConstant db (reaction "clausReaction")
                                                 (kelvin tC) |> value
         Assert.True(k.LogK > 0.0, $"at {tC} degC ln K = {k.LogK}")
 
 /// An unknown species must fail by name, not silently contribute zero.
 [<Fact>]
 let ``a reaction naming an unknown species fails`` () =
-    let bogus = { Equilibrium.Name = "test"; Terms = [ "UNOBTAINIUM", -1.0; "H2", 1.0 ] }
+    let bogus : Equilibrium.Reaction = { Name = "test"; Terms = [ "UNOBTAINIUM", -1.0; "H2", 1.0 ] }
     match Equilibrium.equilibriumConstant db bogus 1000.0<K> with
     | Failure msgs -> Assert.Contains(msgs, function UnknownSpecies _ -> true | _ -> false)
     | Success _ -> failwith "an unknown species must fail"
@@ -138,13 +141,22 @@ let ``a reaction naming an unknown species fails`` () =
 /// as an infinity that propagates silently.
 [<Fact>]
 let ``an effectively complete reaction warns rather than overflowing quietly`` () =
-    let strong =
-        { Equilibrium.Name = "2 H2 + O2 -> 2 H2O"
+    let strong : Equilibrium.Reaction =
+        { Name = "2 H2 + O2 -> 2 H2O"
           Terms = [ "H2", -2.0; "O2", -1.0; "H2O", 2.0 ] }
+    // ln K = 85.8 at 600 K (dG about -428 kJ/mol): strongly favoured, still finite.
     match Equilibrium.equilibriumConstant db strong 600.0<K> with
+    | Success (k, _) -> Assert.True(k.LogK > 80.0, $"ln K = {k.LogK}")
+    | Failure msgs -> failwith (msgs |> List.map string |> String.concat "; ")
+    // Ten times the same reaction gives ln K of about 858, past exp overflow.
+    let scaled : Equilibrium.Reaction =
+        { Name = "20 H2 + 10 O2 -> 20 H2O"
+          Terms = strong.Terms |> List.map (fun (key, nu) -> key, 10.0 * nu) }
+    match Equilibrium.equilibriumConstant db scaled 600.0<K> with
     | Success (k, warnings) ->
-        Assert.True(k.LogK > 100.0)
-        if k.LogK > 700.0 then Assert.NotEmpty(warnings)
+        Assert.True(k.LogK > 700.0, $"ln K = {k.LogK}")
+        Assert.True(Double.IsPositiveInfinity k.K)
+        Assert.NotEmpty(warnings)
     | Failure msgs -> failwith (msgs |> List.map string |> String.concat "; ")
 
 // ---------- Chung estimation ----------

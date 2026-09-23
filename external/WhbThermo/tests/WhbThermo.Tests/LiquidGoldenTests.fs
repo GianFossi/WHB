@@ -79,8 +79,8 @@ let ``saturated liquid properties track CoolProp inside the fit ranges`` () =
                         let deviation = abs (ours - reference) / abs reference
                         if deviation > tolerance.[label] then
                             failures.Add
-                                $"{key} {label} at Tr {tr}: {deviation:P1} "
-                                + $"(ours {ours:g4}, CoolProp {reference:g4})"
+                                ($"{key} {label} at Tr {tr}: {deviation:P1} "
+                                 + $"(ours {ours:g4}, CoolProp {reference:g4})")
 
             check "rho" "liquidMolarDensity"
                   (fun () -> Dippr.liquidDensity s t >>= fun v -> ok (float v))
@@ -175,8 +175,8 @@ let ``DIPPR water agrees with IAPWS-IF97`` () =
             | Success (cp, _) ->
                 let deviation = abs (float cp / 1000.0 - state.Liquid.Cp) / state.Liquid.Cp
                 if deviation > 0.05 then
-                    failures.Add $"{pBar} bar: cp {deviation:P1} apart "
-                                 + $"(DIPPR {float cp / 1000.0:F3}, IF97 {state.Liquid.Cp:F3})"
+                    failures.Add ($"{pBar} bar: cp {deviation:P1} apart "
+                                  + $"(DIPPR {float cp / 1000.0:F3}, IF97 {state.Liquid.Cp:F3})")
             | Failure _ -> ()
 
     Assert.True(failures.Count = 0, String.Join("\n", failures))

@@ -296,7 +296,23 @@ sono ordini di grandezza, non misurazioni.
 
 ### 5.1 Compilare e far girare i test
 
-Prima di tutto il resto. 275 test mai eseguiti.
+Fatto il 2026-09-23. La soluzione (`GasProperties.sln`) ora compila e la suite
+gira: 317 test, 313 superati. I quattro che falliscono sono lacune di **dati**
+che nessuna tolleranza deve nascondere:
+
+- conducibilità gas di C₃H₈, C₃H₆, C₆H₆, C₇H₈ (fit Sutherland del manuale) dal
+  20 all'82 % sotto CoolProp, viscosità fino al 18 % — dichiarato nel database
+  come `knownDeviation`;
+- viscosità liquida di C₃H₆ e iC₄H₁₀ circa 18 % da CoolProp;
+- cp liquido di SO₃: un solo punto a 30 °C, non una correlazione;
+- viscosità del radicale H che scende di poco tra 400 e 600 K (fit CEA).
+
+### 5.1bis Dati dello schema 3.0 non ancora trascritti
+
+Lo schema li prevede, il database li lascia **vuoti con il motivo** finché non
+c'è una fonte verificata: parametri Lennard-Jones, punti di ebollizione, fusione
+e triplo, LFL/UFL e temperatura di autoaccensione. La tabella dei k_ij
+(`binary-interaction.json`) è vuota: k_ij = 0 per ogni coppia.
 
 ### 5.2 Validare contro un caso consuntivato
 

@@ -94,9 +94,10 @@ let ``Wassiljewa conductivity stays within the rigorous bounds`` () =
         let conductivities = parts |> Array.map (fun r -> number r "k_W_mK")
         let input =
             Array.init parts.Length (fun i ->
-                fractions.[i], number parts.[i] "molarMass_g_mol", conductivities.[i])
+                fractions.[i], number parts.[i] "molarMass_g_mol",
+                number parts.[i] "mu_Pas", conductivities.[i])
 
-        let ours = Mixing.combine input
+        let ours = Mixing.combineConductivity input
         let lower, upper = Mixing.bounds fractions conductivities
 
         // The generator writes the same bounds; check both agree, then check ours.
@@ -127,9 +128,10 @@ let ``Wassiljewa conductivity is close to Mathur-Tondon-Saxena`` () =
             |> Array.map (fun r ->
                 number r "moleFraction" / total,
                 number r "molarMass_g_mol",
+                number r "mu_Pas",
                 number r "k_W_mK")
 
-        let ours = Mixing.combine input
+        let ours = Mixing.combineConductivity input
         let mathur = number row "k_mathur_W_mK"
         let deviation = abs (ours - mathur) / mathur
         if deviation > 0.25 then
@@ -156,7 +158,7 @@ let ``all process gas mixtures evaluate across the WHB envelope`` () =
                                "NO", 0.005; "Ar", 0.06 ]
           "Nitric acid",     [ "NO", 0.09; "NO2", 0.01; "N2", 0.62; "H2O", 0.16; "O2", 0.0
                                "N2O", 0.01; "CO2", 0.11 ]
-          "Sulfur vapour",  [ "S2", 0.10; "S6", 0.03; "S8", 0.02; "N2", 0.55
+          "Sulfur vapour",   [ "S2", 0.10; "S6", 0.03; "S8", 0.02; "N2", 0.55
                                "H2O", 0.25; "COS", 0.03; "CS2", 0.02 ]
           "DRI reformer",    [ "CO", 0.35; "H2", 0.40; "CO2", 0.10; "H2O", 0.08; "N2", 0.07 ] ]
 
@@ -170,7 +172,7 @@ let ``all process gas mixtures evaluate across the WHB envelope`` () =
                 >>= fun mix -> Mixing.evaluate mix t 1.5<bar>
             match result with
             | Failure msgs ->
-                failures.Add $"{name} @ {tC} degC: " + (msgs |> List.map string |> String.concat "; ")
+                failures.Add ($"{name} @ {tC} degC: " + (msgs |> List.map string |> String.concat "; "))
             | Success (p, _) ->
                 if Double.IsNaN p.Prandtl || p.Prandtl <= 0.05 || p.Prandtl > 2.0 then
                     failures.Add $"{name} @ {tC} degC: Prandtl {p.Prandtl:F3} implausible"
@@ -202,8 +204,8 @@ let ``mixture properties are continuous across correlation interval joins`` () =
         match evaluate (join - 0.5), evaluate (join + 0.5) with
         | Success (a, _), Success (b, _) ->
             let jump (x: float) (y: float) = abs (y - x) / abs x
-            if jump a.SpecificHeat b.SpecificHeat > 0.01 then
-                failures.Add $"cp jumps {jump a.SpecificHeat b.SpecificHeat:P2} at {join} K"
+            if jump (float a.SpecificHeat) (float b.SpecificHeat) > 0.01 then
+                failures.Add $"cp jumps {jump (float a.SpecificHeat) (float b.SpecificHeat):P2} at {join} K"
             if jump (float a.Viscosity) (float b.Viscosity) > 0.02 then
                 failures.Add $"mu jumps at {join} K"
             if jump (float a.ThermalConductivity) (float b.ThermalConductivity) > 0.02 then

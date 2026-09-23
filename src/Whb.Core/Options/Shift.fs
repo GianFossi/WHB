@@ -24,7 +24,12 @@ module Shift =
         | FractionalApproach(f, t) ->
             sprintf "approccio %.0f%% all'equilibrio sopra %.0f °C" (100.0 * f) (kToC t)
     /// <summary>Computes the equilibrium constant for the water-gas shift reaction.</summary>
-    let kp (tK: float) = exp (4577.8 / tK - 4.33)
+    /// <remarks>
+    /// From the NASA-9 Gibbs energies of the WhbThermo database. It replaces the empirical
+    /// ln Kp = 4577.8/T - 4.33, which agrees within about 5 % up to 500 °C but falls 11 % low
+    /// at 700 °C and 26 % low at 1000 °C, where a WHB inlet actually sits.
+    /// </remarks>
+    let kp (tK: float) = exp (GasThermoAdapter.waterGasShiftLnK tK)
     let private extent (nCO: float) (nH2O: float) (nCO2: float) (nH2: float) (k: float) =
         let a = k - 1.0
         let b = -(k * (nCO + nH2O) + nCO2 + nH2)

@@ -66,7 +66,7 @@ module Wsgg =
 
     let private options =
         let o = JsonSerializerOptions(PropertyNameCaseInsensitive = true)
-        o.Converters.Add(JsonFsharpConverter())
+        o.Converters.Add(JsonFSharpConverter())
         o
 
     let private validateSet (d: SetDto) : Thermo<CoefficientSet> =
@@ -74,8 +74,8 @@ module Wsgg =
             fail (DatabaseParseError $"WSGG set '{d.id}': no absorption coefficients")
         elif isNull d.b || d.b.Length <> d.k.Length then
             fail (DatabaseParseError
-                    $"WSGG set '{d.id}': {d.k.Length} gray gases but "
-                    + $"{(if isNull d.b then 0 else d.b.Length)} weight polynomials")
+                    ($"WSGG set '{d.id}': {d.k.Length} gray gases but "
+                     + $"{(if isNull d.b then 0 else d.b.Length)} weight polynomials"))
         elif d.b |> Array.exists (fun row -> isNull row || row.Length <> 4) then
             fail (DatabaseParseError $"WSGG set '{d.id}': weight polynomials must be cubic (4 coefficients)")
         else
@@ -158,30 +158,6 @@ module Wsgg =
         |> List.filter (fun (key, y) ->
             y > 1e-3 && absorbers.Contains key && not (known.Contains key))
 
-    /// Emissivity with an explicit statement of what was left out.
-    ///
-    /// Returns the value tagged with its provenance: Fitted when the mixture
-    /// contains only species the model covers, Estimated when a radiating
-    /// species had to be ignored.
-    let emissivityWithCoverage (model: Model) (t: float<K>)
-                               (pH2O: float<bar>) (pCO2: float<bar>) (le: float<m>)
-                               (composition: (string * float) list)
-                               : Thermo<Qualified<float>> =
-        let missing = unaccountedRadiators composition
-        emissivity model t pH2O pCO2 le
-        >>= fun eps ->
-            match missing with
-            | [] ->
-                ok (Qualified.fitted "Smith, Shen & Friedman (1982) WSGG, H2O + CO2" eps)
-            | _ ->
-                let names = missing |> List.map fst |> String.concat ", "
-                ok (Qualified.estimated
-                        (sprintf "Smith WSGG; %s present and NOT accounted for" names) eps)
-                |> warn (CorrelationExtrapolated
-                            ("WSGG coverage",
-                             sprintf
-                                "the mixture contains radiating species the model does not cover                                  (%s). Their emission is missing, so this emissivity is LOW by an                                  unquantified amount. No open coefficient set exists for them;                                  to close the gap, obtain SLW or line-by-line data, or accept                                  the result as a lower bound." names))
-
     // ---------- evaluation ----------
 
     /// Gray-gas weights a_i(T), plus the clear-gas weight a_0.
@@ -217,6 +193,30 @@ module Wsgg =
                 |> warnIf (pathAtmM < model.PathMin || pathAtmM > model.PathMax)
                           (CorrelationExtrapolated ("WSGG Smith 1982",
                             $"p*L = %.5f{pathAtmM} atm*m outside %.3f{model.PathMin}-%.1f{model.PathMax}"))
+
+    /// Emissivity with an explicit statement of what was left out.
+    ///
+    /// Returns the value tagged with its provenance: Fitted when the mixture
+    /// contains only species the model covers, Estimated when a radiating
+    /// species had to be ignored.
+    let emissivityWithCoverage (model: Model) (t: float<K>)
+                               (pH2O: float<bar>) (pCO2: float<bar>) (le: float<m>)
+                               (composition: (string * float) list)
+                               : Thermo<Qualified<float>> =
+        let missing = unaccountedRadiators composition
+        emissivity model t pH2O pCO2 le
+        >>= fun eps ->
+            match missing with
+            | [] ->
+                ok (Qualified.fitted "Smith, Shen & Friedman (1982) WSGG, H2O + CO2" eps)
+            | _ ->
+                let names = missing |> List.map fst |> String.concat ", "
+                ok (Qualified.estimated
+                        (sprintf "Smith WSGG; %s present and NOT accounted for" names) eps)
+                |> warn (CorrelationExtrapolated
+                            ("WSGG coverage",
+                             sprintf
+                                "the mixture contains radiating species the model does not cover                                  (%s). Their emission is missing, so this emissivity is LOW by an                                  unquantified amount. No open coefficient set exists for them;                                  to close the gap, obtain SLW or line-by-line data, or accept                                  the result as a lower bound." names))
 
     /// Beer-Lambert absorption coefficient [1/m], for use in an RTE solver.
     let absorptionCoefficient (model: Model) (t: float<K>)

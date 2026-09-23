@@ -64,8 +64,8 @@ let ``pure species properties track CoolProp`` () =
                     compared <- compared + 1
                     let deviation = abs (ours - reference) / abs reference
                     if deviation > tolerances.[name] then
-                        failures.Add $"{key} @ {t}: {name} {deviation:P1} "
-                                     + $"(ours {ours:g4}, CoolProp {reference:g4})"
+                        failures.Add ($"{key} @ {t}: {name} {deviation:P1} "
+                                      + $"(ours {ours:g4}, CoolProp {reference:g4})")
 
             check "cp" (PureComponent.specificHeatMass sp t >>= fun v -> ok (float v))
                        (number row "cp_J_kgK")
@@ -112,10 +112,18 @@ let ``every species evaluates across the full envelope`` () =
                 [ "cp", (PureComponent.specificHeatMass sp t >>= fun v -> ok (float v))
                   "mu", (PureComponent.viscosity sp t >>= fun v -> ok (float v))
                   "k", (PureComponent.conductivity sp t >>= fun v -> ok (float v)) ] do
+                // Species recorded with NoTransportData must REFUSE viscosity and
+                // conductivity with their reason: the database deliberately does
+                // not fabricate a fit. Everything else must evaluate.
+                let refusesByDesign =
+                    name <> "cp" && (match sp.Transport with NoTransportData _ -> true | _ -> false)
                 match result with
+                | Failure _ when refusesByDesign -> ()
+                | Success _ when refusesByDesign ->
+                    failures.Add $"{sp.Key} {name} @ {tC} degC: has no transport data but returned a value"
                 | Failure msgs ->
-                    failures.Add $"{sp.Key} {name} @ {tC} degC: "
-                                 + (msgs |> List.map string |> String.concat "; ")
+                    failures.Add ($"{sp.Key} {name} @ {tC} degC: "
+                                  + (msgs |> List.map string |> String.concat "; "))
                 | Success (v, _) ->
                     if Double.IsNaN v || Double.IsInfinity v || v <= 0.0 then
                         failures.Add $"{sp.Key} {name} @ {tC} degC: non-physical value {v}"

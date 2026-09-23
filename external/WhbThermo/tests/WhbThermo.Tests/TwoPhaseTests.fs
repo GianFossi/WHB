@@ -270,11 +270,14 @@ let ``Colburn-Hougen solves for an interface temperature inside the bracket`` ()
     | Failure msgs -> failwith (msgs |> List.map string |> String.concat "; ")
 
 /// An unbracketed case must be refused rather than returning an endpoint.
+/// With an almost insulating condensate film (1 W/m2K) the residual stays
+/// positive from the wall up to the bulk dew point (about 352 K here), so no
+/// interface temperature balances the fluxes.
 [<Fact>]
 let ``Colburn-Hougen refuses an unbracketed case`` () =
-    match Condensation.solveColburnHougen 60.0 5000.0 1.5e-5 1.0e5 4.0e4
+    match Condensation.solveColburnHougen 60.0 1.0 1.5e-5 1.0e5 4.0e4
                                           saturationPressure 18.015 2.26e6
-                                          322.0<K> 321.0<K> with
+                                          360.0<K> 320.0<K> with
     | Failure _ -> ()
     | Success _ -> failwith "an unbracketed case must be refused"
 

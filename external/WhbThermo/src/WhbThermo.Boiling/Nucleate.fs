@@ -256,6 +256,7 @@ module Overall =
     /// Tube metal thermal conductivity [W/(m*K)] as a function of temperature.
     /// Fits taken from the design manual; valid over normal WHB metal
     /// temperatures, roughly 20-600 degC.
+    [<NoEquality; NoComparison>]
     type TubeMaterial =
         | CarbonSteelSA516_70
         | LowAlloySA213_T11

@@ -80,6 +80,8 @@ src/Whb.Core/
   Options/Constants.fs       constants, unit conversions, bisection, fixed point
   Materials/SteamIF97.fs     IAPWS-IF97 helper properties
   Materials/GasProps.fs      gas species and mixture properties
+  Materials/Gas/GasThermoAdapter.fs
+                             thin adapter: species data from the WhbThermo database
   Materials/Materials.fs     material catalogue and limits
   Solvers/GasSide.fs         gas-side HTC correlations
   Solvers/WaterSide.fs       boiling and CHF correlations
@@ -183,6 +185,46 @@ appear before dependents).
 Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
+
+- 2026-09-23 — WhbThermo solution renamed `GasProperties.sln`, all projects on
+  Ganfoss.ROP 1.2.0 / FSharp.Core 10.1.401 (the pin in Directory.Build.props has no
+  effect on the implicit FSharp.Core reference; each .fsproj repeats it). The vendored
+  library had never compiled beyond XSulfur: fixed the compile errors and real defects
+  the test suite then exposed (NASA-7 cp/R summed all 7 coefficients; dissociation
+  fraction assumed A -> nB; Colburn-Hougen refused cases above the dew point; frozen
+  sulfur film verdict needed liquid viscosity; loaders rejected absent optional JSON
+  fields). Species database moved to schema 3.0 (id, family, synonyms, elements,
+  dataQuality A-D + validation, radiation role, eosParameters, Lennard-Jones/phase
+  placeholders, screening material/safety flags, referenceState at 1 bar), with
+  `tools/schema_v3.py` applied by `db_guard.save` on every write. Reactions moved to
+  `reactions.json`, k_ij table `binary-interaction.json` created EMPTY (no sourced
+  values), sulfur allotropes referenced by id instead of copied. In whb: the virial
+  water term and k_ij now come from WhbThermo data (numbers unchanged), and
+  `Shift.kp` uses NASA-9 Gibbs energies instead of Moe's correlation (11 % higher
+  at 700 degC, 26 % at 1000 degC; frozen mode and all reference cases unchanged).
+  Do NOT put numeric Lennard-Jones, phase or flammability values in the database
+  without a checked source. Four WhbThermo tests stay red on purpose: they are data
+  gaps (hydrocarbon Sutherland transport vs CoolProp, two liquid viscosities, SO3
+  liquid cp single point, H radical viscosity).
+
+- 2026-09-23 — Migrated the gas-species property database from `GasProps.fs`
+  to WhbThermo, on explicit request, accepting the numerical change. `GasProps`
+  keeps its public API but its hard-coded tables (molar mass, cp polynomials,
+  Sutherland/Eucken, IAPWS dilute H2O transport, formation enthalpies, virial
+  critical constants) are gone; values now come from
+  `external/WhbThermo/data/species-database.json` via
+  `Materials/Gas/GasThermoAdapter.fs` (NASA-9 cp/h, NASA CEA or Sutherland
+  transport, Poling Tc/Pc/omega). The virial Vc had no home in WhbThermo, so
+  `CriticalProperties` gained `Vc`/`VcSource` and the old GasProps values were
+  written into the JSON through `tools/db_guard.py`. The unused
+  `databases/gas_components.json` was removed. Two pre-existing WhbThermo
+  defects had to be fixed on the way because `SpeciesDatabase.load` had never
+  worked on this vendored copy: an operator-precedence compile error in
+  `PureComponent.conductivity`, and a JSON converter that rejected the absent
+  and null optional fields (now option-typed DTO fields with
+  `WithSkippableOptionFields(Always, deserializeNullAsNone = true)`). Adapter
+  results drop WhbThermo warnings (hot path, no warning channel). Do not
+  reintroduce species coefficients in Whb.Core.
 
 - 2026-09-23 — Extended the sulfur facade migration so Process/Sulphur.fs now routes fog assessment and condensation-activity checks through src/Whb.Core/Materials/Sulfur/Sulfur.fs / XSulfur too, while keeping the legacy FogAssessment and Check records stable for callers and reports.
 

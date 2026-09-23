@@ -106,10 +106,20 @@ abbatte il flusso termico locale di un ordine di grandezza. Il picco di flusso s
 
 ### 1.3 Proprietà del gas
 
-- `c_p` da polinomi `c_p/R = A + B·T + C·T² + D/T²` (Smith–Van Ness–Abbott) per specie
-- `µ` da Sutherland; per H₂O il limite di gas diluito IAPWS (µ₀(T))
-- `k` da Eucken modificato `k = (µ/M)(1.32 c_v + 1.77 R)`
+I dati di specie (massa molare, `c_p`, entalpia di formazione, trasporto, costanti critiche)
+provengono dal database di WhbThermo (`external/WhbThermo/data/species-database.json`),
+letto da `Materials/Gas/GasThermoAdapter.fs`; `GasProps` non contiene più coefficienti propri.
+
+- `c_p` e `h` da polinomi **NASA-9** (NASA CEA), entalpia assoluta con termine di formazione
+- `µ` e `k` da correlazioni **NASA CEA** di trasporto dove disponibili, altrimenti Sutherland
+  (C3H6, C3H8, C6H6, C7H8, SO3, S2/S6/S8); H₂O compresa
+- costanti critiche Tc, Pc, ω (Poling) e volume critico Vc per il viriale; S2/S6/S8 senza
+  costanti critiche restano gas ideali
 - miscelazione: **Wilke** per µ, **Wassiljewa/Mason–Saxena** per k
+
+Fino al 2026-09-23 si usavano polinomi `c_p/R = A + B·T + C·T² + D/T²` (Smith–Van Ness–Abbott),
+Sutherland/Eucken e il limite diluito IAPWS per H₂O: rispetto a quei valori `c_p` si sposta
+di circa ±1–4 % e `µ` fino a +7 % sopra 1000 K.
 
 Attenzione: syngas ricco di H₂ ha `k` 5–8 volte quello dei fumi → `h` molto più alto a parità
 di velocità, e quindi flussi termici molto più alti.
@@ -455,11 +465,18 @@ che va concentrata la verifica, non alla piastra tubiera.
 
 ### 6.3 Water-gas shift
 
-`CO + H₂O ⇌ CO₂ + H₂`, ΔH°(298) = −41.16 kJ/mol, K_p da Moe (1962):
+`CO + H₂O ⇌ CO₂ + H₂`, ΔH°(298) = −41.16 kJ/mol. Dal 2026-09-23 K_p è calcolata dalle
+energie di Gibbs NASA-9 del database WhbThermo (reazione `waterGasShift` di
+`reactions.json`), non più dalla correlazione empirica di Moe (1962):
 
 ```
-K_p(T) = exp(4577.8/T − 4.33)        K_p(700 K) = 9.11 ; K_p(1000 K) = 1.28
+K_p(T) = exp(−ΔG°(T)/RT)             K_p(700 K) = 9.40 ; K_p(1000 K) = 1.43
 ```
+
+La correlazione di Moe, `exp(4577.8/T − 4.33)`, coincide entro circa il 5 % fino a 500 °C
+(il campo per cui era stata ricavata) ma sotto-stima K_p del 11 % a 700 °C, del 26 % a
+1000 °C e del 37 % a 1200 °C, cioè proprio dove si trova l'ingresso di un WHB. La modalità
+**congelata** non usa K_p, quindi i casi di riferimento non cambiano.
 
 Tre modalità: **congelata** (default), **equilibrio sopra una temperatura di congelamento**,
 **approccio frazionario**. Il bilancio energetico usa entalpie **assolute** (formazione +

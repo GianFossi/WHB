@@ -18,7 +18,7 @@ let private syntheticModel () : Emissivity.RadiationModel =
           Source = "synthetic" }
     { Water = coeff
       Dioxide = coeff
-      Overlap = { C = [| [| 0.01 |] |]; Source = "synthetic" } }
+      Overlap = { C = [| [| 0.01 |] |]; CAsym = [| [| 0.0 |] |]; Source = "synthetic" } }
 
 // ---------- mean beam length ----------
 
@@ -72,14 +72,24 @@ let ``zero gas emissivity gives zero effective emissivity`` () =
 /// If this test ever goes green with the stock JSON, the fail-loud contract is broken.
 [<Fact>]
 let ``unpopulated Leckner model refuses to evaluate`` () =
+    // The shipped radiation-models.json is populated now (tools/fit_leckner.py),
+    // so the refusal path is exercised on a model with empty matrices.
+    let empty : Emissivity.LecknerCoefficients =
+        { C = [| [| 0.0 |] |]; TMin = 300.0<K>; TMax = 2500.0<K>
+          PathMin = 0.001; PathMax = 10.0; Source = "empty" }
+    let model : Emissivity.RadiationModel =
+        { Water = empty; Dioxide = empty
+          Overlap = { C = [| [| 0.0 |] |]; CAsym = [| [| 0.0 |] |]; Source = "empty" } }
+    Assert.False(RadiationModel.isUsable model)
+    match Emissivity.gasEmissivity model 1673.15<K> 0.25<bar> 0.10<bar> 0.0475<m> with
+    | Failure msgs ->
+        Assert.Contains(msgs, function RadiationCoefficientsPending _ -> true | _ -> false)
+    | Success _ -> failwith "empty coefficient matrices must not produce an emissivity"
+
+[<Fact>]
+let ``shipped Leckner model is populated and usable`` () =
     match RadiationModel.load () with
-    | Success (model, warnings) ->
-        Assert.False(RadiationModel.isUsable model)
-        Assert.Contains(warnings, function RadiationCoefficientsPending _ -> true | _ -> false)
-        match Emissivity.gasEmissivity model 1673.15<K> 0.25<bar> 0.10<bar> 0.0475<m> with
-        | Failure msgs ->
-            Assert.Contains(msgs, function RadiationCoefficientsPending _ -> true | _ -> false)
-        | Success _ -> failwith "empty coefficient matrices must not produce an emissivity"
+    | Success (model, _) -> Assert.True(RadiationModel.isUsable model)
     | Failure msgs -> failwith (msgs |> List.map string |> String.concat "; ")
 
 [<Fact>]
@@ -104,7 +114,7 @@ let ``emissivity stays within physical bounds`` () =
 
 [<Fact>]
 let ``convection only rating warns that it is non conservative`` () =
-    let model = syntheticModel ()
+    let model = Leckner (syntheticModel ())
     match InternalFilm.total model 120.0<W/(m^2*K)> 1673.15<K> 623.15<K>
                              0.25 0.10 1.5<bar> (Emissivity.CircularDuct 0.05<m>)
                              0.85 false with
@@ -117,7 +127,7 @@ let ``convection only rating warns that it is non conservative`` () =
 /// total film coefficient materially above the convective value.
 [<Fact>]
 let ``radiation increases the total film coefficient`` () =
-    let model = syntheticModel ()
+    let model = Leckner (syntheticModel ())
     match InternalFilm.total model 120.0<W/(m^2*K)> 1673.15<K> 623.15<K>
                              0.25 0.10 1.5<bar> (Emissivity.CircularDuct 0.05<m>)
                              0.85 true with
@@ -228,10 +238,11 @@ module Wsgg =
             Assert.Equal(e, recovered, 9)
         | Failure msgs -> failwith (msgs |> List.map string |> String.concat "; ")
 
-    /// A short tube beam length sits near the lower p*L bound and must warn.
+    /// A beam length that puts p*L below the fitted lower bound (0.001 atm*m)
+    /// must warn: here p*L = 0.0296 atm * 0.02 m = 0.0006 atm*m.
     [<Fact>]
     let ``short beam length warns about the path length bound`` () =
-        match Wsgg.emissivity model 1673.15<K> 0.02<bar> 0.01<bar> 0.0475<m> with
+        match Wsgg.emissivity model 1673.15<K> 0.02<bar> 0.01<bar> 0.02<m> with
         | Success (_, warnings) ->
             Assert.Contains(warnings, function CorrelationExtrapolated _ -> true | _ -> false)
         | Failure msgs -> failwith (msgs |> List.map string |> String.concat "; ")
@@ -240,7 +251,7 @@ module Wsgg =
     /// at SRU waste-heat-boiler inlet conditions with no further data entry.
     [<Fact>]
     let ``default model rates an SRU inlet without extra data`` () =
-        match RadiationModel.loadDefault () with
+        match GasRadiation.loadDefault () with
         | Failure msgs -> failwith (msgs |> List.map string |> String.concat "; ")
         | Success (model, _) ->
             match InternalFilm.total model 120.0<W/(m^2*K)> 1673.15<K> 623.15<K>

@@ -50,7 +50,7 @@ let ``single phase grid matches an independent IF97 implementation`` () =
         let pMPa = number row "P_MPa"
         match If97.properties model (t * 1.0<K>) (pMPa * 10.0<bar>) with
         | Failure msgs ->
-            failures.Add $"{t} K, {pMPa} MPa: " + (msgs |> List.map string |> String.concat "; ")
+            failures.Add ($"{t} K, {pMPa} MPa: " + (msgs |> List.map string |> String.concat "; "))
         | Success (s, _) ->
             let expectedRegion = if row.["region"] = "region1" then 1 else 2
             if s.Region <> expectedRegion then
@@ -78,13 +78,13 @@ let ``saturation line matches across the drum pressure range`` () =
         let pBar = number row "P_bar"
         match If97.saturatedAt model (pBar * 1.0<bar>) with
         | Failure msgs ->
-            failures.Add $"{pBar} bar: " + (msgs |> List.map string |> String.concat "; ")
+            failures.Add ($"{pBar} bar: " + (msgs |> List.map string |> String.concat "; "))
         | Success (s, _) ->
             let check name (ours: float) (theirs: float) (tolerance: float) =
                 let deviation = abs (ours - theirs) / abs theirs
                 if deviation > tolerance then
-                    failures.Add $"{pBar} bar: {name} {deviation:P3} apart "
-                                 + $"(ours {ours:F4}, reference {theirs:F4})"
+                    failures.Add ($"{pBar} bar: {name} {deviation:P3} apart "
+                                  + $"(ours {ours:F4}, reference {theirs:F4})")
 
             check "Tsat" (float s.SaturationTemperature) (number row "Tsat_K") 1e-6
             check "rho_l" (float s.Liquid.Density) (number row "rho_l_kg_m3") 1e-6

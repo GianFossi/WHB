@@ -1,0 +1,127 @@
+{
+  "schemaVersion": "1.0",
+  "description": "Reaction database. Stoichiometry by species id; the equilibrium constant is computed from the species data, never stored. Validity is the intersection of the NASA-9 ranges of the species involved. Written by tools/build_reactions.py.",
+  "reactions": [
+    {
+      "id": "waterGasShift",
+      "equation": "CO + H2O -> CO2 + H2",
+      "stoichiometry": {
+        "CO": -1,
+        "H2O": -1,
+        "CO2": 1,
+        "H2": 1
+      },
+      "equilibriumModel": "nasa9Gibbs",
+      "kineticModel": null,
+      "validity": {
+        "tMinK": 200.0,
+        "tMaxK": 6000.0
+      },
+      "source": "Equilibrium constant from the NASA-9 Gibbs energies of species-database.json",
+      "note": "Sets the H2/CO ratio of a cooling syngas while it is still reactive."
+    },
+    {
+      "id": "h2sCracking",
+      "equation": "2 H2S -> 2 H2 + S2",
+      "stoichiometry": {
+        "H2S": -2,
+        "H2": 2,
+        "S2": 1
+      },
+      "equilibriumModel": "nasa9Gibbs",
+      "kineticModel": null,
+      "validity": {
+        "tMinK": 300.0,
+        "tMaxK": 6000.0
+      },
+      "source": "Equilibrium constant from the NASA-9 Gibbs energies of species-database.json",
+      "note": "Decides how much sulfur leaves a Claus thermal stage as S2."
+    },
+    {
+      "id": "sulfurDepolymerisation",
+      "equation": "S8 -> 4 S2",
+      "stoichiometry": {
+        "S8": -1,
+        "S2": 4
+      },
+      "equilibriumModel": "nasa9Gibbs",
+      "kineticModel": null,
+      "validity": {
+        "tMinK": 300.0,
+        "tMaxK": 6000.0
+      },
+      "source": "Equilibrium constant from the NASA-9 Gibbs energies of species-database.json",
+      "note": "Why the thermal stage makes S2 and the catalytic stage S8."
+    },
+    {
+      "id": "ammoniaCracking",
+      "equation": "2 NH3 -> N2 + 3 H2",
+      "stoichiometry": {
+        "NH3": -2,
+        "N2": 1,
+        "H2": 3
+      },
+      "equilibriumModel": "nasa9Gibbs",
+      "kineticModel": null,
+      "validity": {
+        "tMinK": 200.0,
+        "tMaxK": 6000.0
+      },
+      "source": "Equilibrium constant from the NASA-9 Gibbs energies of species-database.json",
+      "note": "Ammonia destruction in a Claus furnace or an ammonia plant WHB."
+    },
+    {
+      "id": "clausReaction",
+      "equation": "2 H2S + SO2 -> 3/2 S2 + 2 H2O",
+      "stoichiometry": {
+        "H2S": -2,
+        "SO2": -1,
+        "S2": 1.5,
+        "H2O": 2
+      },
+      "equilibriumModel": "nasa9Gibbs",
+      "kineticModel": null,
+      "validity": {
+        "tMinK": 300.0,
+        "tMaxK": 6000.0
+      },
+      "source": "Equilibrium constant from the NASA-9 Gibbs energies of species-database.json",
+      "note": "Thermal Claus reaction written to S2, the high-temperature allotrope."
+    },
+    {
+      "id": "cosHydrolysis",
+      "equation": "COS + H2O -> CO2 + H2S",
+      "stoichiometry": {
+        "COS": -1,
+        "H2O": -1,
+        "CO2": 1,
+        "H2S": 1
+      },
+      "equilibriumModel": "nasa9Gibbs",
+      "kineticModel": null,
+      "validity": {
+        "tMinK": 300.0,
+        "tMaxK": 6000.0
+      },
+      "source": "Equilibrium constant from the NASA-9 Gibbs energies of species-database.json",
+      "note": "COS destruction; kinetically slow below catalyst temperatures."
+    },
+    {
+      "id": "sulfurDioxideDissociation",
+      "equation": "2 SO2 -> S2 + 2 O2",
+      "stoichiometry": {
+        "SO2": -2,
+        "S2": 1,
+        "O2": 2
+      },
+      "equilibriumModel": "nasa9Gibbs",
+      "kineticModel": null,
+      "validity": {
+        "tMinK": 300.0,
+        "tMaxK": 6000.0
+      },
+      "source": "Equilibrium constant from the NASA-9 Gibbs energies of species-database.json",
+      "note": "Negligible at WHB temperatures; kept as a check that it is."
+    }
+  ]
+}

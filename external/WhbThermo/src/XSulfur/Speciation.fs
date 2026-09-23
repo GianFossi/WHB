@@ -37,9 +37,13 @@ module Speciation =
     type private SegmentDto =
         { tMinK: float; tMaxK: float; a: float[]; b: float[]; source: string }
 
+    /// An allotrope is either a reference to species-database.json by `id`
+    /// (the normal case: the gas-phase coefficients live there only) or carries
+    /// its own NASA-9 segments (the liquid reference phase, and test fixtures).
     [<CLIMutable>]
     type private SpeciesDto =
-        { key: string; atoms: int; molarMass_g_mol: float; nasa9Segments: SegmentDto[] }
+        { key: string; id: string option; atoms: int option
+          molarMass_g_mol: float option; nasa9Segments: SegmentDto[] option }
 
     [<CLIMutable>]
     type private RootDto =
@@ -62,29 +66,72 @@ module Speciation =
 
     let private options =
         let o = JsonSerializerOptions(PropertyNameCaseInsensitive = true)
-        o.Converters.Add(JsonFSharpConverter())
+        o.Converters.Add(
+            JsonFSharpConverter(
+                JsonFSharpOptions.Default()
+                    .WithSkippableOptionFields(SkippableOptionFields.Always,
+                                               deserializeNullAsNone = true)))
         o
 
-    let parse (json: string) : Thermo<Model> =
+    let private inlineAllotrope (s: SpeciesDto) (segments: SegmentDto[]) =
+        match s.atoms, s.molarMass_g_mol with
+        | Some atoms, _ when atoms < 1 || atoms > 8 ->
+            fail (DatabaseParseError $"sulfur allotrope '{s.key}': implausible atom count {atoms}")
+        | Some atoms, Some molarMass ->
+            if segments |> Array.exists (fun g ->
+                   isNull g.a || g.a.Length <> 7 || isNull g.b || g.b.Length <> 2) then
+                fail (DatabaseParseError $"sulfur allotrope '{s.key}': malformed NASA-9 segment")
+            else
+                ok { Key = s.key
+                     Atoms = atoms
+                     MolarMass = molarMass
+                     Segments =
+                        segments
+                        |> Array.map (fun g ->
+                            g.tMinK * 1.0<K>, g.tMaxK * 1.0<K>, Array.copy g.a, Array.copy g.b)
+                        |> List.ofArray }
+        | _ ->
+            fail (DatabaseParseError
+                    $"sulfur allotrope '{s.key}': inline NASA-9 data needs atoms and molarMass_g_mol")
+
+    /// Resolves an allotrope from the species database by id. The atom count is
+    /// taken from the database elements and, where the file also states it,
+    /// checked against it.
+    let private referencedAllotrope (db: Map<string, SpeciesData>) (s: SpeciesDto) (id: string) =
+        match Map.tryFind id db with
+        | None -> fail (UnknownSpecies $"{id} (sulfur allotrope '{s.key}')")
+        | Some sp ->
+            let sulfurAtoms =
+                match sp.Elements with
+                | [ ("S", n) ] -> Some n
+                | _ -> Option.None
+            match sp.Cp, sulfurAtoms with
+            | _, Option.None ->
+                fail (DatabaseParseError $"sulfur allotrope '{s.key}': species '{id}' is not pure sulfur")
+            | _, Some n when s.atoms |> Option.exists (fun a -> a <> n) ->
+                fail (DatabaseParseError
+                        $"sulfur allotrope '{s.key}': states {s.atoms.Value} atoms, species '{id}' has {n}")
+            | Nasa9 segments, Some n ->
+                ok { Key = s.key
+                     Atoms = n
+                     MolarMass = float sp.MolarMass
+                     Segments = segments |> List.map (fun g -> g.TMin, g.TMax, Array.copy g.A, Array.copy g.B) }
+            | _ ->
+                fail (DatabaseParseError $"sulfur allotrope '{s.key}': species '{id}' has no NASA-9 fit")
+
+    /// Parses the sulfur data file. Allotropes given by `id` are resolved against
+    /// `db`; without a database only fully inline allotropes can be read.
+    let parseWith (db: Map<string, SpeciesData> option) (json: string) : Thermo<Model> =
         try
             let root = JsonSerializer.Deserialize<RootDto>(json, options)
             let toAllotrope (s: SpeciesDto) =
-                if isNull s.nasa9Segments || s.nasa9Segments.Length = 0 then
-                    fail (DatabaseParseError $"sulfur allotrope '{s.key}': no NASA-9 segments")
-                elif s.atoms < 1 || s.atoms > 8 then
-                    fail (DatabaseParseError $"sulfur allotrope '{s.key}': implausible atom count {s.atoms}")
-                elif s.nasa9Segments |> Array.exists (fun g ->
-                        isNull g.a || g.a.Length <> 7 || isNull g.b || g.b.Length <> 2) then
-                    fail (DatabaseParseError $"sulfur allotrope '{s.key}': malformed NASA-9 segment")
-                else
-                    ok { Key = s.key
-                         Atoms = s.atoms
-                         MolarMass = s.molarMass_g_mol
-                         Segments =
-                            s.nasa9Segments
-                            |> Array.map (fun g ->
-                                g.tMinK * 1.0<K>, g.tMaxK * 1.0<K>, Array.copy g.a, Array.copy g.b)
-                            |> List.ofArray }
+                match s.nasa9Segments, s.id, db with
+                | Some segments, _, _ when segments.Length > 0 -> inlineAllotrope s segments
+                | _, Some id, Some db -> referencedAllotrope db s id
+                | _, Some id, Option.None ->
+                    fail (DatabaseParseError
+                            $"sulfur allotrope '{s.key}' refers to '{id}' but no species database was given")
+                | _ -> fail (DatabaseParseError $"sulfur allotrope '{s.key}': no NASA-9 segments and no id")
 
             root.species
             |> List.ofArray
@@ -105,8 +152,19 @@ module Speciation =
         with ex ->
             fail (DatabaseParseError ex.Message)
 
-    let load () : Thermo<Model> = DataStore.load DefaultFile parse
-    let loadFile (path: string) : Thermo<Model> = DataStore.load path parse
+    /// Parses a sulfur file whose allotropes are all inline.
+    let parse (json: string) : Thermo<Model> = parseWith Option.None json
+
+    /// Loads the default sulfur file, resolving the gas-phase allotropes against
+    /// the species database. The raw text is cached by DataStore; the model is
+    /// rebuilt on each call so an edited species database is never stale here.
+    let load () : Thermo<Model> =
+        SpeciesDatabase.load ()
+        >>= fun db -> DataStore.loadText DefaultFile >>= parseWith (Some db)
+
+    let loadFile (path: string) : Thermo<Model> =
+        SpeciesDatabase.load ()
+        >>= fun db -> DataStore.loadText path >>= parseWith (Some db)
 
     // ---------- thermodynamic functions ----------
 

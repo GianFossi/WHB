@@ -1,0 +1,5 @@
+{
+  "schemaVersion": "1.0",
+  "description": "Binary interaction parameters k_ij, one entry per (species pair, equation of state), symmetric in the two ids. An absent pair means k_ij = 0, the default of every mixing rule in the library. The table ships EMPTY on purpose: no value may be added without a documented source (e.g. Knapp et al. 1982, DECHEMA Chemistry Data Series) and the temperature range it was fitted over. Entry form: {\"species1\": \"CO2\", \"species2\": \"N2\", \"eos\": \"PengRobinson\", \"kij\": 0.0, \"tMinK\": 0.0, \"tMaxK\": 0.0, \"source\": \"...\"}.",
+  "pairs": []
+}

@@ -2913,7 +2913,7 @@
       }
     },
     {
-      "key": "CH4O",
+      "key": "CH3OH",
       "cas": "67-56-1",
       "name": "Methanol",
       "molarMass_g_mol": 32.042,
@@ -3017,7 +3017,7 @@
       }
     },
     {
-      "key": "C2H6O",
+      "key": "C2H5OH",
       "cas": "64-17-5",
       "name": "Ethanol",
       "molarMass_g_mol": 46.068,

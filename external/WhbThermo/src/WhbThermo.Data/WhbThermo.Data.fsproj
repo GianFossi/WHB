@@ -2,6 +2,7 @@
   <ItemGroup>
     <Compile Include="DataStore.fs" />
     <Compile Include="Loader.fs" />
+    <Compile Include="BinaryInteraction.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../../data/*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="data" />
