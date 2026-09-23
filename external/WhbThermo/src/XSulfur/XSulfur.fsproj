@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Compile Include="Speciation.fs" />
+    <Compile Include="Chemistry.fs" />
+    <Compile Include="LiquidProperties.fs" />
+    <Compile Include="FilmKinetics.fs" />
+    <Compile Include="Checks.fs" />
+    <Compile Include="CondensationCurve.fs" />
+    <Compile Include="Condensation.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Ganfoss.ROP" Version="1.2.0" />
+    <PackageReference Include="FSharp.SystemTextJson" Version="1.3.13" />
+    <PackageReference Update="FSharp.Core" Version="10.1.401" />
+    <ProjectReference Include="../WhbThermo.Domain/WhbThermo.Domain.fsproj" />
+    <ProjectReference Include="../WhbThermo.Data/WhbThermo.Data.fsproj" />
+    <ProjectReference Include="../WhbThermo.TwoPhase/WhbThermo.TwoPhase.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../data/*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="data" />
+  </ItemGroup>
+</Project>

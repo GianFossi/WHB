@@ -184,6 +184,33 @@ Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
 
+- 2026-09-23 — Extended the sulfur facade migration so Process/Sulphur.fs now routes fog assessment and condensation-activity checks through src/Whb.Core/Materials/Sulfur/Sulfur.fs / XSulfur too, while keeping the legacy FogAssessment and Check records stable for callers and reports.
+
+- 2026-09-23 — Started the repo-wide sulfur migration without breaking the
+  legacy public API: `src/Whb.Core/Process/Sulphur.fs` now delegates vapour
+  pressure, dew point, condenser flash, liquid properties, and corrosion/wall
+  checks to `src/Whb.Core/Materials/Sulfur/Sulfur.fs` / `XSulfur`, while
+  preserving the existing `Sulphur` record shapes and function names consumed
+  by CLI, solver, findings, and tests. Keep future migration steps inside this
+  legacy facade first; do not remove `GasProps` or broad sulfur callers until
+  the replacement path is complete.
+
+- 2026-09-23 — Bumped `Ganfoss.ROP` from `1.0.2` to `1.2.0` in
+  `src/Whb.Core/Whb.Core.fsproj`, refreshed the declared-package table in
+  `.ai/AI_STARTER_INSTRUCTIONS.md`, and aligned all explicit
+  `FSharp.Core` pins to `10.1.401` because `Ganfoss.ROP 1.2.0` raises the
+  minimum transitive version. Current code does not reference any
+  package-specific module names directly, so the upgrade stays a dependency
+  version change plus build/test verification.
+
+- 2026-09-23 — Vendored `external/WhbThermo/` and linked `src/Whb.Core` to
+  `external/WhbThermo/src/XSulfur/XSulfur.fsproj` through the thin adapter
+  `src/Whb.Core/Materials/Sulfur/Sulfur.fs`. Keep sulfur chemistry,
+  condensation, liquid properties and film/drainage checks in `XSulfur`; do
+  not duplicate those correlations back into `Whb.Core`. The legacy internal
+  gas/sulfur modules remain in place for now because they are still used across
+  the solver/tests; migrate callers in stages instead of deleting them.
+
 - 2026-08-31 — `src/Whb.Equipment/Components/ComponentModel.fs` now models
   `Component` as a property-based type instead of an F# record. Keep creating
   and updating components through the `Component` module helpers

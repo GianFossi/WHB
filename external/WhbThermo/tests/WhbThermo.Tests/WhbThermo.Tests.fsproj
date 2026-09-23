@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="reference/*.csv" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Include="NumericsTests.fs" />
+    <Compile Include="DatabaseTests.fs" />
+    <Compile Include="PureComponentTests.fs" />
+    <Compile Include="EquilibriumTests.fs" />
+    <Compile Include="SchemaCoverageTests.fs" />
+    <Compile Include="Nasa7Tests.fs" />
+    <Compile Include="RadiationTests.fs" />
+    <Compile Include="DataStoreTests.fs" />
+    <Compile Include="If97Tests.fs" />
+    <Compile Include="PureComponentGoldenTests.fs" />
+    <Compile Include="MixtureGoldenTests.fs" />
+    <Compile Include="SteamGoldenTests.fs" />
+    <Compile Include="ConvectionTests.fs" />
+    <Compile Include="BuoyancyTests.fs" />
+    <Compile Include="BoilingTests.fs" />
+    <Compile Include="TwoPhaseTests.fs" />
+    <Compile Include="XSulfurTests.fs" />
+    <Compile Include="XSulfurConsolidatedTests.fs" />
+    <Compile Include="LiquidTests.fs" />
+    <Compile Include="LiquidGoldenTests.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <ProjectReference Include="../../src/WhbThermo.Properties/WhbThermo.Properties.fsproj" />
+    <ProjectReference Include="../../src/WhbThermo.Radiation/WhbThermo.Radiation.fsproj" />
+    <ProjectReference Include="../../src/WhbThermo.Steam/WhbThermo.Steam.fsproj" />
+    <ProjectReference Include="../../src/WhbThermo.Boiling/WhbThermo.Boiling.fsproj" />
+    <ProjectReference Include="../../src/WhbThermo.Convection/WhbThermo.Convection.fsproj" />
+    <ProjectReference Include="../../src/WhbThermo.Liquids/WhbThermo.Liquids.fsproj" />
+    <ProjectReference Include="../../src/WhbThermo.TwoPhase/WhbThermo.TwoPhase.fsproj" />
+    <ProjectReference Include="../../src/XSulfur/XSulfur.fsproj" />
+  </ItemGroup>
+</Project>

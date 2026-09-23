@@ -1,0 +1,473 @@
+{
+  "schemaVersion": "1.1",
+  "description": "Gas-phase sulfur allotropes S1-S8 for reactive condensation modelling",
+  "atomicMass_g_mol": 32.065,
+  "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0",
+  "reference": "Speciation behaviour cross-checked against Gamson & Elkins (1953) and Paskall (1979) as summarised in the Claus process literature: below about 700 degF the vapour is dominated by S6 and S8; above about 1000 degF it is predominantly S2.",
+  "species": [
+    {
+      "key": "S",
+      "atoms": 1,
+      "molarMass_g_mol": 32.065,
+      "nasa9Segments": [
+        {
+          "tMinK": 300.0,
+          "tMaxK": 1000.0007,
+          "a": [
+            -317.484182,
+            -192.4704923,
+            4.68682593,
+            -0.0058413656,
+            7.53853352e-06,
+            -4.86358604e-09,
+            1.256976992e-12
+          ],
+          "b": [
+            33235.9218,
+            -5.718523969
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        },
+        {
+          "tMinK": 1000.0,
+          "tMaxK": 6000.0007,
+          "a": [
+            -485424.479,
+            1438.830408,
+            1.258504116,
+            0.000379799043,
+            1.630685864e-09,
+            -9.54709585e-12,
+            8.041466646e-16
+          ],
+          "b": [
+            23349.9527,
+            15.59554855
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        },
+        {
+          "tMinK": 6000.0,
+          "tMaxK": 20000.0007,
+          "a": [
+            -130200541.4,
+            69093.6202,
+            -11.76228025,
+            0.00160154085,
+            -1.05053334e-07,
+            4.34182902e-12,
+            -7.675621927e-17
+          ],
+          "b": [
+            -526148.503,
+            132.2195251
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        }
+      ]
+    },
+    {
+      "key": "S2",
+      "atoms": 2,
+      "molarMass_g_mol": 64.13,
+      "nasa9Segments": [
+        {
+          "tMinK": 300.0,
+          "tMaxK": 1000.0007,
+          "a": [
+            35280.9178,
+            -422.215658,
+            4.67743349,
+            0.001724046361,
+            -3.86220821e-06,
+            3.33615634e-09,
+            -9.93066154e-13
+          ],
+          "b": [
+            16547.67715,
+            -0.7957279032
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        },
+        {
+          "tMinK": 1000.0,
+          "tMaxK": 6000.0007,
+          "a": [
+            -15881.28788,
+            631.548088,
+            2.449628069,
+            0.001986240565,
+            -6.50792724e-07,
+            1.002813651e-10,
+            -5.59699005e-15
+          ],
+          "b": [
+            10855.08427,
+            14.58544515
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        }
+      ]
+    },
+    {
+      "key": "S3",
+      "atoms": 3,
+      "molarMass_g_mol": 96.195,
+      "nasa9Segments": [
+        {
+          "tMinK": 300.0,
+          "tMaxK": 1000.0007,
+          "a": [
+            72453.9574,
+            -1162.146759,
+            9.95541368,
+            -0.00415802622,
+            3.24177839e-06,
+            -1.264648239e-09,
+            1.777450535e-13
+          ],
+          "b": [
+            21462.75475,
+            -25.87525865
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        },
+        {
+          "tMinK": 1000.0,
+          "tMaxK": 6000.0007,
+          "a": [
+            -111780.5401,
+            -51.9790839,
+            7.03876084,
+            -1.546804022e-05,
+            3.40834041e-09,
+            -3.89686236e-13,
+            1.800860389e-17
+          ],
+          "b": [
+            15254.06485,
+            -7.610045099
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        }
+      ]
+    },
+    {
+      "key": "S4",
+      "atoms": 4,
+      "molarMass_g_mol": 128.26,
+      "nasa9Segments": [
+        {
+          "tMinK": 300.0,
+          "tMaxK": 1000.0007,
+          "a": [
+            119866.4135,
+            -2040.786521,
+            15.10235054,
+            -0.0070411043,
+            5.350405e-06,
+            -2.002348038e-09,
+            2.569940995e-13
+          ],
+          "b": [
+            24109.09409,
+            -55.03153238
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        },
+        {
+          "tMinK": 1000.0,
+          "tMaxK": 6000.0007,
+          "a": [
+            -206833.3537,
+            -96.9615143,
+            10.0724321,
+            -2.895047053e-05,
+            6.38780619e-09,
+            -7.31176743e-13,
+            3.38226529e-17
+          ],
+          "b": [
+            13211.0953,
+            -23.44872237
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        }
+      ]
+    },
+    {
+      "key": "S5",
+      "atoms": 5,
+      "molarMass_g_mol": 160.325,
+      "nasa9Segments": [
+        {
+          "tMinK": 300.0,
+          "tMaxK": 1000.0007,
+          "a": [
+            136137.0439,
+            -2955.476536,
+            26.33358816,
+            -0.0412580653,
+            7.05681403e-05,
+            -5.61109533e-08,
+            1.6594572e-11
+          ],
+          "b": [
+            26753.07046,
+            -106.9711067
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        },
+        {
+          "tMinK": 1000.0,
+          "tMaxK": 6000.0007,
+          "a": [
+            -4038495.16,
+            8601.80388,
+            7.4437809,
+            0.001533393812,
+            -2.532718676e-07,
+            2.145210795e-11,
+            -7.21310268e-16
+          ],
+          "b": [
+            -46869.2542,
+            11.04229196
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        }
+      ]
+    },
+    {
+      "key": "S6",
+      "atoms": 6,
+      "molarMass_g_mol": 192.39,
+      "nasa9Segments": [
+        {
+          "tMinK": 300.0,
+          "tMaxK": 1000.0007,
+          "a": [
+            97803.0721,
+            -2568.47013,
+            24.67025557,
+            -0.01619983175,
+            1.712334526e-05,
+            -9.74629674e-09,
+            2.486964867e-12
+          ],
+          "b": [
+            20378.88389,
+            -101.4410309
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        },
+        {
+          "tMinK": 1000.0,
+          "tMaxK": 6000.0007,
+          "a": [
+            3686845.06,
+            -7695.0179,
+            18.60721995,
+            0.002290382548,
+            -1.219834021e-06,
+            2.060780798e-10,
+            -1.190354318e-14
+          ],
+          "b": [
+            60324.8648,
+            -74.90245718
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        }
+      ]
+    },
+    {
+      "key": "S7",
+      "atoms": 7,
+      "molarMass_g_mol": 224.455,
+      "nasa9Segments": [
+        {
+          "tMinK": 300.0,
+          "tMaxK": 1000.0007,
+          "a": [
+            123365.5613,
+            -3200.54364,
+            30.15678887,
+            -0.02197472483,
+            2.487892075e-05,
+            -1.506049557e-08,
+            3.76892599e-12
+          ],
+          "b": [
+            23900.05896,
+            -127.5978171
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        },
+        {
+          "tMinK": 1000.0,
+          "tMaxK": 6000.0007,
+          "a": [
+            -272639.6041,
+            -73.7321522,
+            19.05771987,
+            -2.394575885e-05,
+            5.4426713e-09,
+            -6.37966348e-13,
+            3.008212993e-17
+          ],
+          "b": [
+            7308.45883,
+            -61.59112428
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        }
+      ]
+    },
+    {
+      "key": "S8",
+      "atoms": 8,
+      "molarMass_g_mol": 256.52,
+      "nasa9Segments": [
+        {
+          "tMinK": 300.0,
+          "tMaxK": 1000.0007,
+          "a": [
+            314562.5719,
+            -6116.51016,
+            48.7532754,
+            -0.0624179465,
+            7.42183175e-05,
+            -3.72644931e-08,
+            5.79942988e-12
+          ],
+          "b": [
+            35738.9084,
+            -228.8701977
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        },
+        {
+          "tMinK": 1000.0,
+          "tMaxK": 6000.0007,
+          "a": [
+            -8727921.13,
+            12216.27968,
+            22.09959617,
+            -0.00349406483,
+            1.397604162e-06,
+            -2.169815281e-10,
+            1.212304364e-14
+          ],
+          "b": [
+            -86581.1082,
+            -64.35742508
+          ],
+          "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+        }
+      ]
+    }
+  ],
+  "liquid": {
+    "key": "SL",
+    "atoms": 1,
+    "molarMass_g_mol": 32.065,
+    "nasa9Segments": [
+      {
+        "tMinK": 388.36,
+        "tMaxK": 428.1507,
+        "a": [
+          -63665507.65,
+          0.0,
+          2376.860693,
+          -7.888076026,
+          0.007376076522,
+          0.0,
+          0.0
+        ],
+        "b": [
+          -635659.492,
+          -11869.29589
+        ],
+        "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+      },
+      {
+        "tMinK": 428.15,
+        "tMaxK": 432.2507,
+        "a": [
+          0.0,
+          0.0,
+          6928.522306,
+          -32.54655981,
+          0.03824448176,
+          0.0,
+          0.0
+        ],
+        "b": [
+          -983222.268,
+          -31548.06751
+        ],
+        "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+      },
+      {
+        "tMinK": 432.25,
+        "tMaxK": 453.1507,
+        "a": [
+          0.0,
+          0.0,
+          164.9945697,
+          -0.6843534977,
+          0.0007315907973,
+          0.0,
+          0.0
+        ],
+        "b": [
+          -26388.46929,
+          -768.1730097
+        ],
+        "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+      },
+      {
+        "tMinK": 453.15,
+        "tMaxK": 717.0007,
+        "a": [
+          1972984.578,
+          0.0,
+          -24.41009753,
+          0.06090352889,
+          -3.744069103e-05,
+          0.0,
+          0.0
+        ],
+        "b": [
+          11130.1344,
+          136.3174183
+        ],
+        "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+      },
+      {
+        "tMinK": 717.0,
+        "tMaxK": 6000.0007,
+        "a": [
+          0.0,
+          0.0,
+          3.848693429,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "b": [
+          -828.458983,
+          -17.36128237
+        ],
+        "source": "NASA CEA thermo.inp (Glenn Research Center), Apache-2.0"
+      }
+    ]
+  },
+  "vapourPressureValidity": {
+    "tMinC": 120.0,
+    "tMaxC": 350.0,
+    "note": "Derived as n S(L) -> S_n(g) from CEA Gibbs energies. Honest limit: at the normal boiling point (444.6 degC) it gives 0.68 bar against 1.013 expected, so it must not be used above about 350 degC. Inside the condenser window it is consistent: 5.6 Pa at 120 degC, 32 Pa at 150 degC, 6.07 kPa at 300 degC."
+  }
+}

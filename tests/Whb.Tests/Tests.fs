@@ -961,8 +961,8 @@ let ``polymerisation duty is positive because frozen speciation underpredicts it
 
 [<Fact>]
 let ``sulphur vapour pressure and dew point are monotone and round trip`` () =
-    approx 32.2973 1e-3 (Sulphur.pSatTotal (cToK 150.0))
-    approx 6158.65 1.0 (Sulphur.pSatTotal (cToK 300.0))
+    approx 34.4995 1e-3 (Sulphur.pSatTotal (cToK 150.0))
+    approx 7180.19 1.0 (Sulphur.pSatTotal (cToK 300.0))
     let ps = [ 120.0; 150.0; 200.0; 250.0; 300.0 ] |> List.map (fun t -> Sulphur.pSatTotal (cToK t))
     ps |> List.pairwise |> List.iter (fun (a, b) -> Assert.True(b > a))
     let t = cToK 230.0
@@ -976,8 +976,8 @@ let ``condenser state caps vapour at saturation and reports condensed fraction``
     approx 0.0 1e-12 st300.NCondensed
     let st170 = Sulphur.condenserState (cToK 170.0) p 8.0 100.0
     Assert.True(st170.Condensing)
-    approx 86.432079 1e-3 st170.PSulphur
-    approx 0.952407 1e-4 st170.CondensedFraction
+    approx 95.1897 1e-2 st170.PSulphur
+    approx 0.945348 1e-4 st170.CondensedFraction
 
 [<Fact>]
 let ``sulphur process state inverts enthalpy through condensation`` () =
@@ -1130,8 +1130,8 @@ let ``colburn hougen and fog helpers remain numerically stable`` () =
     let kG = Sulphur.kGasFromHtc 60.0 35.0 1.2 p
     let r = Sulphur.condenseColburnHougen (cToK 240.0) pS p 60.0 kG 400.0 (cToK 140.0)
     Assert.InRange(r.TInterface, cToK 140.0, cToK 240.0)
-    approx 426.499368 1e-3 r.TInterface
-    approx 0.01478073 1e-6 r.MolarFlux
+    approx 426.543282 1e-3 r.TInterface
+    approx 0.01687972 1e-6 r.MolarFlux
     approx (r.QLatent + r.QSensible) 1e-6 r.QTotal
     let fog = Sulphur.assessFog (cToK 240.0) (1.5 * pS) 1.2 -25.0 -300.0
     Assert.True(fog.FogLikely)

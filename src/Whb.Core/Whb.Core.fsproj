@@ -23,6 +23,7 @@
     <Compile Include="Options\Constants.fs" />
     <Compile Include="Options\ProgressModel.fs" />
     <Compile Include="Materials\SteamIF97.fs" />
+    <Compile Include="Materials\Sulfur\Sulfur.fs" />
     <Compile Include="Materials\GasProps.fs" />
     <Compile Include="Options\Shift.fs" />
     <Compile Include="Materials\Materials.fs" />
@@ -98,8 +99,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Whb.Equipment\Whb.Equipment.fsproj" />
-    <PackageReference Include="Ganfoss.ROP" Version="1.0.2" />
-    <PackageReference Update="FSharp.Core" Version="10.1.301" />
+    <ProjectReference Include="..\..\external\WhbThermo\src\XSulfur\XSulfur.fsproj" />
+    <PackageReference Include="Ganfoss.ROP" Version="1.2.0" />
+    <PackageReference Update="FSharp.Core" Version="10.1.401" />
   </ItemGroup>
 
 </Project>

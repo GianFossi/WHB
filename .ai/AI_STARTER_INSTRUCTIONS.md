@@ -38,7 +38,7 @@ add a row to "Declared exceptions" below.
 
 | Package | Version | Where | Role |
 |---|---|---|---|
-| `Ganfoss.ROP` | 1.0.2 | `Whb.Core` | Railway-Oriented Programming helpers for the typed error path (`EXEC-2`) |
+| `Ganfoss.ROP` | 1.2.0 | `Whb.Core` | Railway-Oriented Programming helpers for the typed error path (`EXEC-2`) |
 | `NumericInput.Core` | 1.3.0 | future UI application layer | numeric entry model, unit-agnostic |
 | `NumericInput.WPF` | 1.3.0 | future `Whb.Desktop` | WPF numeric entry control |
 
@@ -55,6 +55,7 @@ business rule goes into it - those stay in `Whb.Core`.
 | Equipment / Component model | `src/Whb.Equipment` (components, piping, equipment assemblies, material lookup) |
 | Domain / Calculations | `Whb.Core/Components/`, `Process/`, `Loads/`, `Solvers/` |
 | Materials | `Materials/` (gas properties, IF97 steam) |
+| External thermo source | `external/WhbThermo/` vendored runtime/property libraries, with `src/Whb.Core/Materials/Sulfur/Sulfur.fs` as the thin adapter into `XSulfur` |
 | Sizing / Optimization | `Whb.Core/Designers/`, `Whb.Core/Optimizer/` |
 | Configuration | `Options/` (`whb.options.json` merged onto defaults) |
 | Reporting | `Whb.Core/Reports/` |

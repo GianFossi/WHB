@@ -1,0 +1,156 @@
+{
+  "schemaVersion": "1.0",
+  "status": "POPULATED by tools/fit_leckner.py -- read the source field",
+  "_instructions": [
+    "Model: log10(eps0) = SUM_i a_i (log10 pL)^i, with a_i = SUM_j c[j][i] (T/1000)^j.",
+    "c is indexed c[j][i]: row j = power of (T/1000), column i = power of log10(pL).",
+    "Matrix shape is read from this file, so H2O and CO2 may have different sizes.",
+    "Source options, in order of preference:",
+    "  1. Leckner, B., 'Spectral and total emissivity of water vapour and carbon dioxide',",
+    "     Combustion and Flame 19 (1972) 33-48 - the primary reference, Tables 2 and 3.",
+    "  2. Modest, M.F., 'Radiative Heat Transfer', 3rd ed., ch. 10 - same tables, reprinted.",
+    "  3. VDI-Waermeatlas, section on gas radiation.",
+    "After filling: run tools/validate_leckner.py to check against the published",
+    "emissivity charts before trusting any rating result."
+  ],
+  "h2o": {
+    "c": [
+      [
+        -0.320423856661366,
+        0.34862781574780927,
+        0.17308160035803857,
+        0.07401539104699727
+      ],
+      [
+        -0.08878803798397857,
+        -0.09752489085414408,
+        -0.3977946631952345,
+        -0.1278880711730694
+      ],
+      [
+        0.03506129022943524,
+        0.06515385000308382,
+        0.11950703229900897,
+        0.059510131284163714
+      ],
+      [
+        -0.024119475500944933,
+        -0.004600938564120931,
+        -0.004326240837328902,
+        -0.008305429816960638
+      ]
+    ],
+    "tMinK": 300.0,
+    "tMaxK": 2500.0,
+    "pathMinBarM": 0.001,
+    "pathMaxBarM": 10.0,
+    "source": "FITTED to Smith, Shen & Friedman (1982) WSGG by tools/fit_leckner.py. Leckner FORM, not Leckner's published coefficients - carries no accuracy independent of the WSGG model it was calibrated against."
+  },
+  "co2": {
+    "c": [
+      [
+        -1.1353132065021387,
+        0.22712489302084746,
+        0.12944716621075975,
+        0.03882963172278508
+      ],
+      [
+        0.9091121714378347,
+        -0.061374720594709255,
+        -0.2060766317159283,
+        -0.036366146209060236
+      ],
+      [
+        -0.5942986492795062,
+        0.06659645789713127,
+        0.10145054939788442,
+        0.01630637891773928
+      ],
+      [
+        0.09920511333176338,
+        -0.010748011026889657,
+        -0.019537744911962626,
+        -0.002450645690460057
+      ]
+    ],
+    "tMinK": 300.0,
+    "tMaxK": 2500.0,
+    "pathMinBarM": 0.001,
+    "pathMaxBarM": 10.0,
+    "source": "FITTED to Smith, Shen & Friedman (1982) WSGG by tools/fit_leckner.py. Leckner FORM, not Leckner's published coefficients - carries no accuracy independent of the WSGG model it was calibrated against."
+  },
+  "overlap": {
+    "c": [
+      [
+        0.6188053846257493,
+        0.8999629081202596,
+        0.6839139369758892,
+        0.17617520961174093
+      ],
+      [
+        0.07575788645632245,
+        0.632649106024443,
+        0.11054982920794264,
+        -0.06253014874268187
+      ],
+      [
+        -0.12738870982145833,
+        -0.623680741002689,
+        -0.32712712299897306,
+        -0.0340749899411729
+      ],
+      [
+        0.011840747979776058,
+        0.10858319768681966,
+        0.0760344087403175,
+        0.012952691667897968
+      ]
+    ],
+    "source": "FITTED to Smith, Shen & Friedman (1982) WSGG by tools/fit_leckner.py. Leckner FORM, not Leckner's published coefficients - carries no accuracy independent of the WSGG model it was calibrated against.",
+    "cAsym": [
+      [
+        -1.0195431570596598,
+        -1.0572480315028778,
+        -0.8565591773123027,
+        -0.23688201294238379
+      ],
+      [
+        1.167087278228883,
+        -0.3601950299631201,
+        -0.3074430005655564,
+        0.003126629454374904
+      ],
+      [
+        -0.7110591859885207,
+        0.5599565006566395,
+        0.6930433442073523,
+        0.14628841332648904
+      ],
+      [
+        0.1508195671363442,
+        -0.1151440942860623,
+        -0.17620227250517767,
+        -0.043205167692307166
+      ]
+    ]
+  },
+  "fitStatistics": {
+    "h2o": {
+      "points": 121,
+      "meanRelError": 0.04010590466152857,
+      "maxRelError": 0.15143278711455319
+    },
+    "co2": {
+      "points": 121,
+      "meanRelError": 0.030103326791105535,
+      "maxRelError": 0.08621291009916913
+    },
+    "overlap": {
+      "points": 605,
+      "maxAbsResidual": 0.08621891494036796,
+      "meanAbsResidual": 0.014205169483992496,
+      "maxAbsResidual_pL_below_1": 0.0741725581409179,
+      "meanAbsResidual_pL_below_1": 0.00921892274270476
+    }
+  }
+}

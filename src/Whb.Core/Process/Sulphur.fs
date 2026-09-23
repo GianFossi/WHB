@@ -2,8 +2,20 @@ namespace Whb.Core
 
 open System
 open Constants
+open ROP
 
 module Sulphur =
+
+    let private tryXsulfur fallback source =
+        match source with
+        | Success (value, _) -> value
+        | Failure _ -> fallback ()
+
+    let private sulfurAtomsByKey = function
+        | "S2" -> 2.0
+        | "S6" -> 6.0
+        | "S8" -> 8.0
+        | _ -> 0.0
 
     let clausSpecies =
         [ GasProps.H2S; GasProps.SO2; GasProps.COS; GasProps.CS2
@@ -100,14 +112,18 @@ module Sulphur =
 
     let pSatS8 (tK: float) = exp (115.199396 - 15302.2546 / tK - 14.443866 * log tK) * 1.0e5
 
-    let pSatTotal (tK: float) = pSatS2 tK + pSatS6 tK + pSatS8 tK
+    let pSatTotal (tK: float) =
+        SulfurAdapter.vapourPressure tK
+        |> tryXsulfur (fun () -> pSatS2 tK + pSatS6 tK + pSatS8 tK)
 
     let dewPoint (pSulphurPa: float) =
-        let lo = cToK 120.0
-        let hi = cToK 350.0
-        if pSulphurPa <= pSatTotal lo then lo
-        elif pSulphurPa >= pSatTotal hi then hi
-        else bisect (fun t -> pSatTotal t - pSulphurPa) lo hi 1e-6 200
+        let legacy () =
+            let lo = cToK 120.0
+            let hi = cToK 350.0
+            if pSulphurPa <= pSatTotal lo then lo
+            elif pSulphurPa >= pSatTotal hi then hi
+            else bisect (fun t -> pSatTotal t - pSulphurPa) lo hi 1e-6 200
+        SulfurAdapter.dewPoint pSulphurPa |> tryXsulfur legacy
 
     let hasElementalSulphur (composition: GasProps.Composition) =
         composition
@@ -174,35 +190,88 @@ module Sulphur =
           Condensing: bool }
 
     let condenserState (tK: float) (pPa: float) (nSAtoms: float) (nInert: float) : CondenserState =
-        let dry = speciate tK pPa nSAtoms nInert
-        let pDry = dry.PS2 + dry.PS6 + dry.PS8
-        let pSat = pSatTotal tK
-        if pDry <= pSat then
-            { Vapour = dry; PSulphur = pDry; NCondensed = 0.0; NVapour = nSAtoms
-              CondensedFraction = 0.0; Condensing = false }
-        else
-            let ySat = pSat / pPa
-            let nGasTot = nInert / max 1e-12 (1.0 - ySat)
-            let nMolSat = ySat * nGasTot
-            let atomicity =
-                let kp6 = exp (lnKpS6 tK)
-                let kp8 = exp (lnKpS8 tK)
-                let pSatBar = pSat / 1.0e5
-                let f p2 = p2 + kp6 * Math.Pow(p2, 3.0) + kp8 * Math.Pow(p2, 4.0) - pSatBar
-                let p2 = bisect f 1e-30 pSatBar 1e-16 300
-                let p6 = kp6 * Math.Pow(p2, 3.0)
-                let p8 = kp8 * Math.Pow(p2, 4.0)
-                let tot = p2 + p6 + p8
-                if tot <= 0.0 then 8.0 else (2.0 * p2 + 6.0 * p6 + 8.0 * p8) / tot
-            let nVap = min nSAtoms (nMolSat * atomicity)
-            let nCond = max 0.0 (nSAtoms - nVap)
-            let sat = speciate tK pPa nVap nInert
-            { Vapour = sat
-              PSulphur = pSat
+        let legacy () =
+            let dry = speciate tK pPa nSAtoms nInert
+            let pDry = dry.PS2 + dry.PS6 + dry.PS8
+            let pSat = pSatTotal tK
+            if pDry <= pSat then
+                { Vapour = dry; PSulphur = pDry; NCondensed = 0.0; NVapour = nSAtoms
+                  CondensedFraction = 0.0; Condensing = false }
+            else
+                let ySat = pSat / pPa
+                let nGasTot = nInert / max 1e-12 (1.0 - ySat)
+                let nMolSat = ySat * nGasTot
+                let atomicity =
+                    let kp6 = exp (lnKpS6 tK)
+                    let kp8 = exp (lnKpS8 tK)
+                    let pSatBar = pSat / 1.0e5
+                    let f p2 = p2 + kp6 * Math.Pow(p2, 3.0) + kp8 * Math.Pow(p2, 4.0) - pSatBar
+                    let p2 = bisect f 1e-30 pSatBar 1e-16 300
+                    let p6 = kp6 * Math.Pow(p2, 3.0)
+                    let p8 = kp8 * Math.Pow(p2, 4.0)
+                    let tot = p2 + p6 + p8
+                    if tot <= 0.0 then 8.0 else (2.0 * p2 + 6.0 * p6 + 8.0 * p8) / tot
+                let nVap = min nSAtoms (nMolSat * atomicity)
+                let nCond = max 0.0 (nSAtoms - nVap)
+                let sat = speciate tK pPa nVap nInert
+                { Vapour = sat
+                  PSulphur = pSat
+                  NCondensed = nCond
+                  NVapour = nVap
+                  CondensedFraction = (if nSAtoms > 0.0 then nCond / nSAtoms else 0.0)
+                  Condensing = true }
+
+        let fromXsulfur (state: XSulfur.Chemistry.CondenserState) =
+            let pSulphur = float state.VapourPressure * 1.0e5
+            let nCond = max 0.0 (nSAtoms * state.CondensedFraction)
+            let nVapAtoms = max 0.0 (nSAtoms - nCond)
+            let vapour =
+                match SulfurAdapter.speciation tK pSulphur with
+                | Success (distribution, _) -> distribution
+                | Failure _ -> failwith "fallback"
+            let meanAtomicity =
+                vapour.Fractions |> List.sumBy (fun (key, y) -> y * sulfurAtomsByKey key)
+            let nVapMolecules =
+                if meanAtomicity > 1e-12 then nVapAtoms / meanAtomicity else 0.0
+            let fractionOf key =
+                vapour.Fractions
+                |> List.tryFind (fun (name, _) -> name = key)
+                |> Option.map snd
+                |> Option.defaultValue 0.0
+            let nS2 = fractionOf "S2" * nVapMolecules
+            let nS6 = fractionOf "S6" * nVapMolecules
+            let nS8 = fractionOf "S8" * nVapMolecules
+            let pS2 = fractionOf "S2" * pSulphur
+            let pS6 = fractionOf "S6" * pSulphur
+            let pS8 = fractionOf "S8" * pSulphur
+            let nMol = nS2 + nS6 + nS8
+            let spec =
+                { NS2 = nS2
+                  NS6 = nS6
+                  NS8 = nS8
+                  PS2 = pS2
+                  PS6 = pS6
+                  PS8 = pS8
+                  NTotal = nInert + nMol
+                  YSulphur = (if nInert + nMol > 1e-12 then nMol / (nInert + nMol) else 0.0)
+                  MeanAtomicity = meanAtomicity }
+            { Vapour = spec
+              PSulphur = pSulphur
               NCondensed = nCond
-              NVapour = nVap
-              CondensedFraction = (if nSAtoms > 0.0 then nCond / nSAtoms else 0.0)
-              Condensing = true }
+              NVapour = nVapAtoms
+              CondensedFraction = state.CondensedFraction
+              Condensing = state.IsSaturated }
+
+        if nSAtoms <= 0.0 then legacy ()
+        else
+            let dry = speciate tK pPa nSAtoms nInert
+            let drySulphurPressure = dry.PS2 + dry.PS6 + dry.PS8
+            SulfurAdapter.condenserState tK drySulphurPressure
+            |> function
+                | Success (state, _) ->
+                    try fromXsulfur state
+                    with _ -> legacy ()
+                | Failure _ -> legacy ()
 
     let supersaturation (pSulphurPa: float) (tGasK: float) =
         pSulphurPa / max 1e-12 (pSatTotal tGasK)
@@ -211,29 +280,37 @@ module Sulphur =
 
     let TLambda = cToK 159.0
 
-    let rhoLiquid (tK: float) = 1900.0 - 0.80 * kToC tK
+    let rhoLiquid (tK: float) =
+        SulfurAdapter.liquidDensity tK
+        |> tryXsulfur (fun () -> 1900.0 - 0.80 * kToC tK)
 
-    let cpLiquid (_tK: float) = 1000.0
+    let cpLiquid (tK: float) =
+        SulfurAdapter.liquidHeatCapacity tK
+        |> tryXsulfur (fun () -> 1000.0)
 
-    let kLiquid (_tK: float) = 0.15
+    let kLiquid (tK: float) =
+        SulfurAdapter.liquidConductivity tK
+        |> tryXsulfur (fun () -> 0.15)
 
     let muLiquid (tK: float) =
-        let tC = kToC tK
-        let anchors =
-            [ 115.0, 12.0e-3; 120.0, 11.0e-3; 140.0, 8.0e-3; 155.0, 7.0e-3
-              159.0, 12.0e-3; 161.0, 0.4; 165.0, 4.0; 175.0, 40.0
-              187.0, 93.0; 200.0, 75.0; 250.0, 20.0; 300.0, 5.0 ]
-        let rec walk =
-            function
-            | (t1, m1) :: ((t2, m2) :: _ as rest) ->
-                if tC <= t1 then m1
-                elif tC <= t2 then
-                    let f = (tC - t1) / (t2 - t1)
-                    exp (log m1 + f * (log m2 - log m1))
-                else walk rest
-            | [ (_, m) ] -> m
-            | [] -> 1.0
-        walk anchors
+        let legacy () =
+            let tC = kToC tK
+            let anchors =
+                [ 115.0, 12.0e-3; 120.0, 11.0e-3; 140.0, 8.0e-3; 155.0, 7.0e-3
+                  159.0, 12.0e-3; 161.0, 0.4; 165.0, 4.0; 175.0, 40.0
+                  187.0, 93.0; 200.0, 75.0; 250.0, 20.0; 300.0, 5.0 ]
+            let rec walk =
+                function
+                | (t1, m1) :: ((t2, m2) :: _ as rest) ->
+                    if tC <= t1 then m1
+                    elif tC <= t2 then
+                        let f = (tC - t1) / (t2 - t1)
+                        exp (log m1 + f * (log m2 - log m1))
+                    else walk rest
+                | [ (_, m) ] -> m
+                | [] -> 1.0
+            walk anchors
+        SulfurAdapter.liquidViscosity tK |> tryXsulfur legacy
 
     let sulphurMolarMass (sp: Speciation) =
         let n = sp.NS2 + sp.NS6 + sp.NS8
@@ -428,21 +505,40 @@ module Sulphur =
           FogLikely: bool
           Margin: float }
 
+    let private mapXsFog (fog: XSulfur.Checks.FogAssessment) : FogAssessment =
+        { Supersaturation = fog.Supersaturation
+          SlopeRatio = fog.SlopeRatio
+          Lewis = fog.LewisNumber
+          FogLikely = fog.FogLikely
+          Margin = (if fog.FogLikely then 0.0 else max 0.0 (1.0 - fog.Supersaturation)) }
+
     let assessFog (tGasK: float) (pSulphurPa: float) (lewis: float)
                   (dTGas: float) (dPSulphur: float) =
+        let legacy () =
+            let ss = supersaturation pSulphurPa tGasK
+            let dTdew =
+                if abs dPSulphur < 1e-9 then 0.0
+                else dewPoint (pSulphurPa + dPSulphur) - dewPoint pSulphurPa
+            let slopeRatio =
+                if abs dTdew < 1e-9 then (if abs dTGas > 1e-9 then 10.0 else 0.0)
+                else abs dTGas / abs dTdew
+            let fog = ss > 1.05 && slopeRatio > 1.0 && lewis > 1.0
+            { Supersaturation = ss
+              SlopeRatio = slopeRatio
+              Lewis = lewis
+              FogLikely = fog
+              Margin = (if fog then 0.0 else max 0.0 (1.0 - ss)) }
+
         let ss = supersaturation pSulphurPa tGasK
         let dTdew =
             if abs dPSulphur < 1e-9 then 0.0
             else dewPoint (pSulphurPa + dPSulphur) - dewPoint pSulphurPa
-        let slopeRatio =
-            if abs dTdew < 1e-9 then (if abs dTGas > 1e-9 then 10.0 else 0.0)
-            else abs dTGas / abs dTdew
-        let fog = ss > 1.05 && slopeRatio > 1.0 && lewis > 1.0
-        { Supersaturation = ss
-          SlopeRatio = slopeRatio
-          Lewis = lewis
-          FogLikely = fog
-          Margin = (if fog then 0.0 else max 0.0 (1.0 - ss)) }
+
+        if abs dTdew < 1e-9 then legacy ()
+        else
+            match SulfurAdapter.assessFog ss (abs dTGas) (abs dTdew) lewis with
+            | Success (fog, _) -> mapXsFog fog
+            | Failure _ -> legacy ()
 
     type Severity =
         | Ok
@@ -458,65 +554,68 @@ module Sulphur =
 
     let private chk s t v l d = { Severity = s; Title = t; Value = v; Limit = l; Detail = d }
 
+    let private mapXsCheck (check: XSulfur.Checks.Check) : Check =
+        let severity =
+            match check.Severity with
+            | XSulfur.Checks.Ok -> Ok
+            | XSulfur.Checks.Watch -> Watch
+            | XSulfur.Checks.Alarm -> Alarm
+        { Severity = severity
+          Title = check.Title
+          Value = check.Actual
+          Limit = check.Limit
+          Detail = check.Rationale }
+
     let checkWallWindow (tWallK: float) =
-        let tC = kToC tWallK
-        if tC < 125.0 then
-            chk Alarm "Parete sotto la finestra dello zolfo"
-                (sprintf "T parete = %.1f C" tC) "125-155 C (fusione a 115.2 C)"
-                "Sotto i 125 C lo zolfo solidifica sulla parete: incrostazione, perdita di scambio e ostruzione dei drenaggi. Alzare la pressione del vapore LP."
-        elif tC > kToC TLambda then
-            chk Alarm "Parete oltre la transizione lambda"
-                (sprintf "T parete = %.1f C" tC) (sprintf "< %.0f C" (kToC TLambda))
-                "Sopra 159 C lo zolfo liquido polimerizza e la viscosita' sale di ordini di grandezza: il condensato non drena piu' e il fascio si intasa. Ridurre la pressione del vapore LP."
-        elif tC > 155.0 then
-            chk Watch "Parete vicina alla transizione lambda"
-                (sprintf "T parete = %.1f C" tC) "155 C con riserva di 4 K su 159 C"
-                "Il margine sulla transizione lambda e' sotto i 4 K: verificare la banda di regolazione del vapore LP e i transitori di carico."
-        else
-            chk Ok "Finestra di parete rispettata"
-                (sprintf "T parete = %.1f C" tC) "125-155 C" ""
+        mapXsCheck (SulfurAdapter.wallWindow tWallK)
 
     let steamPressureForWall (tWallK: float) = Steam.psat_MPa tWallK * 1.0e6
 
     let checkSulphidation (tWallK: float) (yH2S: float) =
-        let tC = kToC tWallK
-        if yH2S <= 1e-4 then chk Ok "H2S trascurabile" (sprintf "y(H2S) = %.2e" yH2S) "-" ""
-        elif tC > 340.0 then
-            chk Alarm "Sulfidation: parete oltre il limite pratico"
-                (sprintf "T parete = %.0f C, y(H2S) = %.3f" tC yH2S) "< 340 C per acciaio al carbonio"
-                "Il tasso di sulfidation cresce in modo esponenziale: verificare integrita' ferrule e valutare 1.25Cr-0.5Mo o rivestimento."
-        elif tC > 260.0 then
-            chk Watch "Sulfidation: parete in campo attivo"
-                (sprintf "T parete = %.0f C, y(H2S) = %.3f" tC yH2S) "260-340 C campo di attacco"
-                "Sopra 260 C l'attacco e' misurabile. Con ferrule integre la parete resta vicina a Tsat; ogni bypass locale accelera il fenomeno."
-        else chk Ok "Sulfidation entro i limiti" (sprintf "T parete = %.0f C" tC) "< 260 C" ""
+        mapXsCheck (SulfurAdapter.sulfidation tWallK yH2S)
 
     let checkWetH2S (tMetalK: float) (tWaterDewK: float) (yH2S: float) =
-        if yH2S > 1e-4 && tMetalK <= tWaterDewK then
-            chk Alarm "Rischio wet H2S (HIC/SOHIC/SSC)"
-                (sprintf "T metallo = %.0f C <= dew point acqua %.0f C" (kToC tMetalK) (kToC tWaterDewK))
-                "T metallo > dew point acqua in presenza di H2S"
-                "Condensa acida in presenza di H2S: richiede acciaio HIC-resistant e verifica delle condizioni di fermata."
-        else chk Ok "Nessuna condensa acida con H2S" "-" "-" ""
+        mapXsCheck (SulfurAdapter.wetH2S tMetalK tWaterDewK yH2S)
 
     let condenserChecks (tWallK: float) (tGasK: float) (pSulphurPa: float)
                         (fog: FogAssessment) =
+        let condensationCheck () =
+            let legacy () =
+                let tdew = dewPoint pSulphurPa
+                if tGasK <= tdew then
+                    chk Ok "Condensazione attiva"
+                        (sprintf "T gas = %.0f C, dew point = %.0f C" (kToC tGasK) (kToC tdew))
+                        "T gas < dew point" ""
+                else
+                    chk Watch "Gas sopra il dew point dello zolfo"
+                        (sprintf "T gas = %.0f C, dew point = %.0f C" (kToC tGasK) (kToC tdew))
+                        "T gas < dew point per condensare"
+                        "Nessuna condensazione a questo punto: il tratto lavora in solo raffreddamento sensibile."
+
+            match SulfurAdapter.condensationActive tGasK pSulphurPa with
+            | Success (check, _) -> mapXsCheck check
+            | Failure _ -> legacy ()
+
+        let fogCheck () =
+            let legacy () =
+                if fog.FogLikely then
+                    chk Alarm "Rischio di nebbia (fog) di zolfo"
+                        (sprintf "supersaturazione = %.2f, rapporto pendenze = %.2f" fog.Supersaturation fog.SlopeRatio)
+                        "supersaturazione < 1 oppure raffreddamento piu' lento della curva di rugiada"
+                        "Il gas si raffredda piu' in fretta di quanto scenda il suo dew point: lo zolfo nuclea in seno al gas invece che sulla parete."
+                else
+                    chk Ok "Nessun rischio di nebbia"
+                        (sprintf "supersaturazione = %.2f" fog.Supersaturation) "< 1" ""
+
+            let xsFog : XSulfur.Checks.FogAssessment =
+                { Supersaturation = fog.Supersaturation
+                  SlopeRatio = fog.SlopeRatio
+                  LewisNumber = fog.Lewis
+                  FogLikely = fog.FogLikely }
+
+            try SulfurAdapter.fogCheck xsFog |> mapXsCheck
+            with _ -> legacy ()
+
         [ checkWallWindow tWallK
-          (let tdew = dewPoint pSulphurPa
-           if tGasK <= tdew then
-               chk Ok "Condensazione attiva"
-                   (sprintf "T gas = %.0f C, dew point = %.0f C" (kToC tGasK) (kToC tdew))
-                   "T gas < dew point" ""
-           else
-               chk Watch "Gas sopra il dew point dello zolfo"
-                   (sprintf "T gas = %.0f C, dew point = %.0f C" (kToC tGasK) (kToC tdew))
-                   "T gas < dew point per condensare"
-                   "Nessuna condensazione a questo punto: il tratto lavora in solo raffreddamento sensibile.")
-          (if fog.FogLikely then
-               chk Alarm "Rischio di nebbia (fog) di zolfo"
-                   (sprintf "supersaturazione = %.2f, rapporto pendenze = %.2f" fog.Supersaturation fog.SlopeRatio)
-                   "supersaturazione < 1 oppure raffreddamento piu' lento della curva di rugiada"
-                   "Il gas si raffredda piu' in fretta di quanto scenda il suo dew point: lo zolfo nuclea in seno al gas invece che sulla parete."
-           else
-               chk Ok "Nessun rischio di nebbia"
-                   (sprintf "supersaturazione = %.2f" fog.Supersaturation) "< 1" "") ]
+          condensationCheck ()
+          fogCheck () ]
