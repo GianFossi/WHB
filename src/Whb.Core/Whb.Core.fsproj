@@ -31,7 +31,6 @@
     <Compile Include="Process\Claus.fs" />
     <Compile Include="Process\Sulphur.fs" />
     <Compile Include="Process\SulphurCondenser.fs" />
-    <Compile Include="Materials\Water\WaterProperties.fs" />
     <Compile Include="Materials\Gas\GasPropertySets.fs" />
     <Compile Include="Solvers\SolverCatalog.fs" />
     <Compile Include="Reports\ReportCatalog.fs" />
@@ -100,8 +99,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Whb.Equipment\Whb.Equipment.fsproj" />
-    <ProjectReference Include="..\..\external\WhbThermo\src\XSulfur\XSulfur.fsproj" />
-    <ProjectReference Include="..\..\external\WhbThermo\src\WhbThermo.Properties\WhbThermo.Properties.fsproj" />
+    <ProjectReference Include="..\Whb.Thermo\src\XSulfur\XSulfur.fsproj" />
+    <ProjectReference Include="..\Whb.Thermo\src\WhbThermo.Properties\WhbThermo.Properties.fsproj" />
+    <ProjectReference Include="..\Whb.Thermo\src\WhbThermo.Steam\WhbThermo.Steam.fsproj" />
+    <ProjectReference Include="..\Whb.Thermo\src\WhbThermo.Radiation\WhbThermo.Radiation.fsproj" />
     <PackageReference Include="Ganfoss.ROP" Version="1.2.0" />
     <PackageReference Update="FSharp.Core" Version="10.1.401" />
   </ItemGroup>

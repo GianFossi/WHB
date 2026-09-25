@@ -107,12 +107,16 @@ abbatte il flusso termico locale di un ordine di grandezza. Il picco di flusso s
 ### 1.3 Proprietà del gas
 
 I dati di specie (massa molare, `c_p`, entalpia di formazione, trasporto, costanti critiche)
-provengono dal database di WhbThermo (`external/WhbThermo/data/species-database.json`),
+provengono dal database di WhbThermo (`src/Whb.Thermo/data/species-database.json`),
 letto da `Materials/Gas/GasThermoAdapter.fs`; `GasProps` non contiene più coefficienti propri.
 
 - `c_p` e `h` da polinomi **NASA-9** (NASA CEA), entalpia assoluta con termine di formazione
-- `µ` e `k` da correlazioni **NASA CEA** di trasporto dove disponibili, altrimenti Sutherland
-  (C3H6, C3H8, C6H6, C7H8, SO3, S2/S6/S8); H₂O compresa
+- `µ` e `k` da correlazioni **NASA CEA** di trasporto dove disponibili; per C3H6, C3H8, C6H6,
+  C7H8 una stima Chung-Lee-Starling nella stessa forma (i fit Sutherland precedenti davano `k`
+  fino al 55 % basso); Sutherland solo per SO3 e S2/S6/S8; H₂O compresa
+- verifica sul syngas di riferimento (2026-09-25): `k` di miscela entro ±2.5 % da Cantera
+  multicomponente, `µ` entro +3 %; le specie pure entro il 5 % da CoolProp nel suo campo
+  (H₂ e CO₂ tendono a stare 2-5 % sotto sopra 1000 K)
 - costanti critiche Tc, Pc, ω (Poling) e volume critico Vc per il viriale; S2/S6/S8 senza
   costanti critiche restano gas ideali
 - miscelazione: **Wilke** per µ, **Wassiljewa/Mason–Saxena** per k

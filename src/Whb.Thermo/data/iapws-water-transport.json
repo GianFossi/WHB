@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "description": "Transport properties and surface tension of water and steam. Coefficients transcribed from the IAPWS releases below, as used by Whb.Core since 2026-08. The critical enhancement terms of both transport releases are NOT included: the formulations here are the background values, which is what a WHB needs away from the critical point.",
+  "tcK": 647.096,
+  "rhocKgM3": 322.0,
+  "viscosity": {
+    "standard": "IAPWS R12-08 (2008), dilute-gas and residual terms, no critical enhancement",
+    "h0": [1.67752, 2.20462, 0.6366564, -0.241605],
+    "h1": [
+      [0, 0, 5.20094e-1], [1, 0, 8.50895e-2], [2, 0, -1.08374], [3, 0, -2.89555e-1],
+      [0, 1, 2.22531e-1], [1, 1, 9.99115e-1], [2, 1, 1.88797], [3, 1, 1.26613],
+      [5, 1, 1.20573e-1],
+      [0, 2, -2.81378e-1], [1, 2, -9.06851e-1], [2, 2, -7.72479e-1], [3, 2, -4.89837e-1],
+      [4, 2, -2.57040e-1],
+      [0, 3, 1.61913e-1], [1, 3, 2.57399e-1],
+      [0, 4, -3.25372e-2], [3, 4, 6.98452e-2],
+      [4, 5, 8.72102e-3],
+      [3, 6, -4.35673e-3], [5, 6, -5.93264e-4]
+    ]
+  },
+  "conductivity": {
+    "standard": "IAPWS R15-11 (2011), dilute-gas and residual terms, no critical enhancement",
+    "l0": [2.443221e-3, 1.323095e-2, 6.770357e-3, -3.454586e-3, 4.096266e-4],
+    "l1": [
+      [1.60397357, -0.646013523, 0.111443906, 0.102997357, -0.0504123634, 0.00609859258],
+      [2.33771842, -2.78843778, 1.53616167, -0.463045512, 0.0832827019, -0.00719201245],
+      [2.19650529, -4.54580785, 3.55777244, -1.40944978, 0.275418278, -0.0205938816],
+      [-1.21051378, 1.60812989, -0.621178141, 0.0716373224, 0.0, 0.0],
+      [-2.7203370, 4.57586331, -3.18369245, 1.1168348, -0.19268305, 0.012913842]
+    ]
+  },
+  "surfaceTension": {
+    "standard": "IAPWS R1-76(2014): sigma = B tau^mu (1 + b tau), tau = 1 - T/Tc",
+    "bigB": 235.8e-3,
+    "mu": 1.256,
+    "smallB": -0.625
+  }
+}

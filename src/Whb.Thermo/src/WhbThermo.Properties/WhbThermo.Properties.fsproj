@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Compile Include="PureComponent.fs" />
+    <Compile Include="ChungEstimate.fs" />
+    <Compile Include="Equilibrium.fs" />
+    <Compile Include="ReactionDatabase.fs" />
+    <Compile Include="SpeciesApi.fs" />
+    <Compile Include="Mixing.fs" />
+    <Compile Include="SecondVirial.fs" />
+    <Compile Include="GasState.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Ganfoss.ROP" Version="1.2.0" />
+    <PackageReference Update="FSharp.Core" Version="10.1.401" />
+    <ProjectReference Include="../WhbThermo.Domain/WhbThermo.Domain.fsproj" />
+    <ProjectReference Include="../WhbThermo.Data/WhbThermo.Data.fsproj" />
+    <ProjectReference Include="../WhbThermo.Steam/WhbThermo.Steam.fsproj" />
+  </ItemGroup>
+</Project>

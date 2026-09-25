@@ -21,6 +21,10 @@ this file in the same commit so the memory stays accurate.
   - `src/Whb.Core` — calculation library and domain model.
   - `src/Whb.Cli` — CLI, JSON input loader, report generator.
   - `tests/Whb.Tests` — xUnit test project.
+  - `src/Whb.Thermo` — thermophysical library (species database, NASA-9 / CEA
+    properties, IF97, liquids, radiation, two-phase, XSulfur) with its own solution
+    `Whb.Thermo.sln` and test suite; `Whb.Core` references its `XSulfur` and
+    `WhbThermo.Properties` projects.
 
 See `README.md` and `docs/` for engineering scope, theory, assumptions
 and limitations.
@@ -59,6 +63,14 @@ engine only).
 ## Repository Layout (canonical)
 
 ```text
+src/Whb.Thermo/                separate solution Whb.Thermo.sln
+  data/                      species, reactions, k_ij, liquids, sulfur, IF97, radiation
+  src/                       WhbThermo.Domain/Data/Properties/Steam/Liquids/Radiation/
+                             Convection/Boiling/TwoPhase and XSulfur projects
+  tests/WhbThermo.Tests/     xUnit suite of the library
+  tools/                     Python data tools; every species-database write goes
+                             through db_guard.py (schema_v3.py rules)
+
 src/Whb.Equipment/
   Common/Bom.fs              `BomItem = { Id; Description; Quantity; Unit }`
   Common/Metrics.fs          derived component/equipment weight-volume breakdowns
@@ -78,8 +90,10 @@ src/Whb.Equipment/
 
 src/Whb.Core/
   Options/Constants.fs       constants, unit conversions, bisection, fixed point
-  Materials/SteamIF97.fs     IAPWS-IF97 helper properties
-  Materials/GasProps.fs      gas species and mixture properties
+  Materials/SteamIF97.fs     `Steam` facade over WhbThermo.Steam.Water (IF97, IAPWS
+                             transport, surface tension, saturation records)
+  Materials/GasProps.fs      gas species vocabulary and mixtures; virial, mixing-rule and
+                             grey-gas kernels delegated to Whb.Thermo
   Materials/Gas/GasThermoAdapter.fs
                              thin adapter: species data from the WhbThermo database
   Materials/Materials.fs     material catalogue and limits
@@ -186,6 +200,54 @@ Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
 
+- 2026-09-25 — One interface for constants and water: `WhbThermo.Domain.PhysicalConstants`
+  holds R, sigma, g and the IAPWS water critical point; `Units.Ru`,
+  `Emissivity.sigma`, the g of Boiling/Convection/XSulfur and Whb.Core `Constants`
+  alias it, and the IF97/transport loaders refuse data files that disagree.
+  `Nucleate.surfaceTension` delegates to `Water.surfaceTension`; the unused
+  `Materials/Water/WaterProperties.fs` was deleted. IF97 regions 1 and 2 build each
+  distinct power once per call, so cv is always computed at no measurable cost
+  (bit-identical results). IF97 is complete: region 3 (density solved on the right
+  branch from the SR1-86 auxiliaries, saturation above 623.15 K) and region 5, with
+  coefficients from the `iapws` package via `tools/import_if97_regions.py`, checked
+  against IF97 Tables 33 and 42. No backward equations. Water B above 1073.15 K in the
+  virial is still the scaled region 2 value; region 5 differs by +61 % at 1240 K
+  (B turns positive near 1600 K) - switching is a model change awaiting a decision.
+  All Whb.Thermo projects and tests are now also in `WhbDesign.sln`.
+
+- 2026-09-25 — Solution renamed `Whb.Thermo.sln`. Water, steam and gas physics
+  migrated from Whb.Core to Whb.Thermo with bit-identical results (selftest, all
+  CSVs and text reports of both cases) and unchanged run time:
+  IF97 now has ONE kernel (`If97.fs`, Whb.Core's cached-power algorithm and
+  assembly order, coefficients from `iapws-if97.json`; the cv sums are skipped
+  on the hot path or the run slows by 20 %); IAPWS 2008/2011 transport and
+  surface tension moved to `WhbThermo.Steam.Water` with coefficients in
+  `iapws-water-transport.json`; the virial model (`Properties/SecondVirial.fs`),
+  the Wilke/Wassiljewa and molar-average kernels (`Mixing.fs`, phi with
+  Math.Pow(.,0.25)) and the grey-gas emissivity (`Radiation/GreyGas.fs`) moved
+  too. `Steam` and `GasProps` in Whb.Core are facades keeping every public name;
+  `GasProps` still owns the species vocabulary and the pair-term cache keyed by
+  its species indices. Do not reintroduce coefficients or kernels in Whb.Core.
+
+- 2026-09-25 — Moved the thermo library from `external/WhbThermo` to
+  `src/Whb.Thermo` (git mv, history kept); the `external/` folder is gone. It stays a
+  separate solution (`Whb.Thermo.sln`) and its inner project and namespace names
+  (`WhbThermo.*`, `XSulfur`) are unchanged. The move was blocked by VS Code's Ionide
+  language server holding files open; `dotnet build-server shutdown` alone is not
+  enough.
+
+- 2026-09-25 — Closed the open gas-data points with measured evidence (CoolProp 8.0
+  and Cantera 3.2 used offline only, from a scratch venv). Syngas mixture k from
+  Wilke/Wassiljewa is within +/-2.5 % of Cantera multicomponent, so the mixing rule
+  was NOT changed. C3H8/C3H6/C6H6/C7H8 transport replaced by a Chung estimate fitted
+  to the CEA form (`tools/fit_transport_chung.py`, quality C, verified against
+  CoolProp below its Tmax); the legacy Sutherland k was up to 55 % low. CoolProp
+  is not a reference above its EOS Tmax (NH3 k goes negative), so
+  `generate_reference.py` stops there and uses ideal-gas Cp0mass. k_ij sensitivity:
+  0.1 on every pair moves the reference enthalpy drop by 0.06 %, so transcribing
+  k_ij is not worth the risk for WHB conditions. WhbThermo 318/318; whb numbers
+  unchanged (no C3+ in the reference gas).
+
 - 2026-09-23 — WhbThermo solution renamed `GasProperties.sln`, all projects on
   Ganfoss.ROP 1.2.0 / FSharp.Core 10.1.401 (the pin in Directory.Build.props has no
   effect on the implicit FSharp.Core reference; each .fsproj repeats it). The vendored
@@ -212,7 +274,7 @@ ISO date. Keep each entry short (what / why / where).
   keeps its public API but its hard-coded tables (molar mass, cp polynomials,
   Sutherland/Eucken, IAPWS dilute H2O transport, formation enthalpies, virial
   critical constants) are gone; values now come from
-  `external/WhbThermo/data/species-database.json` via
+  `src/Whb.Thermo/data/species-database.json` via
   `Materials/Gas/GasThermoAdapter.fs` (NASA-9 cp/h, NASA CEA or Sutherland
   transport, Poling Tc/Pc/omega). The virial Vc had no home in WhbThermo, so
   `CriticalProperties` gained `Vc`/`VcSource` and the old GasProps values were

@@ -181,84 +181,37 @@ module GasProps =
         /// <param name="pc">Critical pressure in pascal.</param>
         /// <param name="om">Acentric factor.</param>
         /// <param name="tK">Temperature in kelvin.</param>
-        /// <returns>The pseudocritical virial contribution.</returns>
+        /// <returns>The second virial coefficient in m³/mol.</returns>
         let pitzer (tc: float) (pc: float) (om: float) (tK: float) =
-            let tr = max 0.30 (tK / tc)
-            let b0 = 0.083 - 0.422 / Math.Pow(tr, 1.6)
-            let b1 = 0.139 - 0.172 / Math.Pow(tr, 4.2)
-            (b0 + om * b1) * R * tc / pc
+            WhbThermo.Properties.SecondVirial.pitzer tc pc om tK
 
         /// <summary>
-        /// Estimates the virial coefficient correction for water vapor.
+        /// Second virial coefficient of water from IAPWS-IF97 in the dilute limit.
         /// </summary>
         /// <param name="tK">Temperature in kelvin.</param>
-        /// <returns>The water-specific virial pressure term.</returns>
-        let bWater (tK: float) =
-            let p = 1000.0                       // Pa: gas praticamente ideale
-            let t = min tK 1073.15
-            let (v, _, _, _) = Steam.region2 (p / 1.0e6) t   // v [m³/kg]
-            let z = p * v / (Rw * 1000.0 * t)
-            let b = (z - 1.0) * R * t / p
-            if tK <= 1073.15 then b else b * Math.Pow(1073.15 / tK, 1.6)
+        /// <returns>The water second virial coefficient in m³/mol.</returns>
+        let bWater (tK: float) = WhbThermo.Properties.SecondVirial.waterB tK
+
         /// <summary>
-        /// Stores the precomputed pseudo-critical interaction data for a species pair.
-        /// </summary>
-        /// <remarks>
-        /// The pair coefficients are built once and reused across mixture evaluations to avoid recomputing the same values.
-        /// </remarks>
-        [<Struct>]
-        type private PairTerm =
-            { I: int
-              J: int
-              Mult: float          // 1 on the diagonal, 2 off-diagonal (bPair is symmetric)
-              Tc: float
-              Pc: float
-              Om: float
-              IsWater: bool }
-        /// <summary>
-        /// Builds the virial interaction coefficients for a species set.
+        /// Builds the WhbThermo virial pair terms for a species set.
         /// </summary>
         /// <param name="species">The species that define the mixture.</param>
-        /// <returns>The cached pair coefficients used for mixture B calculations.</returns>
+        /// <returns>The pair terms, temperature independent.</returns>
         let private buildPairTerms (species: Species[]) =
-            let n = species.Length
-            let acc = ResizeArray<PairTerm>(n * (n + 1) / 2)
-            for i in 0 .. n - 1 do
-                for j in i .. n - 1 do
-                    let a = species.[i]
-                    let b = species.[j]
-                    let mult = if i = j then 1.0 else 2.0
-                    if a = b then
-                        if (recordOf a).If97SecondVirial then
-                            acc.Add { I = i; J = j; Mult = mult
-                                      Tc = 0.0; Pc = 0.0; Om = 0.0; IsWater = true }
-                        else
-                            match criticalOpt a with
-                            | Some (tc, pc, om, _) ->
-                                acc.Add { I = i; J = j; Mult = mult
-                                          Tc = tc; Pc = pc; Om = om; IsWater = false }
-                            | None -> ()
-                    else
-                        match criticalOpt a, criticalOpt b with
-                        | Some (tca, pca, oma, vca), Some (tcb, pcb, omb, vcb) ->
-                            // k_ij from the WhbThermo binary table; 0 when the pair has none.
-                            let kij = GasThermoAdapter.virialKij (speciesName a) (speciesName b)
-                            let tcij = sqrt (tca * tcb) * (1.0 - kij)
-                            let omij = 0.5 * (oma + omb)
-                            let zca = pca * vca / (R * tca)
-                            let zcb = pcb * vcb / (R * tcb)
-                            let zcij = 0.5 * (zca + zcb)
-                            let vcij = (0.5 * (Math.Cbrt vca + Math.Cbrt vcb)) ** 3.0
-                            let pcij = zcij * R * tcij / vcij
-                            acc.Add { I = i; J = j; Mult = mult
-                                      Tc = tcij; Pc = pcij; Om = omij; IsWater = false }
-                        | _ -> ()
-            acc.ToArray()
+            let components =
+                species
+                |> Array.map (fun sp ->
+                    let r = recordOf sp
+                    let c : WhbThermo.Properties.SecondVirial.Component =
+                        { Id = r.Key; Critical = r.Critical; If97SecondVirial = r.If97SecondVirial }
+                    c)
+            WhbThermo.Properties.SecondVirial.buildPairTerms components (fun i j ->
+                GasThermoAdapter.virialKij (speciesName species.[i]) (speciesName species.[j]))
         /// <summary>
         /// Stores the per-species-set virial pair coefficient cache.
         /// </summary>
         let private pairTermCache =
-            Collections.Concurrent.ConcurrentDictionary<int64, PairTerm[]>()
+            Collections.Concurrent.ConcurrentDictionary<int64, WhbThermo.Properties.SecondVirial.PairTerm[]>()
         /// <summary>
         /// Gets the pair-term cache entry for a species array.
         /// </summary>
@@ -278,12 +231,9 @@ module GasProps =
                     v
 
         /// <summary>
-        /// Computes the mixture second virial coefficient approaching the ideal-gas limit for a composition.
+        /// Splits a composition into the species and mole-fraction arrays the kernels take.
         /// </summary>
-        /// <param name="c">The gas composition.</param>
-        /// <param name="tK">Temperature in kelvin.</param>
-        /// <returns>The mixture virial coefficient.</returns>
-        let bMix (c: Composition) (tK: float) =
+        let private arrays (c: Composition) =
             let n = List.length c
             let species = Array.zeroCreate n
             let ys = Array.zeroCreate n
@@ -292,12 +242,17 @@ module GasProps =
                 species.[k] <- sp
                 ys.[k] <- y
                 k <- k + 1
-            let terms = pairTermsFor species
-            let mutable s = 0.0
-            for t in terms do
-                let b = if t.IsWater then bWater tK else pitzer t.Tc t.Pc t.Om tK
-                s <- s + t.Mult * ys.[t.I] * ys.[t.J] * b
-            s
+            species, ys
+
+        /// <summary>
+        /// Computes the mixture second virial coefficient for a composition.
+        /// </summary>
+        /// <param name="c">The gas composition.</param>
+        /// <param name="tK">Temperature in kelvin.</param>
+        /// <returns>The mixture virial coefficient in m³/mol.</returns>
+        let bMix (c: Composition) (tK: float) =
+            let species, ys = arrays c
+            WhbThermo.Properties.SecondVirial.bMix (pairTermsFor species) ys tK
 
         /// <summary>
         /// Evaluates the virial residual terms for compression factor, enthalpy departure, and heat-capacity departure.
@@ -307,16 +262,8 @@ module GasProps =
         /// <param name="pPa">Pressure in pascal.</param>
         /// <returns>A tuple containing the compressibility factor, enthalpy residual, and heat-capacity residual.</returns>
         let residual (c: Composition) (tK: float) (pPa: float) =
-            let dt = 2.0
-            let bm = bMix c tK
-            let bp = bMix c (tK + dt)
-            let bmn = bMix c (tK - dt)
-            let db = (bp - bmn) / (2.0 * dt)
-            let d2b = (bp - 2.0 * bm + bmn) / (dt * dt)
-            let z = 1.0 + bm * pPa / (R * tK)
-            let hRes = pPa * (bm - tK * db)
-            let cpRes = -pPa * tK * d2b
-            (z, hRes, cpRes)
+            let species, ys = arrays c
+            WhbThermo.Properties.SecondVirial.residual (pairTermsFor species) ys tK pPa
     /// <summary>
     /// Returns the enthalpy departure term when the real-gas correction is active.
     /// </summary>
@@ -329,16 +276,23 @@ module GasProps =
         if not real then 0.0
         else let (_, h, _) = Virial.residual c tK pPa in h
     /// <summary>
-    /// Computes the Wilke diffusion factor used in the mixture transport-property averaging.
+    /// Mole fractions, molar masses, pure viscosities and conductivities of a normalized
+    /// composition, in composition order, for the WhbThermo mixing kernels.
     /// </summary>
-    /// <param name="mi">Molar mass of species i.</param>
-    /// <param name="mj">Molar mass of species j.</param>
-    /// <param name="mui">Viscosity of species i.</param>
-    /// <param name="muj">Viscosity of species j.</param>
-    /// <returns>The Wilke interaction coefficient.</returns>
-    let private phiWilke (mi: float) (mj: float) (mui: float) (muj: float) =
-        let a = 1.0 + sqrt (mui / muj) * Math.Pow(mj / mi, 0.25)
-        a * a / sqrt (8.0 * (1.0 + mi / mj))
+    let private transportArrays (cn: Composition) (tK: float) =
+        let n = List.length cn
+        let y = Array.zeroCreate n
+        let m = Array.zeroCreate n
+        let mu = Array.zeroCreate n
+        let k = Array.zeroCreate n
+        let mutable i = 0
+        for (sp, yi) in cn do
+            y.[i] <- yi
+            mu.[i] <- muPure sp tK
+            k.[i] <- kPure sp tK
+            m.[i] <- molarMass sp
+            i <- i + 1
+        struct (y, m, mu, k)
     /// <summary>
     /// Stores the equilibrium thermodynamic properties of a gas mixture at a given state.
     /// </summary>
@@ -381,30 +335,11 @@ module GasProps =
         let m = mixMolarMass cn
         let cpm = cn |> List.sumBy (fun (sp, y) -> y * cpMolar sp tK)
         let hm = cn |> List.sumBy (fun (sp, y) -> y * hMolar sp tK)
-        let mus = cn |> List.map (fun (sp, y) -> (sp, y, muPure sp tK, kPure sp tK, molarMass sp))
-        let muMix, kMix =
+        let struct (y, ms, mus, ks) = transportArrays cn tK
+        let struct (muMix, kMix) =
             match rule with
-            | MolarAverage ->
-                let sw = mus |> List.sumBy (fun (_, y, _, _, m) -> y * sqrt m)
-                (mus |> List.sumBy (fun (_, y, mu, _, _) -> y * mu),
-                 (mus |> List.sumBy (fun (_, y, _, k, m) -> y * sqrt m * k)) / sw)
-            | Wilke ->
-                // The Wilke denominator depends on species i only, so it is built once and
-                // reused for viscosity and conductivity instead of being summed twice. Same
-                // expression in the same accumulation order, so the result is unchanged.
-                let musArr = List.toArray mus
-                let dens =
-                    musArr
-                    |> Array.map (fun (_, _, mui, _, mi) ->
-                        mus |> List.sumBy (fun (_, yj, muj, _, mj) -> yj * phiWilke mi mj mui muj))
-                let mutable muAcc = 0.0
-                let mutable kAcc = 0.0
-                for i in 0 .. musArr.Length - 1 do
-                    let (_, yi, mui, ki, _) = musArr.[i]
-                    let d = dens.[i]
-                    muAcc <- muAcc + (if d <= 0.0 then 0.0 else yi * mui / d)
-                    kAcc <- kAcc + (if d <= 0.0 then 0.0 else yi * ki / d)
-                (muAcc, kAcc)
+            | MolarAverage -> WhbThermo.Properties.Mixing.molarAverage y ms mus ks
+            | Wilke -> WhbThermo.Properties.Mixing.wilkeWassiljewa y ms mus ks
         let (zEff, hRes, cpRes) =
             if real then Virial.residual cn tK pPa else (z, 0.0, 0.0)
         let rho = pPa * m / (zEff * R * tK)
@@ -437,20 +372,8 @@ module GasProps =
         let m = mixMolarMass cn
         let cpm = cn |> List.sumBy (fun (sp, y) -> y * cpMolar sp tK)
         let hm = cn |> List.sumBy (fun (sp, y) -> y * hMolar sp tK)
-        let mus = cn |> List.map (fun (sp, y) -> (sp, y, muPure sp tK, kPure sp tK, molarMass sp))
-        // One denominator per species, shared by viscosity and conductivity (see mixReal).
-        let musArr = List.toArray mus
-        let dens =
-            musArr
-            |> Array.map (fun (_, _, mui, _, mi) ->
-                mus |> List.sumBy (fun (_, yj, muj, _, mj) -> yj * phiWilke mi mj mui muj))
-        let mutable muMix = 0.0
-        let mutable kMix = 0.0
-        for i in 0 .. musArr.Length - 1 do
-            let (_, yi, mui, ki, _) = musArr.[i]
-            let den = dens.[i]
-            muMix <- muMix + (if den <= 0.0 then 0.0 else yi * mui / den)
-            kMix <- kMix + (if den <= 0.0 then 0.0 else yi * ki / den)
+        let struct (y, ms, mus, ks) = transportArrays cn tK
+        let struct (muMix, kMix) = WhbThermo.Properties.Mixing.wilkeWassiljewa y ms mus ks
         let rho = pPa * m / (z * R * tK)
         let cpMass = cpm / m
         { T = tK; P = pPa; M = m; Rho = rho
@@ -533,16 +456,7 @@ module GasProps =
     /// <param name="tK">Gas temperature in kelvin.</param>
     /// <returns>The gas emissivity factor clipped to the physically meaningful range.</returns>
     let gasEmissivity (rH2O: float) (rCO2: float) (pPa: float) (sBeam: float) (tK: float) =
-        let rn = rH2O + rCO2
-        if rn <= 1e-6 || sBeam <= 0.0 then 0.0
-        else
-            let pnMPa = pPa * rn / 1.0e6
-            let ps = max 1e-6 (pnMPa * sBeam)
-            let kg =
-                ((0.78 + 1.6 * rH2O) / sqrt ps - 0.1) * (1.0 - 0.37 * tK / 1000.0)
-            let kg = max 0.0 kg
-            let e = 1.0 - exp (-kg * ps)
-            min 0.95 (max 0.0 e)
+        WhbThermo.Radiation.GreyGas.emissivity rH2O rCO2 pPa sBeam tK
     /// <summary>
     /// Calculates the net radiative heat flux between a gas and a wall.
     /// </summary>
@@ -552,12 +466,4 @@ module GasProps =
     /// <param name="tWallK">Wall temperature in kelvin.</param>
     /// <returns>The radiative heat-transfer rate in W/m².</returns>
     let hRadiation (epsGas: float) (epsWall: float) (tGasK: float) (tWallK: float) =
-        if abs (tGasK - tWallK) < 1e-6 then 0.0
-        else
-            let effWall = 0.5 * (epsWall + 1.0)      // gray wall in a cavity
-            let e = epsGas * effWall
-            e * sigmaSB * (tGasK ** 4.0 - tWallK ** 4.0) / (tGasK - tWallK)
-
-
-
-
+        WhbThermo.Radiation.GreyGas.cavityCoefficient epsGas epsWall tGasK tWallK

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Compile Include="Emissivity.fs" />
+    <Compile Include="GreyGas.fs" />
+    <Compile Include="Wsgg.fs" />
+    <Compile Include="RadiationModel.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Ganfoss.ROP" Version="1.2.0" />
+    <PackageReference Update="FSharp.Core" Version="10.1.401" />
+    <PackageReference Include="FSharp.SystemTextJson" Version="1.3.13" />
+    <ProjectReference Include="../WhbThermo.Domain/WhbThermo.Domain.fsproj" />
+    <ProjectReference Include="../WhbThermo.Data/WhbThermo.Data.fsproj" />
+  </ItemGroup>
+</Project>

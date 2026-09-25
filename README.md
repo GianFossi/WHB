@@ -509,6 +509,14 @@ checked against the available client PDS data.
 ## Repository Layout
 
 ```text
+src/Whb.Thermo/                separate solution Whb.Thermo.sln
+  data/                      species, reactions, k_ij, liquids, sulfur, IF97, radiation
+  src/                       WhbThermo.Domain/Data/Properties/Steam/Liquids/Radiation/
+                             Convection/Boiling/TwoPhase and XSulfur projects
+  tests/WhbThermo.Tests/     xUnit suite of the library
+  tools/                     Python data tools; every species-database write goes
+                             through db_guard.py (schema_v3.py rules)
+
 src/Whb.Equipment/
   Common/Bom.fs              `BomItem = { Id; Description; Quantity; Unit }`
   Common/Metrics.fs          derived weight/volume/area breakdowns
@@ -527,8 +535,10 @@ src/Whb.Equipment/
 
 src/Whb.Core/
   Options/Constants.fs       constants, unit conversions, bisection, fixed point
-  Materials/SteamIF97.fs     IAPWS-IF97 helper properties
-  Materials/GasProps.fs      gas species and mixture properties
+  Materials/SteamIF97.fs     `Steam` facade over WhbThermo.Steam.Water (IF97, IAPWS
+                             transport, surface tension, saturation records)
+  Materials/GasProps.fs      gas species vocabulary and mixtures; virial, mixing-rule and
+                             grey-gas kernels delegated to Whb.Thermo
   Materials/Gas/GasThermoAdapter.fs
                              thin adapter: species data from the WhbThermo database
   Materials/Materials.fs     material catalogue and limits

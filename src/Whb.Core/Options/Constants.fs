@@ -1,12 +1,14 @@
 namespace Whb.Core
 module Constants =
-    let R = 8.31446261815324
-    let sigmaSB = 5.670374419e-8
-    let g = 9.80665
-    let Tc_water = 647.096
-    let Pc_water = 22.064e6
-    let Rhoc_water = 322.0
-    let Rw = 0.461526
+    // Physical constants: one definition, in WhbThermo.Domain.PhysicalConstants.
+    let R = WhbThermo.Domain.PhysicalConstants.MolarGasConstant
+    let sigmaSB = WhbThermo.Domain.PhysicalConstants.StefanBoltzmann
+    let g = WhbThermo.Domain.PhysicalConstants.StandardGravity
+    let Tc_water = WhbThermo.Domain.PhysicalConstants.Water.CriticalTemperature
+    let Pc_water = WhbThermo.Domain.PhysicalConstants.Water.CriticalPressure
+    let Rhoc_water = WhbThermo.Domain.PhysicalConstants.Water.CriticalDensity
+    /// Specific gas constant of water [kJ/(kg K)].
+    let Rw = WhbThermo.Domain.PhysicalConstants.Water.SpecificGasConstant / 1000.0
     let inline cToK (t: float) = t + 273.15
     let inline kToC (t: float) = t - 273.15
     let inline barToPa (p: float) = p * 1.0e5

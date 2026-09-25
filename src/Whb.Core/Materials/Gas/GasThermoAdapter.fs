@@ -11,7 +11,7 @@ open WhbThermo.Properties
 /// <remarks>
 /// Converts WhbThermo units and result types to the SI floats used across Whb.Core. Species data
 /// (molar mass, NASA-9 heat capacity and enthalpy, NASA CEA / Sutherland transport, critical
-/// constants) live in <c>external/WhbThermo/data/species-database.json</c> only; do not copy
+/// constants) live in <c>src/Whb.Thermo/data/species-database.json</c> only; do not copy
 /// coefficients back into Whb.Core. WhbThermo warnings (extrapolated fit range, missing critical
 /// constants) are not propagated: this facade feeds the solver hot path and has no warning channel.
 /// </remarks>
