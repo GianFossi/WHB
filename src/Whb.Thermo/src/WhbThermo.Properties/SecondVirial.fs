@@ -30,16 +30,42 @@ module SecondVirial =
         let b1 = 0.139 - 0.172 / Math.Pow(tr, 4.2)
         (b0 + om * b1) * r * tc / pc
 
-    /// Second virial coefficient of water [m^3/mol] from IAPWS-IF97 region 2 in
-    /// the dilute limit (1 kPa). Above 1073.15 K, the region-2 limit, it is
-    /// scaled as (1073.15/T)^1.6.
+    /// B [m^3/mol] from an IF97 specific volume [m^3/kg] at 1 kPa, where the
+    /// gas is ideal to within B p / (R T), about 1e-6.
+    let private bFromVolume (p: float) (v: float) (t: float) =
+        let z = p * v / (Water.gasConstant () * 1000.0 * t)
+        (z - 1.0) * r * t / p
+
+    /// Lower and upper end of the region 2 to region 5 blend [K].
+    let private blendLow = 1023.15
+    let private blendHigh = 1123.15
+
+    /// Second virial coefficient of water [m^3/mol] from IAPWS-IF97 in the
+    /// dilute limit (1 kPa): region 2 up to 1023.15 K, region 5 from 1123.15 K,
+    /// and between the two a quintic smoothstep blend.
+    ///
+    /// The blend is not cosmetic. The two equations differ by 0.7 % in B at
+    /// their common boundary (1073.15 K), and the mixture residual cp is a
+    /// second difference of B over 2 K: a hard switch would put a spike of about
+    /// 100 J/(mol K) into cp_res at 35 bar, three times the gas cp itself. The
+    /// quintic weight keeps B, dB/dT and d2B/dT2 continuous. Region 5 matters
+    /// above 800 degC - WHB inlets, Claus furnaces - where B of water heads to
+    /// zero and turns positive near 1600 K; the earlier (1073.15/T)^1.6
+    /// extrapolation of region 2 kept it negative and was 61 % off at 1240 K.
     let waterB (tK: float) =
         let p = 1000.0                       // Pa: practically an ideal gas
-        let t = min tK 1073.15
-        let (v, _, _, _) = Water.region2 (p / 1.0e6) t   // v [m^3/kg]
-        let z = p * v / (Water.gasConstant () * 1000.0 * t)
-        let b = (z - 1.0) * r * t / p
-        if tK <= 1073.15 then b else b * Math.Pow(1073.15 / tK, 1.6)
+        let b2 () =
+            let (v, _, _, _) = Water.region2 (p / 1.0e6) tK
+            bFromVolume p v tK
+        let b5 () =
+            let (v, _, _, _) = Water.region5 (p / 1.0e6) tK
+            bFromVolume p v tK
+        if tK <= blendLow then b2 ()
+        elif tK >= blendHigh then b5 ()
+        else
+            let x = (tK - blendLow) / (blendHigh - blendLow)
+            let w = x * x * x * (10.0 + x * (-15.0 + 6.0 * x))
+            (1.0 - w) * b2 () + w * b5 ()
 
     /// A mixture component as the virial model needs it.
     type Component =

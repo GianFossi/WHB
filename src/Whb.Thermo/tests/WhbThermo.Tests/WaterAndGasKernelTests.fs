@@ -104,3 +104,29 @@ let ``grey-gas emissivity is bounded and the cavity coefficient is zero at equal
     Assert.Equal(0.95, GreyGas.emissivity 0.5 0.5 100e5 5.0 800.0)
     Assert.Equal(0.0, GreyGas.cavityCoefficient 0.2 0.85 900.0 900.0)
     Assert.True(GreyGas.cavityCoefficient 0.2 0.85 1300.0 600.0 > 0.0)
+
+// ---------- water second virial coefficient: region 2 -> region 5 ----------
+
+let private bFrom (region: float -> float -> float * float * float * float) (t: float) =
+    let p = 1000.0
+    let (v, _, _, _) = region (p / 1.0e6) t
+    (p * v / (Water.gasConstant () * 1000.0 * t) - 1.0) * 8.31446261815324 * t / p
+
+/// Below the blend window the value is region 2, above it region 5.
+[<Fact>]
+let ``water B is region 2 below 1023 K and region 5 above 1123 K`` () =
+    Assert.Equal(bFrom Water.region2 900.0, SecondVirial.waterB 900.0)
+    Assert.Equal(bFrom Water.region5 1300.0, SecondVirial.waterB 1300.0)
+    // Above its Boyle temperature water has a positive B.
+    Assert.True(SecondVirial.waterB 1673.0 > 0.0)
+
+/// The residual cp of the mixture is a 2 K second difference of B: across the
+/// blend window that second difference must stay smooth, with no spike where
+/// the two equations meet (a hard switch gives one 100 times larger).
+[<Fact>]
+let ``water B is smooth across the region 2 to region 5 blend`` () =
+    let d2 t = (SecondVirial.waterB (t + 2.0) - 2.0 * SecondVirial.waterB t + SecondVirial.waterB (t - 2.0)) / 4.0
+    let inside = [ 1000.0 .. 5.0 .. 1150.0 ] |> List.map (fun t -> abs (d2 t))
+    let reference = abs (d2 1000.0)
+    for v in inside do
+        Assert.True(v < 3.0 * reference, $"second difference {v:e3} vs {reference:e3} outside the blend")

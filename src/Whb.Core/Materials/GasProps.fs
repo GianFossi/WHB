@@ -186,7 +186,8 @@ module GasProps =
             WhbThermo.Properties.SecondVirial.pitzer tc pc om tK
 
         /// <summary>
-        /// Second virial coefficient of water from IAPWS-IF97 in the dilute limit.
+        /// Second virial coefficient of water from IAPWS-IF97 in the dilute limit: region 2 up to
+        /// 1023.15 K, region 5 from 1123.15 K, smoothly blended in between.
         /// </summary>
         /// <param name="tK">Temperature in kelvin.</param>
         /// <returns>The water second virial coefficient in m³/mol.</returns>

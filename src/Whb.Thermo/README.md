@@ -402,11 +402,14 @@ cleanly rather than sticking as a permanent failure.
 
 ## Steam and water: IAPWS-IF97
 
-`WhbThermo.Steam.If97` implements regions **1** (compressed liquid), **2**
-(superheated steam) and **4** (saturation line). Regions 3 (near-critical) and 5
-(above 1073 K) are deliberately not implemented — a WHB drum at 40–120 bar never
-enters them — and states falling there **fail explicitly** rather than
-extrapolating a valid equation into a range where it is meaningless.
+`WhbThermo.Steam.If97` implements all five regions: **1** (compressed liquid),
+**2** (superheated steam), **3** (near-critical, density solved from p and T on
+the right branch), **4** (saturation line; above 623.15 K the saturated phases
+are evaluated in region 3) and **5** (1073.15–2273.15 K, up to 50 MPa). States
+outside all five, and within about 0.01 K of the critical point, **fail
+explicitly** rather than extrapolating an equation where it is meaningless.
+Backward equations (T(p,h), T(p,s)) are not implemented. (Until 2026-09-25 only
+regions 1, 2 and 4 existed.)
 
 ```fsharp
 If97.load ()
@@ -1069,8 +1072,12 @@ Whb.Core non contiene più proprietà proprie di acqua, vapore o gas: le calcola
   (un'unica implementazione, coefficienti in `iapws-if97.json`); i coefficienti di trasporto
   sono in `iapws-water-transport.json`. I test riproducono i valori di verifica delle release
   IAPWS entro 10⁻⁶.
-- `WhbThermo.Properties.SecondVirial` — equazione del viriale troncata (Pitzer, B dell'acqua
-  da IF97, termini di coppia con k_ij).
+- `WhbThermo.Properties.SecondVirial` — equazione del viriale troncata (Pitzer, termini di
+  coppia con k_ij). Il B dell'acqua viene da IF97 nel limite diluito: regione 2 fino a
+  1023.15 K, regione 5 da 1123.15 K, raccordo quintico in mezzo (continuo fino alla derivata
+  seconda, perché cp residuo è una differenza seconda di B). Sopra 800 °C la regione 5 conta:
+  il B dell'acqua tende a zero e diventa positivo verso 1600 K, cosa che la vecchia
+  estrapolazione della regione 2 non rappresentava (61 % di errore a 1240 K).
 - `WhbThermo.Properties.Mixing.wilkeWassiljewa` / `molarAverage` — kernel su array, senza
   allocazioni.
 - `WhbThermo.Radiation.GreyGas` — emissività grigia H₂O + CO₂ e coefficiente radiativo con

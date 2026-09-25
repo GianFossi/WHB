@@ -200,6 +200,15 @@ Record here notable, non-obvious modification decisions so future AI
 sessions can reuse the context. Append new entries at the top with an
 ISO date. Keep each entry short (what / why / where).
 
+- 2026-09-25 — Water B in the gas-side virial now uses IF97 region 5 above 800 degC
+  (requested, with the Claus furnace/condenser work in view): region 2 up to
+  1023.15 K, region 5 from 1123.15 K, quintic smoothstep between. A hard switch at
+  1073.15 K is NOT acceptable: the two equations differ by 0.7 % in B there and the
+  2 K second difference would put ~100 J/(mol K) into cp_res. Effect on the
+  reference case: duty 116.815 -> 116.770 MW, real-gas correction of the enthalpy
+  drop +0.87 % -> +0.83 %; the old (1073.15/T)^1.6 extrapolation was 61 % off at
+  1240 K and kept B negative where water's B turns positive (~1600 K).
+
 - 2026-09-25 — One interface for constants and water: `WhbThermo.Domain.PhysicalConstants`
   holds R, sigma, g and the IAPWS water critical point; `Units.Ru`,
   `Emissivity.sigma`, the g of Boiling/Convection/XSulfur and Whb.Core `Constants`

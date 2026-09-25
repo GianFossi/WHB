@@ -105,6 +105,19 @@ implemented virial real-gas correction for density, residual enthalpy and heat
 capacity. This is useful for syngas screening, but it is not a complete
 high-pressure equation of state.
 
+The virial model is `Z = 1 + B_mix p / (R T)` with `B_mix = SUM y_i y_j B_ij`.
+`B_ij` comes from the Pitzer corresponding-states correlation, using
+pseudo-critical constants for unlike pairs and the binary parameters of
+`src/Whb.Thermo/data/binary-interaction.json` (empty: `k_ij = 0`). Water is the
+exception: its `B` comes from IAPWS-IF97 in the dilute limit, from region 2 up to
+750 °C and from region 5 above 850 °C, blended in between so that `B`, `dB/dT` and
+`d2B/dT2` stay continuous (the residual cp is a second difference of `B`). Above
+800 °C this matters: water's `B` heads towards zero and turns positive near 1600 K.
+
+The water-gas shift equilibrium constant is computed from the NASA-9 Gibbs
+energies of the species database, `K_p = exp(-dG°/RT)`; the empirical Moe (1962)
+correlation used before under-predicted it by 11 % at 700 °C and 26 % at 1000 °C.
+
 ## Vibration Screening
 
 The vibration analysis estimates tube natural frequency, added mass, damping, and
